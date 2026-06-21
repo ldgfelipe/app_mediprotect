@@ -1,0 +1,21 @@
+{
+  "name": "mediprotectNUXT",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@nuxtjs/supabase": "^2.0.9",
+    "bcryptjs": "^3.0.3",
+    "jsonwebtoken": "^9.0.3",
+    "nuxt": "^4.4.8",
+    "pg": "^8.22.0",
+    "vue": "^3.5.35",
+    "vue-router": "^5.1.0"
+  }
+}
