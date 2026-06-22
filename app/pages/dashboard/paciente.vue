@@ -1,9 +1,17 @@
 <script setup lang="ts">
 const token = useCookie('token')
 const usuario = useCookie('usuario')
+const plan = ref<any>(null)
 
 definePageMeta({
   middleware: 'auth',
+})
+
+onMounted(async () => {
+  try {
+    const { data } = await useFetch('/api/paquetes/mi-plan')
+    plan.value = (data.value as any)?.plan
+  } catch {}
 })
 
 function cerrarSesion() {
@@ -24,6 +32,7 @@ function cerrarSesion() {
           <NuxtLink to="/dashboard/paciente">Inicio</NuxtLink>
           <NuxtLink to="/medicos">Buscar Médicos</NuxtLink>
           <NuxtLink to="/mis-citas">Mis Citas</NuxtLink>
+          <NuxtLink to="/paquetes">Mi Plan</NuxtLink>
         </nav>
         <div class="user-info">
           <span>{{ usuario?.nombre }} {{ usuario?.apellido }}</span>
@@ -34,6 +43,13 @@ function cerrarSesion() {
     <main class="dashboard-content">
       <h1>Bienvenido, {{ usuario?.nombre }}</h1>
       <p class="subtitle">Panel de Paciente — MediProtect</p>
+
+      <div v-if="plan" class="plan-badge" :class="plan.slug">
+        <strong>{{ plan.nombre }}</strong>
+        <span v-if="plan.precio > 0">${{ plan.precio.toLocaleString() }}/año</span>
+        <span v-else>Gratuito</span>
+      </div>
+
       <div class="cards">
         <div class="card">
           <h3>Buscar Especialistas</h3>
@@ -44,6 +60,11 @@ function cerrarSesion() {
           <h3>Mis Citas</h3>
           <p>Revisa y administra tus citas agendadas.</p>
           <NuxtLink to="/mis-citas" class="btn-card">Ver Citas</NuxtLink>
+        </div>
+        <div class="card">
+          <h3>Mi Plan</h3>
+          <p>Conoce los beneficios de tu plan o mejora a uno superior.</p>
+          <NuxtLink to="/paquetes" class="btn-card">Ver Planes</NuxtLink>
         </div>
         <div class="card">
           <h3>Mi Perfil</h3>
