@@ -1,18 +1,7 @@
-import jwt from 'jsonwebtoken'
+import { verifyToken } from '../../utils/auth'
 
 export default defineEventHandler(async (event) => {
-  const authHeader = getHeader(event, 'authorization')
-  if (!authHeader?.startsWith('Bearer ')) {
-    throw createError({ statusCode: 401, message: 'No autorizado' })
-  }
-
-  let decoded: any
-  try {
-    decoded = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET || 'default_secret')
-  } catch {
-    throw createError({ statusCode: 401, message: 'Token inválido' })
-  }
-
+  const decoded = verifyToken(event)
   const pool = getPool()
   const { id, tipo } = decoded
 

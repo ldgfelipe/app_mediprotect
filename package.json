@@ -3,16 +3,17 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "nuxt build",
-    "dev": "nuxt dev",
-    "generate": "nuxt generate",
+    "dev": "node start.js dev",
+    "build": "node start.js build",
+    "generate": "node start.js generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "node setup.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "jsonwebtoken": "^9.0.3",
     "nuxt": "^4.4.8",
+    "oxc-parser": "^0.137.0",
     "pg": "^8.22.0",
     "vue": "^3.5.35",
     "vue-router": "^5.1.0"
