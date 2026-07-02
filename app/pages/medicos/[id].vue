@@ -8,10 +8,19 @@ const disponibilidad = ref<any[]>([])
 const loading = ref(true)
 const error = ref('')
 
-const booking = ref({ fecha: '', hora: '', notas: '' })
-const bookingLoading = ref(false)
-const bookingError = ref('')
-const bookingSuccess = ref('')
+const mostrarModal = ref(false)
+const paso = ref<'elegir' | 'login' | 'registro' | 'whatsapp'>('elegir')
+
+const loginForm = ref({ email: '', password: '' })
+const loginError = ref('')
+const loginLoading = ref(false)
+
+const regForm = ref({ nombre: '', telefono: '', email: '' })
+const regError = ref('')
+const regLoading = ref(false)
+
+const resultado = ref<{ folio: string; wa_link: string; es_nuevo: boolean } | null>(null)
+const copiado = ref(false)
 
 const estaAutenticado = computed(() => !!token.value)
 const esPaciente = computed(() => usuario.value?.tipo === 'paciente')
@@ -33,53 +42,94 @@ onMounted(async () => {
   }
 })
 
-function obtenerFechaMinima() {
-  const d = new Date()
-  d.setDate(d.getDate() + 1)
-  return d.toISOString().slice(0, 10)
+function abrirModal() {
+  if (esPaciente.value) {
+    paso.value = 'whatsapp'
+    resultado.value = null
+  } else {
+    paso.value = 'elegir'
+  }
+  loginError.value = ''
+  regError.value = ''
+  loginForm.value = { email: '', password: '' }
+  regForm.value = { nombre: '', telefono: '', email: '' }
+  mostrarModal.value = true
 }
 
-function obtenerDiaSemana(fechaStr: string) {
-  return new Date(fechaStr + 'T12:00:00').getDay()
+function cerrarModal() {
+  mostrarModal.value = false
+  resultado.value = null
+  copiado.value = false
 }
 
-function disponibleElDia(fechaStr: string) {
-  const dia = obtenerDiaSemana(fechaStr)
-  return disponibilidad.value.some(d => {
-    const idx = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'].indexOf(d.dia)
-    return idx === dia
-  })
-}
-
-function slotsDelDia(fechaStr: string) {
-  const dia = obtenerDiaSemana(fechaStr)
-  const d = disponibilidad.value.find(d => {
-    const idx = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'].indexOf(d.dia)
-    return idx === dia
-  })
-  return d?.slots || []
-}
-
-async function agendar() {
-  bookingError.value = ''
-  bookingSuccess.value = ''
-  bookingLoading.value = true
+async function iniciarSesion() {
+  loginError.value = ''
+  loginLoading.value = true
   try {
-    if (!booking.value.fecha || !booking.value.hora) {
-      throw new Error('Selecciona fecha y hora')
-    }
-    const fecha_hora = `${booking.value.fecha}T${booking.value.hora}:00`
-    await useFetch('/api/citas', {
+    const { data, error: err } = await useFetch('/api/auth/login', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token.value}` },
-      body: { id_medico: route.params.id, fecha_hora, notas_paciente: booking.value.notas || undefined },
+      body: { email: loginForm.value.email, password: loginForm.value.password, tipo: 'paciente' },
     })
-    bookingSuccess.value = 'Cita agendada exitosamente'
-    booking.value = { fecha: '', hora: '', notas: '' }
+    if (err.value) throw new Error(err.value.message || 'Error al iniciar sesión')
+    const d = data.value as any
+    token.value = d.token
+    usuario.value = d.usuario
+    paso.value = 'whatsapp'
+    resultado.value = null
   } catch (e: any) {
-    bookingError.value = e.message || 'Error al agendar cita'
+    loginError.value = e.message || 'Error al iniciar sesión'
   } finally {
-    bookingLoading.value = false
+    loginLoading.value = false
+  }
+}
+
+async function registrar() {
+  regError.value = ''
+  regLoading.value = true
+  try {
+    const { data, error: err } = await useFetch('/api/auth/pre-registro', {
+      method: 'POST',
+      body: {
+        nombre: regForm.value.nombre,
+        telefono: regForm.value.telefono,
+        email: regForm.value.email || undefined,
+        id_medico: route.params.id,
+      },
+    })
+    if (err.value) throw new Error(err.value.message || 'Error al registrarse')
+    resultado.value = (data.value as any)
+    paso.value = 'whatsapp'
+  } catch (e: any) {
+    regError.value = e.message || 'Error al registrarse'
+  } finally {
+    regLoading.value = false
+  }
+}
+
+async function generarWhatsApp() {
+  paso.value = 'whatsapp'
+  resultado.value = null
+  try {
+    const { data, error: err } = await useFetch('/api/auth/pre-registro', {
+      method: 'POST',
+      body: { nombre: '', telefono: '', id_medico: route.params.id },
+    })
+    if (err.value) throw new Error(err.value.message || 'Error')
+    resultado.value = (data.value as any)
+  } catch {}
+}
+
+function irAWhatsApp() {
+  if (resultado.value?.wa_link) {
+    window.open(resultado.value.wa_link, '_blank')
+  }
+}
+
+function copiarFolio() {
+  if (resultado.value?.folio) {
+    navigator.clipboard.writeText(resultado.value.folio)
+    copiado.value = true
+    setTimeout(() => { copiado.value = false }, 2000)
   }
 }
 </script>
@@ -90,6 +140,7 @@ async function agendar() {
       <NuxtLink to="/"><img src="https://imagedelivery.net/xaKlCos5cTg_1RWzIu_h-A/0a041066-aa69-4fe5-07ed-50ee74875100/public" alt="MediProtect" class="logo-sm" /></NuxtLink>
       <nav>
         <NuxtLink to="/medicos">&larr; Volver a Médicos</NuxtLink>
+        <NuxtLink to="/paquetes">Planes</NuxtLink>
       </nav>
     </header>
     <main class="detalle-content">
@@ -128,47 +179,102 @@ async function agendar() {
               <span v-for="s in d.slots" :key="s.id" class="slot-chip">{{ s.inicio }} - {{ s.fin }}</span>
             </div>
           </div>
-        </div>
-        <div v-if="esPaciente" class="booking-section">
-          <h2>Agendar Cita</h2>
-          <div v-if="bookingSuccess" class="success-msg">{{ bookingSuccess }}</div>
-          <div v-if="bookingError" class="error-msg">{{ bookingError }}</div>
-          <form @submit.prevent="agendar" class="booking-form">
-            <div class="form-group">
-              <label>Fecha</label>
-              <input v-model="booking.fecha" type="date" :min="obtenerFechaMinima()" required />
-            </div>
-            <div v-if="booking.fecha" class="form-group">
-              <label>Hora</label>
-              <select v-model="booking.hora" required>
-                <option value="">Seleccionar horario</option>
-                <option v-if="!disponibleElDia(booking.fecha)" value="" disabled>
-                  No hay disponibilidad en esta fecha
-                </option>
-                <template v-else>
-                  <option v-for="s in slotsDelDia(booking.fecha)" :key="s.id" :value="s.inicio">
-                    {{ s.inicio }} - {{ s.fin }}
-                  </option>
-                </template>
-              </select>
-              <small v-if="!disponibleElDia(booking.fecha) && booking.fecha" style="color:#d63031;font-size:0.8rem">
-                El médico no atiende este día. Elige otra fecha.
-              </small>
-            </div>
-            <div class="form-group">
-              <label>Notas (opcional)</label>
-              <textarea v-model="booking.notas" rows="2" placeholder="Describe el motivo de tu consulta..."></textarea>
-            </div>
-            <button type="submit" class="btn-primary" :disabled="bookingLoading || !booking.fecha || !booking.hora">
-              {{ bookingLoading ? 'Agendando...' : 'Agendar Cita' }}
-            </button>
-            <p v-if="!estaAutenticado" class="auth-warning">
-              <NuxtLink to="/login">Inicia sesión</NuxtLink> como paciente para agendar una cita.
-            </p>
-          </form>
+          <button @click="abrirModal" class="btn-agendar">
+            Agendar Cita por WhatsApp
+          </button>
         </div>
       </div>
     </main>
+
+    <Teleport to="body">
+      <div v-if="mostrarModal" class="modal-overlay" @click.self="cerrarModal">
+        <div class="modal-container">
+          <button class="modal-close" @click="cerrarModal">&times;</button>
+
+          <div v-if="paso === 'elegir'" class="modal-body">
+            <h2>Agendar Cita</h2>
+            <p class="modal-sub">¿Ya eres afiliado de MediProtect?</p>
+            <div class="modal-actions">
+              <button @click="paso = 'login'" class="btn-primary btn-block">Sí, ya soy afiliado</button>
+              <button @click="paso = 'registro'" class="btn-outline btn-block">No, quiero afiliarme</button>
+            </div>
+            <p class="modal-footer-text">
+              Al agendar aceptas nuestros <NuxtLink to="/terminos">Términos y Condiciones</NuxtLink>
+            </p>
+          </div>
+
+          <div v-if="paso === 'login'" class="modal-body">
+            <h2>Iniciar Sesión</h2>
+            <p class="modal-sub">Ingresa con tu correo y contraseña</p>
+            <form @submit.prevent="iniciarSesion" class="modal-form">
+              <div class="form-group">
+                <label>Correo electrónico</label>
+                <input v-model="loginForm.email" type="email" placeholder="correo@ejemplo.com" required />
+              </div>
+              <div class="form-group">
+                <label>Contraseña</label>
+                <input v-model="loginForm.password" type="password" placeholder="••••••••" required />
+              </div>
+              <p v-if="loginError" class="error-msg">{{ loginError }}</p>
+              <button type="submit" class="btn-primary btn-block" :disabled="loginLoading">
+                {{ loginLoading ? 'Entrando...' : 'Iniciar Sesión' }}
+              </button>
+            </form>
+            <p class="modal-back" @click="paso = 'elegir'">&larr; Volver</p>
+          </div>
+
+          <div v-if="paso === 'registro'" class="modal-body">
+            <h2>Afíliate gratis</h2>
+            <p class="modal-sub">Completa tus datos y recibe descuentos en consultas</p>
+            <form @submit.prevent="registrar" class="modal-form">
+              <div class="form-group">
+                <label>Nombre completo</label>
+                <input v-model="regForm.nombre" placeholder="Ej: Juan Pérez" required />
+              </div>
+              <div class="form-group">
+                <label>Teléfono</label>
+                <input v-model="regForm.telefono" type="tel" placeholder="+52 55 1234 5678" required />
+              </div>
+              <div class="form-group">
+                <label>Correo electrónico (opcional)</label>
+                <input v-model="regForm.email" type="email" placeholder="correo@ejemplo.com" />
+                <small style="color:#636e72;font-size:0.8rem">Para enviarte tu comprobante de afiliación</small>
+              </div>
+              <p v-if="regError" class="error-msg">{{ regError }}</p>
+              <button type="submit" class="btn-primary btn-block" :disabled="regLoading">
+                {{ regLoading ? 'Registrando...' : 'Afiliarme y agendar' }}
+              </button>
+            </form>
+            <p class="modal-back" @click="paso = 'elegir'">&larr; Volver</p>
+          </div>
+
+          <div v-if="paso === 'whatsapp'" class="modal-body">
+            <div v-if="resultado" class="whatsapp-step">
+              <div class="check-icon">&#10003;</div>
+              <h2>¡Listo!</h2>
+              <p class="modal-sub">Tu folio de solicitud: <strong class="folio">{{ resultado.folio }}</strong></p>
+              <button @click="copiarFolio" class="btn-outline btn-small">
+                {{ copiado ? 'Copiado' : 'Copiar folio' }}
+              </button>
+              <div class="wa-note">
+                <p>Envía este folio por WhatsApp para que el médico te confirme el horario.</p>
+              </div>
+              <button @click="irAWhatsApp" class="btn-primary btn-block btn-wa">
+                Abrir WhatsApp
+              </button>
+              <p class="modal-footer-text" style="margin-top:0.5rem">
+                ¿No te abrió WhatsApp? <button @click="irAWhatsApp" class="link-btn">haz clic aquí</button>
+              </p>
+            </div>
+            <div v-else>
+              <h2>Agendar Cita</h2>
+              <p class="modal-sub">Generando tu folio...</p>
+              <div class="spinner"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -176,12 +282,10 @@ async function agendar() {
 .logo-sm { height: 35px; }
 .detalle-page { min-height: 100vh; background: #ffffff; }
 .detalle-header { display: flex; align-items: center; gap: 1rem; padding: 1rem 2rem; border-bottom: 1px solid #eaeaea; }
-.detalle-header nav { flex: 1; }
+.detalle-header nav { flex: 1; display: flex; gap: 1rem; }
 .detalle-content { max-width: 1100px; margin: 0 auto; padding: 2rem 1rem; }
 .loading { text-align: center; padding: 3rem; color: #636e72; }
-.medico-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
-@media (max-width: 768px) { .medico-grid { grid-template-columns: 1fr; } }
-.medico-info { }
+.medico-grid { display: grid; grid-template-columns: 1fr; max-width: 800px; margin: 0 auto; }
 .medico-avatar { margin-bottom: 1rem; }
 .avatar-placeholder { width: 80px; height: 80px; border-radius: 50%; background: #2d3436; color: white; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 700; }
 .avatar-img { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; }
@@ -193,14 +297,61 @@ async function agendar() {
 .medico-detalles { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.2rem; }
 .detalle-item { font-size: 0.9rem; color: #2d3436; }
 .detalle-item strong { font-weight: 600; }
-.disponibilidad { border-top: 1px solid #eaeaea; padding-top: 1rem; }
+.disponibilidad { border-top: 1px solid #eaeaea; padding-top: 1rem; margin-bottom: 1.5rem; }
 .disponibilidad h3 { font-size: 1rem; margin-bottom: 0.8rem; }
 .disp-item { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.4rem; font-size: 0.9rem; }
 .slot-chip { background: #f5f5f5; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.85rem; }
-.booking-section { background: #fafafa; border: 1px solid #eaeaea; border-radius: 12px; padding: 1.5rem; }
-.booking-section h2 { font-size: 1.2rem; margin-bottom: 1rem; }
-.booking-form { display: flex; flex-direction: column; gap: 1rem; }
-.success-msg { color: #00b894; background: #e6fcf5; padding: 0.7rem; border-radius: 8px; font-size: 0.9rem; border: 1px solid #b2dfdb; }
-.auth-warning { text-align: center; font-size: 0.85rem; color: #636e72; }
-.auth-warning a { color: #00b894; font-weight: 600; }
+
+.btn-agendar {
+  display: block; width: 100%; max-width: 400px; margin: 0 auto;
+  background: #25D366; color: white; border: none;
+  padding: 1rem 2rem; border-radius: 8px; font-size: 1.1rem;
+  font-weight: 600; cursor: pointer; transition: background 0.2s;
+}
+.btn-agendar:hover { background: #1da851; }
+
+.modal-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5); display: flex; align-items: center;
+  justify-content: center; z-index: 1000; padding: 1rem;
+}
+.modal-container {
+  background: white; border-radius: 16px; padding: 2rem;
+  width: 100%; max-width: 420px; position: relative;
+  max-height: 90vh; overflow-y: auto;
+}
+.modal-close {
+  position: absolute; top: 0.8rem; right: 1rem; background: none;
+  border: none; font-size: 1.5rem; cursor: pointer; color: #636e72;
+}
+.modal-body { text-align: center; }
+.modal-body h2 { font-size: 1.3rem; margin-bottom: 0.3rem; }
+.modal-sub { color: #636e72; font-size: 0.95rem; margin-bottom: 1.5rem; }
+.modal-actions { display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 1rem; }
+.btn-block { width: 100%; }
+.modal-form { display: flex; flex-direction: column; gap: 1rem; text-align: left; }
+.modal-form .form-group { text-align: left; }
+.modal-back { color: #636e72; font-size: 0.85rem; cursor: pointer; margin-top: 1rem; }
+.modal-back:hover { color: #2d3436; }
+.modal-footer-text { font-size: 0.8rem; color: #636e72; margin-top: 1rem; }
+.modal-footer-text a { color: #00b894; font-weight: 600; }
+
+.whatsapp-step { text-align: center; }
+.check-icon {
+  width: 50px; height: 50px; border-radius: 50%; background: #25D366;
+  color: white; font-size: 1.5rem; display: flex; align-items: center;
+  justify-content: center; margin: 0 auto 1rem;
+}
+.folio { font-size: 1.2rem; color: #2d3436; letter-spacing: 1px; }
+.btn-small { font-size: 0.85rem; padding: 0.4rem 1rem; margin-top: 0.5rem; }
+.wa-note { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 0.8rem; margin: 1rem 0; font-size: 0.85rem; color: #166534; }
+.btn-wa { background: #25D366; margin-top: 0.5rem; }
+.btn-wa:hover { background: #1da851; }
+.link-btn { background: none; border: none; color: #00b894; font-weight: 600; cursor: pointer; font-size: inherit; padding: 0; text-decoration: underline; }
+
+.spinner {
+  width: 30px; height: 30px; border: 3px solid #f0f0f0; border-top-color: #2d3436;
+  border-radius: 50%; animation: spin 0.6s linear infinite; margin: 1rem auto;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>
