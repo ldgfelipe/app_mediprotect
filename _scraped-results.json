@@ -1,0 +1,279 @@
+[
+  {
+    "slug": "erasmo-vega-osorio",
+    "nombre": "Erasmo Aaron",
+    "apellido": "Vega Osorio",
+    "url": "https://www.mediprotect.com.mx/perfil-dr-erasmo-aaron-vega",
+    "data": {
+      "foto_url": "https://www.mediprotect.com.mx/assets/uploads/d9f833c8-da3b-4f8c-9e47-e7c7d8d0505e/c64c0d70-823f-4fc7-ae45-d76e5bfb2253.webp?w=768",
+      "bio": "Médico Cirujano Partero egresado de la Universidad Autónoma del Estado de Hidalgo, con enfoque en cirugía bariátrica y manejo integral del paciente con obesidad.",
+      "formacion_academica": [
+        {
+          "institucion": "Universidad Autónoma del Estado de Hidalgo",
+          "titulo": "Médico Cirujano Partero"
+        },
+        {
+          "institucion": "Cirugía Bariátrica",
+          "titulo": "Manga gástrica, bypass gástrico y procedimientos laparoscópicos para el tratamiento de la obesidad."
+        }
+      ],
+      "servicios": [
+        {
+          "nombre": "Manga Gástrica",
+          "descripcion": "Procedimiento laparoscópico que reduce el tamaño del estómago para limitar la ingesta de alimentos."
+        },
+        {
+          "nombre": "Bypass Gástrico",
+          "descripcion": "Cirugía que modifica el sistema digestivo para reducir la absorción de calorías y nutrientes."
+        },
+        {
+          "nombre": "Evaluación Preoperatoria",
+          "descripcion": "Valoración integral multidisciplinaria antes de cualquier procedimiento quirúrgico bariátrico."
+        },
+        {
+          "nombre": "Control de Peso Postquirúrgico",
+          "descripcion": "Seguimiento continuo con equipo multidisciplinario para mantener resultados a largo plazo."
+        },
+        {
+          "nombre": "Asesoría Nutricional",
+          "descripcion": "Planes alimenticios personalizados adaptados a cada etapa del proceso bariátrico."
+        },
+        {
+          "nombre": "Consulta de Valoración",
+          "descripcion": "Primera consulta para determinar si eres candidato a cirugía bariátrica y resolver todas tus dudas."
+        }
+      ],
+      "idiomas": [],
+      "horario_atencion": null,
+      "informacion_consulta": {
+        "email": "Enviar mensaje",
+        "centro": "Mediwork Centro Médico",
+        "ubicacion": "Puebla, Pue."
+      }
+    }
+  },
+  {
+    "slug": "oscar-santos-garcia",
+    "nombre": "Oscar de los",
+    "apellido": "Santos Garcia",
+    "url": "https://www.mediprotect.com.mx/perfil-dr-oscar-de-los-santos",
+    "data": {
+      "foto_url": null,
+      "bio": "Médico Cardiólogo egresado de la Universidad La Salle, Ciudad de México, con amplia experiencia en el diagnóstico y tratamiento de enfermedades cardiovasculares en Mediwork Centro Médico.",
+      "formacion_academica": [
+        {
+          "titulo": "Médico Cirujano",
+          "institucion": "Universidad La Salle — Ciudad de México"
+        },
+        {
+          "titulo": "Especialidad en Cardiología",
+          "institucion": "Diagnóstico, tratamiento y prevención de enfermedades del corazón y del sistema circulatorio"
+        }
+      ],
+      "servicios": [
+        {
+          "nombre": "Electrocardiograma"
+        },
+        {
+          "nombre": "Ecocardiograma"
+        },
+        {
+          "nombre": "Prueba de esfuerzo"
+        },
+        {
+          "nombre": "Monitoreo Holter"
+        },
+        {
+          "nombre": "Manejo de hipertensión arterial"
+        },
+        {
+          "nombre": "Valoración preoperatoria cardiológica"
+        }
+      ],
+      "idiomas": [
+        {
+          "idioma": "Español",
+          "nivel": "Nativo"
+        }
+      ],
+      "horario_atencion": "Lunes a Viernes: 9:00 AM - 6:00 PM\nSábados: 9:00 AM - 1:00 PM",
+      "informacion_consulta": {
+        "centro": "Mediwork Centro Médico",
+        "direccion": "Blvd. 5 de Mayo #2307, Col. El Carmen, Puebla, Pue. C.P. 72530",
+        "telefono": "+52 (222) 802 1933"
+      }
+    }
+  },
+  {
+    "slug": "pedro-diaz-garcia",
+    "nombre": "Pedro",
+    "apellido": "Diaz Garcia",
+    "url": "https://www.mediprotect.com.mx/perfil-dr-pedro-diaz-garcia",
+    "data": {
+      "foto_url": "https://www.mediprotect.com.mx/assets/uploads/d9f833c8-da3b-4f8c-9e47-e7c7d8d0505e/c51cc10d-d84f-4c0d-8f2f-16a7752cc027.webp?w=480",
+      "bio": "Médico Cardiólogo egresado de la Universidad Autónoma de México, con amplia experiencia en el diagnóstico y tratamiento de enfermedades cardiovasculares en Mediwork Centro Médico.",
+      "formacion_academica": [
+        {
+          "titulo": "Médico Cirujano",
+          "institucion": "Universidad Autónoma de México"
+        },
+        {
+          "titulo": "Especialidad en Cardiología",
+          "institucion": "Diagnóstico, tratamiento y prevención de enfermedades del corazón y del sistema circulatorio"
+        }
+      ],
+      "servicios": [
+        {
+          "nombre": "Electrocardiograma"
+        },
+        {
+          "nombre": "Ecocardiograma"
+        },
+        {
+          "nombre": "Prueba de esfuerzo"
+        },
+        {
+          "nombre": "Monitoreo Holter"
+        },
+        {
+          "nombre": "Manejo de hipertensión arterial"
+        },
+        {
+          "nombre": "Valoración preoperatoria cardiológica"
+        }
+      ],
+      "idiomas": [
+        {
+          "idioma": "Español",
+          "nivel": "Nativo"
+        }
+      ],
+      "horario_atencion": "Lunes a Viernes: 9:00 AM - 6:00 PM\nSábados: 9:00 AM - 1:00 PM",
+      "informacion_consulta": {
+        "centro": "Mediwork Centro Médico",
+        "direccion": "Blvd. 5 de Mayo #2307, Col. El Carmen, Puebla, Pue. C.P. 72530",
+        "telefono": "+52 (222) 802 1933"
+      }
+    }
+  },
+  {
+    "slug": "ricardo-alvarez-quiroz",
+    "nombre": "Ricardo",
+    "apellido": "Alvarez Quiroz",
+    "url": "https://www.mediprotect.com.mx/perfil-dr-ricardo-alvarez-quiroz",
+    "data": {
+      "foto_url": "https://www.mediprotect.com.mx/assets/uploads/d9f833c8-da3b-4f8c-9e47-e7c7d8d0505e/6413a7cf-17ba-4f5d-a939-8ae6bfc67c0e.webp?w=480",
+      "bio": "Cirujano Plástico certificado, egresado de la BUAP y la UNAM, con amplia experiencia en procedimientos estéticos y reconstructivos. Comprometido con brindar resultados naturales y seguros a cada paciente en Mediwork Centro Médico.",
+      "formacion_academica": [
+        {
+          "titulo": "Especialidad en Cirugía Plástica y Reconstructiva",
+          "institucion": "Universidad Nacional Autónoma de México (UNAM)"
+        },
+        {
+          "titulo": "Médico Cirujano y Partero",
+          "institucion": "Benemérita Universidad Autónoma de Puebla (BUAP)"
+        }
+      ],
+      "servicios": [
+        {
+          "nombre": "Rinoplastia"
+        },
+        {
+          "nombre": "Blefaroplastia (párpados)"
+        },
+        {
+          "nombre": "Abdominoplastia"
+        },
+        {
+          "nombre": "Liposucción y contorno corporal"
+        },
+        {
+          "nombre": "Reconstrucción mamaria"
+        },
+        {
+          "nombre": "Reconstrucción post-trauma"
+        },
+        {
+          "nombre": "Valoración prequirúrgica integral"
+        }
+      ],
+      "idiomas": [
+        {
+          "idioma": "Español",
+          "nivel": "Nativo"
+        },
+        {
+          "idioma": "Inglés",
+          "nivel": "Avanzado"
+        }
+      ],
+      "horario_atencion": "Lunes a Viernes: 9:00 AM - 6:00 PM\nSábados: 9:00 AM - 1:00 PM",
+      "informacion_consulta": {
+        "centro": "Mediwork Centro Médico",
+        "direccion": "Blvd. 5 de Mayo #2307, Col. El Carmen, Puebla, Pue. C.P. 72530",
+        "whatsapp": "+52 (222) 802 19 33",
+        "ubicacion": "Puebla, Pue."
+      }
+    }
+  },
+  {
+    "slug": "raquel-najem-gonzalez",
+    "nombre": "Raquel",
+    "apellido": "Najem Gonzalez",
+    "url": "https://www.mediprotect.com.mx/perfil-dra-raquel-najem-gonzalez",
+    "data": {
+      "foto_url": "https://www.mediprotect.com.mx/assets/uploads/d9f833c8-da3b-4f8c-9e47-e7c7d8d0505e/ba0d9ec5-5eeb-49c3-ae79-423430e419c1.webp?w=480",
+      "bio": "Cirujana pediatra certificada, egresada de la Benemérita Universidad Autónoma de Puebla. Apasionada por brindar atención quirúrgica especializada y de calidad a los más pequeños, combinando excelencia médica con un trato cálido y humano que brinda tranquilidad a pacientes y familias.",
+      "formacion_academica": [
+        {
+          "titulo": "Especialidad en Cirugía Pediátrica",
+          "institucion": "Benemérita Universidad Autónoma de Puebla (BUAP)"
+        },
+        {
+          "titulo": "Especialidad en Pediatría",
+          "institucion": "Benemérita Universidad Autónoma de Puebla (BUAP)"
+        }
+      ],
+      "servicios": [
+        {
+          "nombre": "Cirugía neonatal"
+        },
+        {
+          "nombre": "Cirugía infantil general"
+        },
+        {
+          "nombre": "Hernias y fimosis"
+        },
+        {
+          "nombre": "Apendicectomía pediátrica"
+        },
+        {
+          "nombre": "Cirugía laparoscópica infantil"
+        },
+        {
+          "nombre": "Valoración pediátrica integral"
+        },
+        {
+          "nombre": "Consulta de pediatría general"
+        }
+      ],
+      "idiomas": [
+        {
+          "idioma": "Español",
+          "nivel": "Nativo"
+        },
+        {
+          "idioma": "Inglés",
+          "nivel": "Intermedio"
+        }
+      ],
+      "horario_atencion": "Lunes a Viernes: 9:00 AM - 6:00 PM\nSábados: 9:00 AM - 1:00 PM",
+      "informacion_consulta": {
+        "centro": "Mediwork Centro Médico",
+        "direccion": "Blvd. 5 de Mayo #2307, Col. El Carmen, Puebla, Pue. C.P. 72530",
+        "whatsapp": "+52 (222) 802 19 33",
+        "ubicacion": "Puebla, Pue."
+      }
+    }
+  }
+]

@@ -1,0 +1,3742 @@
+[
+  {
+    "slug": "arturo-munoz-cortes",
+    "nombre": "Arturo",
+    "apellido": "Munoz Cortes",
+    "titulo": "",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/arturo-munoz-cortes",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-arturo-munoz",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-arturo-munoz-cortes",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "david-harrison",
+    "nombre": "David",
+    "apellido": "Harrison",
+    "titulo": "",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/david-harrison",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-david-harrison",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-david-harrison",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "deyxi-martinez-romero",
+    "nombre": "Deyci Xiomara",
+    "apellido": "Martinez Romero",
+    "titulo": "",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/deyxi-martinez-romero",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-deyci-xiomara-martinez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-deyxi-martinez-romero",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "francisco-omar-lozano-castillo",
+    "nombre": "Francisco Omar",
+    "apellido": "Lozano Castillo",
+    "titulo": "",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/francisco-omar-lozano-castillo",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-francisco-omar-lozano",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-francisco-omar-lozano-castillo",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "shareni-osorio-vazquez",
+    "nombre": "Shareni",
+    "apellido": "Osorio Vazquez",
+    "titulo": "",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/shareni-osorio-vazquez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-shareni-osorio",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-shareni-osorio-vazquez",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "yenny-pabon-vaquero",
+    "nombre": "Yenny Paola",
+    "apellido": "Pabon Vaquero",
+    "titulo": "",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/yenny-pabon-vaquero",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-yenny-paola-pabon",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-yenny-pabon-vaquero",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "bethsabe-oyuki-flores-guerrero",
+    "nombre": "Bethsabe Oyuki",
+    "apellido": "Flores Guerrero",
+    "titulo": "Bethsabe Oyuki",
+    "has_data": true,
+    "urls": [
+      {
+        "url": "/red-medica/bethsabe-oyuki-flores-guerrero",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-bethsabe-oyuki-flores",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-bethsabe-oyuki-flores-guerrero",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "adrian-meneses-hoyos",
+    "nombre": "Adrian",
+    "apellido": "Meneses Hoyos",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/adrian-meneses-hoyos",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-adrian-meneses",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-adrian-meneses-hoyos",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "alan-ramses-diaz-ulloa",
+    "nombre": "Alan Ramsés",
+    "apellido": "Díaz Ulloa",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/alan-ramses-diaz-ulloa",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-alan-ramses-diaz",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-alan-ramses-diaz-ulloa",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "alejandro-fuentes-mora",
+    "nombre": "Alejandro",
+    "apellido": "Fuentes Mora",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/alejandro-fuentes-mora",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-alejandro-fuentes",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-alejandro-fuentes-mora",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "alejandro-mendoza-rios",
+    "nombre": "Alejandro",
+    "apellido": "Mendoza Rios",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/alejandro-mendoza-rios",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-alejandro-mendoza",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-alejandro-mendoza-rios",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "andres-ramirez-sanchez",
+    "nombre": "Andrés",
+    "apellido": "Ramírez Sánchez",
+    "titulo": "Dr.",
+    "has_data": true,
+    "urls": [
+      {
+        "url": "/red-medica/andres-ramirez-sanchez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-andres-ramirez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-andres-ramirez-sanchez",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "angel-osante-hernandez",
+    "nombre": "Ángel",
+    "apellido": "Osante Hernández",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/angel-osante-hernandez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-angel-osante",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-angel-osante-hernandez",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "antonio-mejia-de-la-garza",
+    "nombre": "Antonio",
+    "apellido": "Mejia de la Garza",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/antonio-mejia-de-la-garza",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-antonio-mejia",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-antonio-mejia-de-la-garza",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "carlos-ramirez-mendoza",
+    "nombre": "Carlos",
+    "apellido": "Ramirez Mendoza",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/carlos-ramirez-mendoza",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-carlos-ramirez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-carlos-ramirez-mendoza",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "carlos-eduardo-velez",
+    "nombre": "Carlos Eduardo",
+    "apellido": "Velez",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/carlos-eduardo-velez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-carlos-eduardo-velez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-carlos-eduardo-velez",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "cesar-orozco-linares",
+    "nombre": "Cesar",
+    "apellido": "Orozco Linares",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/cesar-orozco-linares",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-cesar-orozco",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-cesar-orozco-linares",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "cesar-gamez-tellez",
+    "nombre": "César",
+    "apellido": "Gámez Téllez",
+    "titulo": "Dr.",
+    "has_data": true,
+    "urls": [
+      {
+        "url": "/red-medica/cesar-gamez-tellez",
+        "status": 200,
+        "ok": true
+      }
+    ],
+    "working_url": "/red-medica/cesar-gamez-tellez"
+  },
+  {
+    "slug": "cesar-augusto-rendon-dircio",
+    "nombre": "Cesar Augusto",
+    "apellido": "Rendon Dircio",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/cesar-augusto-rendon-dircio",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-cesar-augusto-rendon",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-cesar-augusto-rendon-dircio",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "dalay-vazquez-martinez",
+    "nombre": "Dalay",
+    "apellido": "Vazquez Martinez",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/dalay-vazquez-martinez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-dalay-vazquez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-dalay-vazquez-martinez",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "daniel-saucedo-conde",
+    "nombre": "Daniel",
+    "apellido": "Saucedo Conde",
+    "titulo": "Dr.",
+    "has_data": true,
+    "urls": [
+      {
+        "url": "/red-medica/daniel-saucedo-conde",
+        "status": 200,
+        "ok": true
+      }
+    ],
+    "working_url": "/red-medica/daniel-saucedo-conde"
+  },
+  {
+    "slug": "daniel-dietter-ezquerra-mendizabal",
+    "nombre": "Daniel Dietter",
+    "apellido": "Ezquerra Mendizabal",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/daniel-dietter-ezquerra-mendizabal",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-daniel-dietter-ezquerra",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-daniel-dietter-ezquerra-mendizabal",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "edivaldo-pereria-sandoval",
+    "nombre": "Edivaldo",
+    "apellido": "Pereria Sandoval",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/edivaldo-pereria-sandoval",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-edivaldo-pereria",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-edivaldo-pereria-sandoval",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "eduardo-villanueva-parra",
+    "nombre": "Eduardo",
+    "apellido": "Villanueva Parra",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/eduardo-villanueva-parra",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-eduardo-villanueva",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-eduardo-villanueva-parra",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "erasmo-vega-osorio",
+    "nombre": "Erasmo Aaron",
+    "apellido": "Vega Osorio",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/erasmo-vega-osorio",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-erasmo-aaron-vega",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "url": "/perfil-dr-erasmo-vega-osorio",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": "/perfil-dr-erasmo-aaron-vega"
+  },
+  {
+    "slug": "erick-paredes-gonzalez",
+    "nombre": "Erick",
+    "apellido": "Paredes Gonzalez",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/erick-paredes-gonzalez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-erick-paredes",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-erick-paredes-gonzalez",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "ernesto-mendez-moyo",
+    "nombre": "Ernesto",
+    "apellido": "Méndez Moyo",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/ernesto-mendez-moyo",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-ernesto-mendez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-ernesto-mendez-moyo",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "ernesto-salgado-ruiz",
+    "nombre": "Ernesto",
+    "apellido": "Salgado Ruiz",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/ernesto-salgado-ruiz",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-ernesto-salgado",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-ernesto-salgado-ruiz",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "fernando-morales-sanchez",
+    "nombre": "Fernando",
+    "apellido": "Morales Sanchez",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/fernando-morales-sanchez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-fernando-morales",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-fernando-morales-sanchez",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "fernando-castillo-ruiz",
+    "nombre": "Fernando",
+    "apellido": "Castillo Ruiz",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/fernando-castillo-ruiz",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-fernando-castillo",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-fernando-castillo-ruiz",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "fernando-ortega-cruz",
+    "nombre": "Fernando",
+    "apellido": "Ortega Cruz",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/fernando-ortega-cruz",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-fernando-ortega",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-fernando-ortega-cruz",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "fernando-davalos-pena",
+    "nombre": "Fernando",
+    "apellido": "Davalos Pena",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/fernando-davalos-pena",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-fernando-davalos",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-fernando-davalos-pena",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "gerardo-gonzalez-ramirez",
+    "nombre": "Gerardo de Jesus",
+    "apellido": "Gonzalez Ramirez",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/gerardo-gonzalez-ramirez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-gerardo-de-jesus-gonzalez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-gerardo-gonzalez-ramirez",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "german-soria-del-valle",
+    "nombre": "German",
+    "apellido": "Soria del Valle",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/german-soria-del-valle",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-german-soria",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-german-soria-del-valle",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "hector-herrera-martinez",
+    "nombre": "Hector Manuel",
+    "apellido": "Herrera Martinez",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/hector-herrera-martinez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-hector-manuel-herrera",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-hector-herrera-martinez",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "humberto-cardenas-gil",
+    "nombre": "Humberto",
+    "apellido": "Cardenas Gil",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/humberto-cardenas-gil",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-humberto-cardenas",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-humberto-cardenas-gil",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "ismael-torres-perez",
+    "nombre": "Ismael",
+    "apellido": "Torres Pérez",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/ismael-torres-perez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-ismael-torres",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-ismael-torres-perez",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "jaime-alonso-costa",
+    "nombre": "Jaime",
+    "apellido": "Alonso Costa",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/jaime-alonso-costa",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-jaime-alonso",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-jaime-alonso-costa",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "javier-chavez-zavala",
+    "nombre": "Javier",
+    "apellido": "Chavez Zavala",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/javier-chavez-zavala",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-javier-chavez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-javier-chavez-zavala",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "javier-espinoza-rios",
+    "nombre": "Javier",
+    "apellido": "Espinoza Rios",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/javier-espinoza-rios",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-javier-espinoza",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-javier-espinoza-rios",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "jose-antonio-mendez",
+    "nombre": "Jose Antonio",
+    "apellido": "Mendez",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/jose-antonio-mendez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-jose-antonio-mendez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-jose-antonio-mendez",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "jose-antonio-vega",
+    "nombre": "Jose Antonio",
+    "apellido": "Vega",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/jose-antonio-vega",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-jose-antonio-vega",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-jose-antonio-vega",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "juan-perez",
+    "nombre": "juan",
+    "apellido": "perez",
+    "titulo": "Dr.",
+    "has_data": true,
+    "urls": [
+      {
+        "url": "/red-medica/juan-perez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-juan-perez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-juan-perez",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "juan-barron-momox",
+    "nombre": "Juan Fernando",
+    "apellido": "Barron Momox",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/juan-barron-momox",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-juan-fernando-barron",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-juan-barron-momox",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "juan-manuel-rodriguez-gonzalez",
+    "nombre": "Juan Manuel",
+    "apellido": "Rodriguez Gonzalez",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/juan-manuel-rodriguez-gonzalez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-juan-manuel-rodriguez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-juan-manuel-rodriguez-gonzalez",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "ldgframe-carrera",
+    "nombre": "ldgframe",
+    "apellido": "carrera",
+    "titulo": "Dr.",
+    "has_data": true,
+    "urls": [
+      {
+        "url": "/red-medica/ldgframe-carrera",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-ldgframe-carrera",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-ldgframe-carrera",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "luis-alberto-rodriguez-diaz",
+    "nombre": "Luis Alberto",
+    "apellido": "Rodríguez Díaz",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/luis-alberto-rodriguez-diaz",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-luis-alberto-rodriguez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-luis-alberto-rodriguez-diaz",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "luis-hernandez-vazquez",
+    "nombre": "Luis Angel",
+    "apellido": "Hernandez Vazquez",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/luis-hernandez-vazquez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-luis-angel-hernandez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-luis-hernandez-vazquez",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "luis-castillo",
+    "nombre": "Luis Fernando",
+    "apellido": "Castillo",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/luis-castillo",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-luis-fernando-castillo",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-luis-castillo",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "mario-vargas-rodriguez",
+    "nombre": "Mario",
+    "apellido": "Vargas Rodriguez",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/mario-vargas-rodriguez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-mario-vargas",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-mario-vargas-rodriguez",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "miguel-torres",
+    "nombre": "Miguel Angel",
+    "apellido": "Torres",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/miguel-torres",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-miguel-angel-torres",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-miguel-torres",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "miguel-angel-rios",
+    "nombre": "Miguel Angel",
+    "apellido": "Rios",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/miguel-angel-rios",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-miguel-angel-rios",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-miguel-angel-rios",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "octavio-gamino-marquez",
+    "nombre": "Octavio",
+    "apellido": "Gamiño Márquez",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/octavio-gamino-marquez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-octavio-gamino",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-octavio-gamino-marquez",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "oscar-santos-garcia",
+    "nombre": "Oscar de los",
+    "apellido": "Santos Garcia",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/oscar-santos-garcia",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-oscar-de-los-santos",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "url": "/perfil-dr-oscar-santos-garcia",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": "/perfil-dr-oscar-de-los-santos"
+  },
+  {
+    "slug": "oscar-genaro-olmos-garcia",
+    "nombre": "Oscar Genaro",
+    "apellido": "Olmos García",
+    "titulo": "Dr.",
+    "has_data": true,
+    "urls": [
+      {
+        "url": "/red-medica/oscar-genaro-olmos-garcia",
+        "status": 200,
+        "ok": true
+      }
+    ],
+    "working_url": "/red-medica/oscar-genaro-olmos-garcia"
+  },
+  {
+    "slug": "pablo-jauregui-salas",
+    "nombre": "Pablo",
+    "apellido": "Jauregui Salas",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/pablo-jauregui-salas",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-pablo-jauregui",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-pablo-jauregui-salas",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "pedro-diaz-garcia",
+    "nombre": "Pedro",
+    "apellido": "Diaz Garcia",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/pedro-diaz-garcia",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-pedro-diaz",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-pedro-diaz-garcia",
+        "status": 200,
+        "ok": true
+      }
+    ],
+    "working_url": "/perfil-dr-pedro-diaz-garcia"
+  },
+  {
+    "slug": "rafael-posada-noriega",
+    "nombre": "Rafael",
+    "apellido": "Posada Noriega",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/rafael-posada-noriega",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-rafael-posada",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-rafael-posada-noriega",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "-aul--ayan",
+    "nombre": "Raul",
+    "apellido": "Payan",
+    "titulo": "Dr.",
+    "has_data": true,
+    "urls": [
+      {
+        "url": "/red-medica/-aul--ayan",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-raul-payan",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr--aul--ayan",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "ricardo-marquez-gil",
+    "nombre": "Ricardo",
+    "apellido": "Marquez Gil",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/ricardo-marquez-gil",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-ricardo-marquez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-ricardo-marquez-gil",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "ricardo-alvarez-quiroz",
+    "nombre": "Ricardo",
+    "apellido": "Alvarez Quiroz",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/ricardo-alvarez-quiroz",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-ricardo-alvarez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-ricardo-alvarez-quiroz",
+        "status": 200,
+        "ok": true
+      }
+    ],
+    "working_url": "/perfil-dr-ricardo-alvarez-quiroz"
+  },
+  {
+    "slug": "ricardo-hernandez-soto",
+    "nombre": "Ricardo",
+    "apellido": "Hernandez Soto",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/ricardo-hernandez-soto",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-ricardo-hernandez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-ricardo-hernandez-soto",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "ricardo-galindo-pena",
+    "nombre": "Ricardo",
+    "apellido": "Galindo Pena",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/ricardo-galindo-pena",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-ricardo-galindo",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-ricardo-galindo-pena",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "roberto-sanchez-linares",
+    "nombre": "Roberto",
+    "apellido": "Sanchez Linares",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/roberto-sanchez-linares",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-roberto-sanchez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-roberto-sanchez-linares",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "said-ernesto-aguirre-rendon",
+    "nombre": "Said Ernesto",
+    "apellido": "Aguirre Rendon",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/said-ernesto-aguirre-rendon",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-said-ernesto-aguirre",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-said-ernesto-aguirre-rendon",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "sergio-navarro-leon",
+    "nombre": "Sergio",
+    "apellido": "Navarro León",
+    "titulo": "Dr.",
+    "has_data": true,
+    "urls": [
+      {
+        "url": "/red-medica/sergio-navarro-leon",
+        "status": 200,
+        "ok": true
+      }
+    ],
+    "working_url": "/red-medica/sergio-navarro-leon"
+  },
+  {
+    "slug": "tomas-aguilar-rosas",
+    "nombre": "Tomas",
+    "apellido": "Aguilar Rosas",
+    "titulo": "Dr.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/tomas-aguilar-rosas",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-tomas-aguilar",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-tomas-aguilar-rosas",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "alexis-carrasco-sosa",
+    "nombre": "Alexis",
+    "apellido": "Carrasco Sosa",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/alexis-carrasco-sosa",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-alexis-carrasco",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-alexis-carrasco-sosa",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "america-moreno-texcucano",
+    "nombre": "America Beatriz",
+    "apellido": "Moreno Texcucano",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/america-moreno-texcucano",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-america-beatriz-moreno",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-america-moreno-texcucano",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "ana-chavez-serna",
+    "nombre": "Ana Karen",
+    "apellido": "Chavez Serna",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/ana-chavez-serna",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-ana-karen-chavez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-ana-chavez-serna",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "ana-hernandez-nieto",
+    "nombre": "Ana Karen",
+    "apellido": "Hernandez Nieto",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/ana-hernandez-nieto",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-ana-karen-hernandez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-ana-hernandez-nieto",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "ana-karen-monzon-leal",
+    "nombre": "Ana Karen",
+    "apellido": "Monzon Leal",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/ana-karen-monzon-leal",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-ana-karen-monzon",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-ana-karen-monzon-leal",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "bertha-adel-dominguez",
+    "nombre": "Bertha Guadalupe",
+    "apellido": "Adel Dominguez",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/bertha-adel-dominguez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-bertha-guadalupe-adel",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-bertha-adel-dominguez",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "carmen-delgado-valle",
+    "nombre": "Carmen",
+    "apellido": "Delgado Valle",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/carmen-delgado-valle",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-carmen-delgado",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-carmen-delgado-valle",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "cintia-flores-pichardo",
+    "nombre": "Cintia Elisa",
+    "apellido": "Flores Pichardo",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/cintia-flores-pichardo",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-cintia-elisa-flores",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-cintia-flores-pichardo",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "daniela-morales-lopez",
+    "nombre": "Daniela Carolina",
+    "apellido": "Morales Lopez",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/daniela-morales-lopez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-daniela-carolina-morales",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-daniela-morales-lopez",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "diana-perla-valdez-acevedo",
+    "nombre": "Diana Perla",
+    "apellido": "Valdez Acevedo",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/diana-perla-valdez-acevedo",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-diana-perla-valdez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-diana-perla-valdez-acevedo",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "eloisa-guerrero-rodriguez",
+    "nombre": "Eloisa Estela",
+    "apellido": "Guerrero Rodríguez",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/eloisa-guerrero-rodriguez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-eloisa-estela-guerrero",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-eloisa-guerrero-rodriguez",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "erika-barriga-munoz",
+    "nombre": "Erika",
+    "apellido": "Barriga Munoz",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/erika-barriga-munoz",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-erika-barriga",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-erika-barriga-munoz",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "erika-ayonectili-quinones-mendoza",
+    "nombre": "Erika Ayonectili",
+    "apellido": "Quiñones Mendoza",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/erika-ayonectili-quinones-mendoza",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-erika-ayonectili-quinones",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-erika-ayonectili-quinones-mendoza",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "erika-carmona-aguilar",
+    "nombre": "Erika Kareni",
+    "apellido": "Carmona Aguilar",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/erika-carmona-aguilar",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-erika-kareni-carmona",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-erika-carmona-aguilar",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "esmeralda-alonso-guerrero",
+    "nombre": "Esmeralda",
+    "apellido": "Alonso Guerrero",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/esmeralda-alonso-guerrero",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-esmeralda-alonso",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-esmeralda-alonso-guerrero",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "gabriela-herrera-soto",
+    "nombre": "Gabriela",
+    "apellido": "Herrera Soto",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/gabriela-herrera-soto",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-gabriela-herrera",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-gabriela-herrera-soto",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "gabriela-cardenas-ibarra",
+    "nombre": "Gabriela",
+    "apellido": "Cárdenas Ibarra",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/gabriela-cardenas-ibarra",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-gabriela-cardenas",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-gabriela-cardenas-ibarra",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "gabriela-isabel-galeana-aburto",
+    "nombre": "Gabriela Isabel",
+    "apellido": "Galeana Aburto",
+    "titulo": "Dra.",
+    "has_data": true,
+    "urls": [
+      {
+        "url": "/red-medica/gabriela-isabel-galeana-aburto",
+        "status": 200,
+        "ok": true
+      }
+    ],
+    "working_url": "/red-medica/gabriela-isabel-galeana-aburto"
+  },
+  {
+    "slug": "isabel-nunez-garcia",
+    "nombre": "Isabel",
+    "apellido": "Nunez Garcia",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/isabel-nunez-garcia",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-isabel-nunez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-isabel-nunez-garcia",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "isabel-contreras-gil",
+    "nombre": "Isabel",
+    "apellido": "Contreras Gil",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/isabel-contreras-gil",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-isabel-contreras",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-isabel-contreras-gil",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "jesica-gonzalez-martinez",
+    "nombre": "Jesica",
+    "apellido": "Gonzalez Martinez",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/jesica-gonzalez-martinez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-jesica-gonzalez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-jesica-gonzalez-martinez",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "julissa-mariana-sanchez-moncada",
+    "nombre": "Julissa Mariana",
+    "apellido": "Sánchez Moncada",
+    "titulo": "Dra.",
+    "has_data": true,
+    "urls": [
+      {
+        "url": "/red-medica/julissa-mariana-sanchez-moncada",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-julissa-mariana-sanchez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-julissa-mariana-sanchez-moncada",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "karen-reynoso-hernandez",
+    "nombre": "Karen",
+    "apellido": "Reynoso Hernández",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/karen-reynoso-hernandez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-karen-reynoso",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-karen-reynoso-hernandez",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "karen-alba-hernandez",
+    "nombre": "Karen",
+    "apellido": "Alba Hernández",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/karen-alba-hernandez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-karen-alba",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-karen-alba-hernandez",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "karen-bautista-orduno",
+    "nombre": "Karen Gabriela",
+    "apellido": "Bautista Orduno",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/karen-bautista-orduno",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-karen-gabriela-bautista",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-karen-bautista-orduno",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "laura-cordova",
+    "nombre": "Laura Elena",
+    "apellido": "Cordova",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/laura-cordova",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-laura-elena-cordova",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-laura-cordova",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "leny-alvarez-manzanilla",
+    "nombre": "Leny del Carmen",
+    "apellido": "Álvarez Manzanilla",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/leny-alvarez-manzanilla",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-leny-del-carmen-alvarez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-leny-alvarez-manzanilla",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "leongeli-grajeda-medina",
+    "nombre": "Leongeli",
+    "apellido": "Grajeda Medina",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/leongeli-grajeda-medina",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-leongeli-grajeda",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-leongeli-grajeda-medina",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "leticia-olmos-garcia",
+    "nombre": "Leticia",
+    "apellido": "Olmos García",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/leticia-olmos-garcia",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-leticia-olmos",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-leticia-olmos-garcia",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "linda-flores-rodriguez",
+    "nombre": "Linda Edith",
+    "apellido": "Flores Rodriguez",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/linda-flores-rodriguez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-linda-edith-flores",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-linda-flores-rodriguez",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "lorena-altamirano-gil",
+    "nombre": "Lorena",
+    "apellido": "Altamirano Gil",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/lorena-altamirano-gil",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-lorena-altamirano",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-lorena-altamirano-gil",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "lorena-serna-pacheco",
+    "nombre": "Lorena",
+    "apellido": "Serna Pacheco",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/lorena-serna-pacheco",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-lorena-serna",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-lorena-serna-pacheco",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "lucina-gomez-cortes",
+    "nombre": "Lucina",
+    "apellido": "Gómez Cortés",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/lucina-gomez-cortes",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-lucina-gomez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-lucina-gomez-cortes",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "maria-elena-torres",
+    "nombre": "Maria Elena",
+    "apellido": "Torres",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/maria-elena-torres",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-maria-elena-torres",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-maria-elena-torres",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "maria-graciela-balcazar-avila",
+    "nombre": "María Graciela",
+    "apellido": "Balcazar Ávila",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/maria-graciela-balcazar-avila",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-maria-graciela-balcazar",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-maria-graciela-balcazar-avila",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "guadalupe-lopez-leon",
+    "nombre": "Maria Guadalupe",
+    "apellido": "Lopez Leon",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/guadalupe-lopez-leon",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-maria-guadalupe-lopez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-guadalupe-lopez-leon",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "maria-lucia-pineda-somodevilla",
+    "nombre": "María Lucía",
+    "apellido": "Pineda Somodevilla",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/maria-lucia-pineda-somodevilla",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-maria-lucia-pineda",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-maria-lucia-pineda-somodevilla",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "mariana-torres-aguilar",
+    "nombre": "Mariana",
+    "apellido": "Torres Aguilar",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/mariana-torres-aguilar",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-mariana-torres",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-mariana-torres-aguilar",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "mariana-coca-lezama",
+    "nombre": "Mariana",
+    "apellido": "Coca Lezama",
+    "titulo": "Dra.",
+    "has_data": true,
+    "urls": [
+      {
+        "url": "/red-medica/mariana-coca-lezama",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-mariana-coca",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-mariana-coca-lezama",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "mariana-estrada-leon",
+    "nombre": "Mariana",
+    "apellido": "Estrada Leon",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/mariana-estrada-leon",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-mariana-estrada",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-mariana-estrada-leon",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "marisol-ordaz-tapia",
+    "nombre": "Marisol",
+    "apellido": "Ordaz Tapia",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/marisol-ordaz-tapia",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-marisol-ordaz",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-marisol-ordaz-tapia",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "marlenne-barrios-aparicio",
+    "nombre": "Marlenne Yolanda",
+    "apellido": "Barrios Aparicio",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/marlenne-barrios-aparicio",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-marlenne-yolanda-barrios",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-marlenne-barrios-aparicio",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "meritxell-hernandez-rosas",
+    "nombre": "Meritxell",
+    "apellido": "Hernández Rosas",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/meritxell-hernandez-rosas",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-meritxell-hernandez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-meritxell-hernandez-rosas",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "michelle-patricia-loeza-uribe",
+    "nombre": "Michelle Patricia",
+    "apellido": "Loeza Uribe",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/michelle-patricia-loeza-uribe",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-michelle-patricia-loeza",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-michelle-patricia-loeza-uribe",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "milena-contreras-rueda",
+    "nombre": "Milena",
+    "apellido": "Contreras Rueda",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/milena-contreras-rueda",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-milena-contreras",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-milena-contreras-rueda",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "natalia-del-rio-ponce",
+    "nombre": "Natalia",
+    "apellido": "del Rio Ponce",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/natalia-del-rio-ponce",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-natalia-del",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-natalia-del-rio-ponce",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "natalia-valdes-gonzalez",
+    "nombre": "Natalia Elizabeth",
+    "apellido": "Valdes Gonzalez",
+    "titulo": "Dra.",
+    "has_data": true,
+    "urls": [
+      {
+        "url": "/red-medica/natalia-valdes-gonzalez",
+        "status": 200,
+        "ok": true
+      }
+    ],
+    "working_url": "/red-medica/natalia-valdes-gonzalez"
+  },
+  {
+    "slug": "patricia-lopez-ruiz",
+    "nombre": "Patricia",
+    "apellido": "Lopez Ruiz",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/patricia-lopez-ruiz",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-patricia-lopez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-patricia-lopez-ruiz",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "patricia-vega-luna",
+    "nombre": "Patricia",
+    "apellido": "Vega Luna",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/patricia-vega-luna",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-patricia-vega",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-patricia-vega-luna",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "patricia-dolores-diaz-jimenez",
+    "nombre": "Patricia Dolores",
+    "apellido": "Díaz Jiménez",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/patricia-dolores-diaz-jimenez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-patricia-dolores-diaz",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-patricia-dolores-diaz-jimenez",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "penelope-ireri-dominguez-cabanas",
+    "nombre": "Penelope Ireri",
+    "apellido": "Dominguez Cabanas",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/penelope-ireri-dominguez-cabanas",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-penelope-ireri-dominguez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-penelope-ireri-dominguez-cabanas",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "raquel-najem-gonzalez",
+    "nombre": "Raquel",
+    "apellido": "Najem Gonzalez",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/raquel-najem-gonzalez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-raquel-najem",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-raquel-najem-gonzalez",
+        "status": 200,
+        "ok": true
+      }
+    ],
+    "working_url": "/perfil-dra-raquel-najem-gonzalez"
+  },
+  {
+    "slug": "rosa-nunez-rodriguez",
+    "nombre": "Rosa Gabriel",
+    "apellido": "Nunez Rodriguez",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/rosa-nunez-rodriguez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-rosa-gabriel-nunez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-rosa-nunez-rodriguez",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "rosa-maria-vega",
+    "nombre": "Rosa Maria",
+    "apellido": "Vega",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/rosa-maria-vega",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-rosa-maria-vega",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-rosa-maria-vega",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "rosa-marina-esquivel-tellez",
+    "nombre": "Rosa Marina",
+    "apellido": "Esquivel Tellez",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/rosa-marina-esquivel-tellez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-rosa-marina-esquivel",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-rosa-marina-esquivel-tellez",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "rosa-nelida-perez-huerta",
+    "nombre": "Rosa Nélida",
+    "apellido": "Pérez Huerta",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/rosa-nelida-perez-huerta",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-rosa-nelida-perez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-rosa-nelida-perez-huerta",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "selene-calixto-tejeda",
+    "nombre": "Selene Yenuen",
+    "apellido": "Calixto Tejeda",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/selene-calixto-tejeda",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-selene-yenuen-calixto",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-selene-calixto-tejeda",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "sofia-quintana-rojas",
+    "nombre": "Sofia",
+    "apellido": "Quintana Rojas",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/sofia-quintana-rojas",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-sofia-quintana",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-sofia-quintana-rojas",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "sofia-narvaez-chavez",
+    "nombre": "Sofia Mercedes",
+    "apellido": "Narvaez Chavez",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/sofia-narvaez-chavez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-sofia-mercedes-narvaez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-sofia-narvaez-chavez",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "tania-torres-sanchez",
+    "nombre": "Tania",
+    "apellido": "Torres Sánchez",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/tania-torres-sanchez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-tania-torres",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-tania-torres-sanchez",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "yaoliztli-garita-rosa",
+    "nombre": "Yaoliztli Elena",
+    "apellido": "Garita Rosa",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/yaoliztli-garita-rosa",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-yaoliztli-elena-garita",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-yaoliztli-garita-rosa",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "yukiko-harumi-yamasaki-ramos",
+    "nombre": "Yukiko Harumi",
+    "apellido": "Yamasaki Ramos",
+    "titulo": "Dra.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/yukiko-harumi-yamasaki-ramos",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-yukiko-harumi-yamasaki",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-yukiko-harumi-yamasaki-ramos",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "edwin-sanchez-coral",
+    "nombre": "Edwin",
+    "apellido": "Sanchez Coral",
+    "titulo": "Enf.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/edwin-sanchez-coral",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-edwin-sanchez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-edwin-sanchez-coral",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "gabriela-juarez-mejia",
+    "nombre": "Gabriela",
+    "apellido": "Juarez Mejia",
+    "titulo": "Enf.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/gabriela-juarez-mejia",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-gabriela-juarez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-gabriela-juarez-mejia",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "sergio-torres-vazquez",
+    "nombre": "Sergio",
+    "apellido": "Torres Vazquez",
+    "titulo": "Enf. Esp.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/sergio-torres-vazquez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-sergio-torres",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-sergio-torres-vazquez",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "jahanara-gutierrez-velez",
+    "nombre": "Jahanara",
+    "apellido": "Gutiérrez Velez",
+    "titulo": "Jahanara",
+    "has_data": true,
+    "urls": [
+      {
+        "url": "/red-medica/jahanara-gutierrez-velez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-jahanara-gutierrez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-jahanara-gutierrez-velez",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "adriana-rios-campos",
+    "nombre": "Adriana",
+    "apellido": "Rios Campos",
+    "titulo": "Lic.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/adriana-rios-campos",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-adriana-rios",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-adriana-rios-campos",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "andrea-gomez-castillo",
+    "nombre": "Andrea",
+    "apellido": "Gomez Castillo",
+    "titulo": "Lic.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/andrea-gomez-castillo",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-andrea-gomez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-andrea-gomez-castillo",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "carlos-mejia-flores",
+    "nombre": "Carlos",
+    "apellido": "Mejia Flores",
+    "titulo": "Lic.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/carlos-mejia-flores",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-carlos-mejia",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-carlos-mejia-flores",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "edith-garcia-carrasco",
+    "nombre": "Edith",
+    "apellido": "Garcia Carrasco",
+    "titulo": "Lic.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/edith-garcia-carrasco",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-edith-garcia",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-edith-garcia-carrasco",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "karina-paredes-perez",
+    "nombre": "Karina",
+    "apellido": "Paredes Perez",
+    "titulo": "Lic.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/karina-paredes-perez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-karina-paredes",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-karina-paredes-perez",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "laura-hernandez-vega",
+    "nombre": "Laura",
+    "apellido": "Hernandez Vega",
+    "titulo": "Lic.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/laura-hernandez-vega",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-laura-hernandez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-laura-hernandez-vega",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "martha-orozco-diaz",
+    "nombre": "Martha",
+    "apellido": "Orozco Diaz",
+    "titulo": "Lic.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/martha-orozco-diaz",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-martha-orozco",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-martha-orozco-diaz",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "ana-paola-zarate-velazquez",
+    "nombre": "Ana Paola",
+    "apellido": "Zárate Velázquez",
+    "titulo": "LN.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/ana-paola-zarate-velazquez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-ana-paola-zarate",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-ana-paola-zarate-velazquez",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "blanca-cristina-villalobos-flores",
+    "nombre": "Blanca Cristina",
+    "apellido": "Villalobos Flores",
+    "titulo": "LN.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/blanca-cristina-villalobos-flores",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-blanca-cristina-villalobos",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-blanca-cristina-villalobos-flores",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "carmen-janet-bautista-orduno",
+    "nombre": "Carmen Janet",
+    "apellido": "Bautista Orduño",
+    "titulo": "LN.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/carmen-janet-bautista-orduno",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-carmen-janet-bautista",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-carmen-janet-bautista-orduno",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "maria-fernanda-mateos-pastrana",
+    "nombre": "María Fernanda",
+    "apellido": "Mateos Pastrana",
+    "titulo": "LN.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/maria-fernanda-mateos-pastrana",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-maria-fernanda-mateos",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-maria-fernanda-mateos-pastrana",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "maria-jose-mendiola-riestra",
+    "nombre": "María José",
+    "apellido": "Mendiola Riestra",
+    "titulo": "LN.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/maria-jose-mendiola-riestra",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-maria-jose-mendiola",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-maria-jose-mendiola-riestra",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "monica-rodriguez-benitez",
+    "nombre": "Mónica",
+    "apellido": "Rodríguez Benitez",
+    "titulo": "LN.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/monica-rodriguez-benitez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-monica-rodriguez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-monica-rodriguez-benitez",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "monica-raquel-bonilla-castillo",
+    "nombre": "Mónica Raquel",
+    "apellido": "Bonilla Castillo",
+    "titulo": "LN.",
+    "has_data": false,
+    "urls": [
+      {
+        "url": "/red-medica/monica-raquel-bonilla-castillo",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-monica-raquel-bonilla",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dra-monica-raquel-bonilla-castillo",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "maria-del-rocio-mata-castillo",
+    "nombre": "María del Rocío",
+    "apellido": "Mata Castillo",
+    "titulo": "María del Rocío",
+    "has_data": true,
+    "urls": [
+      {
+        "url": "/red-medica/maria-del-rocio-mata-castillo",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-maria-del-rocio-mata",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-maria-del-rocio-mata-castillo",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "miriam-aguila-hernandez",
+    "nombre": "Miriam",
+    "apellido": "Águila Hernández",
+    "titulo": "Miriam",
+    "has_data": true,
+    "urls": [
+      {
+        "url": "/red-medica/miriam-aguila-hernandez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-miriam-aguila",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-miriam-aguila-hernandez",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "nelida-jimenez-gomez-salazar",
+    "nombre": "Nélida",
+    "apellido": "Jiménez Gomez Salazar",
+    "titulo": "Nélida",
+    "has_data": true,
+    "urls": [
+      {
+        "url": "/red-medica/nelida-jimenez-gomez-salazar",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-nelida-jimenez",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-nelida-jimenez-gomez-salazar",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "samantha-franco-mora",
+    "nombre": "Samantha",
+    "apellido": "Franco Mora",
+    "titulo": "Samantha",
+    "has_data": true,
+    "urls": [
+      {
+        "url": "/red-medica/samantha-franco-mora",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-samantha-franco",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-samantha-franco-mora",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  },
+  {
+    "slug": "yenni-samantha-nieves-luis",
+    "nombre": "Yenni Samantha",
+    "apellido": "Nieves Luis",
+    "titulo": "Yenni Samantha",
+    "has_data": true,
+    "urls": [
+      {
+        "url": "/red-medica/yenni-samantha-nieves-luis",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-yenni-samantha-nieves",
+        "status": 404,
+        "ok": false
+      },
+      {
+        "url": "/perfil-dr-yenni-samantha-nieves-luis",
+        "status": 404,
+        "ok": false
+      }
+    ],
+    "working_url": null
+  }
+]

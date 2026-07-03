@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
+    "cheerio": "^1.2.0",
     "jsonwebtoken": "^9.0.3",
     "nuxt": "^4.4.8",
     "oxc-parser": "^0.137.0",
