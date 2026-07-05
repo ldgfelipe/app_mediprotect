@@ -30,7 +30,7 @@ function cerrarSesion() {
         <NuxtLink to="/"><img src="https://imagedelivery.net/xaKlCos5cTg_1RWzIu_h-A/0a041066-aa69-4fe5-07ed-50ee74875100/public" alt="MediProtect" class="logo-sm" /></NuxtLink>
         <nav>
           <NuxtLink to="/dashboard/paciente">Inicio</NuxtLink>
-          <NuxtLink to="/medicos">Buscar Médicos</NuxtLink>
+          <a href="https://www.mediprotect.com.mx/red-medica" target="_blank">Buscar Médicos</a>
           <NuxtLink to="/mis-citas">Mis Citas</NuxtLink>
           <NuxtLink to="/paquetes">Mi Plan</NuxtLink>
         </nav>
@@ -54,7 +54,7 @@ function cerrarSesion() {
         <div class="card">
           <h3>Buscar Especialistas</h3>
           <p>Encuentra médicos en nuestra red y agenda tu consulta.</p>
-          <NuxtLink to="/medicos" class="btn-card">Buscar</NuxtLink>
+          <a href="https://www.mediprotect.com.mx/red-medica" target="_blank" class="btn-card">Buscar</a>
         </div>
         <div class="card">
           <h3>Mis Citas</h3>

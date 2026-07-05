@@ -80,7 +80,7 @@ function cerrarSesion() {
         <NuxtLink to="/"><img src="https://imagedelivery.net/xaKlCos5cTg_1RWzIu_h-A/0a041066-aa69-4fe5-07ed-50ee74875100/public" alt="MediProtect" class="logo-sm" /></NuxtLink>
         <nav>
           <NuxtLink to="/dashboard/paciente">Inicio</NuxtLink>
-          <NuxtLink to="/medicos">Buscar Médicos</NuxtLink>
+          <a href="https://www.mediprotect.com.mx/red-medica" target="_blank">Buscar Médicos</a>
           <NuxtLink to="/mis-citas" class="router-link-active">Mis Citas</NuxtLink>
         </nav>
         <div class="user-info">
@@ -99,7 +99,7 @@ function cerrarSesion() {
 
       <div v-else-if="citas.length === 0" class="empty">
         <p>No tienes citas agendadas.</p>
-        <NuxtLink to="/medicos" class="btn-primary" style="display:inline-block;margin-top:1rem">Buscar Médicos</NuxtLink>
+        <a href="https://www.mediprotect.com.mx/red-medica" target="_blank" class="btn-primary" style="display:inline-block;margin-top:1rem">Buscar Médicos</a>
       </div>
 
       <div v-else class="citas-list">
