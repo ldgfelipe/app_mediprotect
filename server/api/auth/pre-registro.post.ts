@@ -66,7 +66,7 @@ export default defineEventHandler(async (event) => {
   )
 
   const m = medico.rows[0]
-  const whatsappNum = m.telefono || process.env.WHATSAPP_NUMBER || '521234567890'
+  const whatsappNum = m.whatsapp || m.telefono || process.env.WHATSAPP_NUMBER || '521234567890'
   const telefonoLimpio = whatsappNum.replace(/[^0-9]/g, '')
   const mensaje = encodeURIComponent(
     `Hola Dr. ${m.nombre} ${m.apellido}, soy ${nombre}, folio ${folio}, quiero agendar mi cita.`
