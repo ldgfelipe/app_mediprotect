@@ -10,9 +10,26 @@ const citaSeleccionada = ref(null)
 const bitacora = ref([])
 const mensajesWA = ref([])
 const showModal = ref(false)
-const showWA = ref(false)
+const showNuevaCita = ref(false)
 const notaText = ref('')
 const newMsg = ref({ remitente: '', destinatario: '', telefono: '', mensaje: '' })
+
+// Nueva cita form
+const nuevaCita = ref({
+  wa_text: '',
+  paciente_search: '',
+  medico_search: '',
+  fecha: '',
+  hora: '',
+  notas: '',
+})
+const pacientesSearch = ref([])
+const medicosSearch = ref([])
+const pacienteSeleccionado = ref(null)
+const medicoSeleccionado = ref(null)
+const creandoCita = ref(false)
+const errorCita = ref('')
+const parseando = ref(false)
 
 onMounted(() => {
   const saved = localStorage.getItem('usuario')
@@ -27,20 +44,126 @@ async function cargarCitas() {
     const qs = new URLSearchParams()
     if (filtroEstado.value) qs.set('estado', filtroEstado.value)
     if (busqueda.value) qs.set('search', busqueda.value)
-    const { data } = await useFetch(`/api/asistente/citas?${qs}`, {
-      headers: { Authorization: `Bearer ${useCookie('token').value}` }
+    const { data } = await useFetch('/api/asistente/citas?' + qs.toString(), {
+      headers: { Authorization: 'Bearer ' + useCookie('token').value }
     })
     citas.value = data.value?.citas || []
   } catch (e) { console.error(e) }
   loading.value = false
 }
 
+// Parse WhatsApp message
+async function parsearMensaje() {
+  const text = nuevaCita.value.wa_text
+  if (!text.trim()) return
+  parseando.value = true
+  errorCita.value = ''
+
+  // Extract doctor name
+  const medicoMatch = text.match(/médico\s+(Dr\.?\s+.+?)(?:\.|\n|$)/i) || text.match(/doctor\s+(Dr\.?\s+.+?)(?:\.|\n|$)/i)
+  if (medicoMatch) {
+    nuevaCita.value.medico_search = medicoMatch[1].trim()
+    await buscarMedicos()
+  }
+
+  // Extract patient ID
+  const idMatch = text.match(/ID\s+de\s+usuario\s+es:\s*([a-f0-9-]+)/i)
+  if (idMatch) {
+    nuevaCita.value.paciente_search = idMatch[1].trim()
+    await buscarPacientesById()
+  } else {
+    // Try name
+    const nombreMatch = text.match(/nombre\s+es:\s*(.+?)(?:\.|\n|$)/i)
+    if (nombreMatch) {
+      nuevaCita.value.paciente_search = nombreMatch[1].trim()
+      await buscarPacientes()
+    }
+  }
+  parseando.value = false
+}
+
+async function buscarPacientesById() {
+  if (!nuevaCita.value.paciente_search.trim()) { pacientesSearch.value = []; return }
+  try {
+    const data = await $fetch('/api/asistente/pacientes?search=' + encodeURIComponent(nuevaCita.value.paciente_search), {
+      headers: { Authorization: 'Bearer ' + useCookie('token').value }
+    })
+    pacientesSearch.value = data.pacientes || []
+    if (pacientesSearch.value.length === 1) {
+      seleccionarPaciente(pacientesSearch.value[0])
+    }
+  } catch (e) { pacientesSearch.value = [] }
+}
+
+async function buscarPacientes() {
+  if (!nuevaCita.value.paciente_search.trim()) { pacientesSearch.value = []; return }
+  try {
+    const data = await $fetch('/api/asistente/pacientes?search=' + encodeURIComponent(nuevaCita.value.paciente_search), {
+      headers: { Authorization: 'Bearer ' + useCookie('token').value }
+    })
+    pacientesSearch.value = data.pacientes || []
+  } catch (e) { pacientesSearch.value = [] }
+}
+
+async function buscarMedicos() {
+  if (!nuevaCita.value.medico_search.trim()) { medicosSearch.value = []; return }
+  try {
+    const data = await $fetch('/api/medicos?search=' + encodeURIComponent(nuevaCita.value.medico_search))
+    medicosSearch.value = data.medicos || []
+    if (medicosSearch.value.length === 1) {
+      seleccionarMedico(medicosSearch.value[0])
+    }
+  } catch (e) { medicosSearch.value = [] }
+}
+
+function seleccionarPaciente(p) {
+  pacienteSeleccionado.value = { ...p }
+  nuevaCita.value.paciente_search = p.nombre + ' ' + p.apellido
+  pacientesSearch.value = []
+}
+
+function seleccionarMedico(m) {
+  medicoSeleccionado.value = { ...m }
+  nuevaCita.value.medico_search = (m.titulo || 'Dr.') + ' ' + m.nombre + ' ' + m.apellido
+  medicosSearch.value = []
+}
+
+async function crearCita() {
+  errorCita.value = ''
+  if (!pacienteSeleccionado.value || !medicoSeleccionado.value || !nuevaCita.value.fecha || !nuevaCita.value.hora) {
+    errorCita.value = 'Selecciona paciente, médico, fecha y hora'
+    return
+  }
+  creandoCita.value = true
+  try {
+    const fecha_hora = nuevaCita.value.fecha + 'T' + nuevaCita.value.hora + ':00'
+    await $fetch('/api/asistente/citas', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + useCookie('token').value },
+      body: {
+        id_paciente: pacienteSeleccionado.value.id,
+        id_medico: medicoSeleccionado.value.id,
+        fecha_hora,
+        notas_asistente: nuevaCita.value.notas || nuevaCita.value.wa_text,
+      }
+    })
+    showNuevaCita.value = false
+    nuevaCita.value = { wa_text: '', paciente_search: '', medico_search: '', fecha: '', hora: '', notas: '' }
+    pacienteSeleccionado.value = null
+    medicoSeleccionado.value = null
+    await cargarCitas()
+  } catch (e) {
+    errorCita.value = e.data?.message || 'Error al crear cita'
+  }
+  creandoCita.value = false
+}
+
 async function abrirCita(cita) {
   citaSeleccionada.value = cita
   showModal.value = true
   try {
-    const { data } = await useFetch(`/api/asistente/citas/${cita.id}/bitacora`, {
-      headers: { Authorization: `Bearer ${useCookie('token').value}` }
+    const { data } = await useFetch('/api/asistente/citas/' + cita.id + '/bitacora', {
+      headers: { Authorization: 'Bearer ' + useCookie('token').value }
     })
     bitacora.value = data.value?.bitacora || []
     mensajesWA.value = data.value?.mensajes_whatsapp || []
@@ -50,9 +173,9 @@ async function abrirCita(cita) {
 async function cambiarEstado(estado, descripcion) {
   if (!citaSeleccionada.value) return
   try {
-    await $fetch(`/api/asistente/citas/${citaSeleccionada.value.id}/estado`, {
+    await $fetch('/api/asistente/citas/' + citaSeleccionada.value.id + '/estado', {
       method: 'PUT',
-      headers: { Authorization: `Bearer ${useCookie('token').value}` },
+      headers: { Authorization: 'Bearer ' + useCookie('token').value },
       body: { estado, descripcion }
     })
     await abrirCita(citaSeleccionada.value)
@@ -63,9 +186,9 @@ async function cambiarEstado(estado, descripcion) {
 async function agregarNota() {
   if (!notaText.value.trim() || !citaSeleccionada.value) return
   try {
-    await $fetch(`/api/asistente/citas/${citaSeleccionada.value.id}/estado`, {
+    await $fetch('/api/asistente/citas/' + citaSeleccionada.value.id + '/estado', {
       method: 'PUT',
-      headers: { Authorization: `Bearer ${useCookie('token').value}` },
+      headers: { Authorization: 'Bearer ' + useCookie('token').value },
       body: { estado: citaSeleccionada.value.estado, descripcion: notaText.value }
     })
     notaText.value = ''
@@ -78,7 +201,7 @@ async function registrarMensaje() {
   try {
     await $fetch('/api/asistente/whatsapp', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${useCookie('token').value}` },
+      headers: { Authorization: 'Bearer ' + useCookie('token').value },
       body: { id_cita: citaSeleccionada.value?.id, ...newMsg.value }
     })
     newMsg.value = { remitente: '', destinatario: '', telefono: '', mensaje: '' }
@@ -87,7 +210,7 @@ async function registrarMensaje() {
 }
 
 function abrirWA(tel) {
-  window.open(`https://wa.me/${tel.replace(/[^0-9]/g, '')}`, '_blank')
+  window.open('https://wa.me/' + tel.replace(/[^0-9]/g, ''), '_blank')
 }
 
 function cerrarSesion() {
@@ -118,7 +241,10 @@ function estadoColor(estado) {
     </header>
 
     <main class="content">
-      <h1>Gestión de Citas</h1>
+      <div class="content-header">
+        <h1>Gestión de Citas</h1>
+        <button @click="showNuevaCita = true" class="btn-primary">+ Nueva Cita</button>
+      </div>
 
       <!-- Filtros -->
       <div class="filters">
@@ -136,7 +262,6 @@ function estadoColor(estado) {
         <button @click="cargarCitas" class="btn-secondary">Actualizar</button>
       </div>
 
-      <!-- Lista de citas -->
       <div v-if="loading" class="loading">Cargando...</div>
       <div v-else-if="citas.length === 0" class="empty">No hay citas con esos filtros.</div>
 
@@ -160,14 +285,104 @@ function estadoColor(estado) {
       </div>
     </main>
 
-    <!-- Modal detalle de cita -->
+    <!-- Modal NUEVA CITA -->
+    <div v-if="showNuevaCita" class="modal-overlay" @click.self="showNuevaCita = false">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>Nueva Cita (desde WhatsApp)</h2>
+          <button @click="showNuevaCita = false" class="close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div v-if="errorCita" class="error">{{ errorCita }}</div>
+
+          <!-- Paso 1: Pegar mensaje de WhatsApp -->
+          <div class="field">
+            <label>Mensaje de WhatsApp (copia y pega)</label>
+            <textarea v-model="nuevaCita.wa_text" rows="5" placeholder="Pega aquí el mensaje que llegó por WhatsApp..."></textarea>
+            <button @click="parsearMensaje" :disabled="parseando || !nuevaCita.wa_text.trim()" class="btn-parse">
+              {{ parseando ? 'Analizando...' : '🔍 Analizar mensaje' }}
+            </button>
+          </div>
+
+          <!-- Paso 2: Paciente -->
+          <div class="field">
+            <label>Paciente (ID o nombre)</label>
+            <input v-model="nuevaCita.paciente_search" placeholder="ID del paciente o nombre..." @input="buscarPacientes" />
+            <div v-if="pacientesSearch.length > 1 && !pacienteSeleccionado" class="search-results">
+              <div v-for="p in pacientesSearch" :key="p.id" class="search-item" @click="seleccionarPaciente(p)">
+                <strong>{{ p.nombre }} {{ p.apellido }}</strong>
+                <span>{{ p.telefono || p.email }}</span>
+              </div>
+            </div>
+            <div v-if="pacienteSeleccionado" class="selected-card">
+              <div class="selected-header">
+                <span class="check">✓</span>
+                <strong>{{ pacienteSeleccionado.nombre }} {{ pacienteSeleccionado.apellido }}</strong>
+                <button @click="pacienteSeleccionado = null; nuevaCita.paciente_search = ''" class="btn-remove">✕</button>
+              </div>
+              <div class="selected-details">
+                <span v-if="pacienteSeleccionado.telefono">📱 {{ pacienteSeleccionado.telefono }}</span>
+                <span v-if="pacienteSeleccionado.email">✉️ {{ pacienteSeleccionado.email }}</span>
+                <span v-if="pacienteSeleccionado.id">🔑 ID: {{ pacienteSeleccionado.id.substring(0,8) }}...</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Paso 3: Médico -->
+          <div class="field">
+            <label>Médico</label>
+            <input v-model="nuevaCita.medico_search" placeholder="Nombre del médico..." @input="buscarMedicos" />
+            <div v-if="medicosSearch.length > 1 && !medicoSeleccionado" class="search-results">
+              <div v-for="m in medicosSearch" :key="m.id" class="search-item" @click="seleccionarMedico(m)">
+                <strong>{{ m.titulo || 'Dr.' }} {{ m.nombre }} {{ m.apellido }}</strong>
+                <span>{{ m.especialidad_nombre || m.subespecialidad }}</span>
+              </div>
+            </div>
+            <div v-if="medicoSeleccionado" class="selected-card">
+              <div class="selected-header">
+                <span class="check">✓</span>
+                <strong>{{ medicoSeleccionado.titulo || 'Dr.' }} {{ medicoSeleccionado.nombre }} {{ medicoSeleccionado.apellido }}</strong>
+                <button @click="medicoSeleccionado = null; nuevaCita.medico_search = ''" class="btn-remove">✕</button>
+              </div>
+              <div class="selected-details">
+                <span v-if="medicoSeleccionado.especialidad_nombre">🩺 {{ medicoSeleccionado.especialidad_nombre }}</span>
+                <span v-if="medicoSeleccionado.subespecialidad">| {{ medicoSeleccionado.subespecialidad }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Paso 4: Fecha y hora -->
+          <div class="field-row">
+            <div class="field">
+              <label>Fecha</label>
+              <input v-model="nuevaCita.fecha" type="date" />
+            </div>
+            <div class="field">
+              <label>Hora</label>
+              <input v-model="nuevaCita.hora" type="time" />
+            </div>
+          </div>
+
+          <!-- Notas -->
+          <div class="field">
+            <label>Notas (opcional)</label>
+            <textarea v-model="nuevaCita.notas" placeholder="Notas adicionales..." rows="2"></textarea>
+          </div>
+
+          <button @click="crearCita" :disabled="creandoCita || !pacienteSeleccionado || !medicoSeleccionado || !nuevaCita.fecha || !nuevaCita.hora" class="btn-primary full">
+            {{ creandoCita ? 'Creando...' : 'Crear Cita' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal DETALLE CITA -->
     <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
       <div class="modal">
         <div class="modal-header">
           <h2>Detalle de Cita</h2>
           <button @click="showModal = false" class="close">&times;</button>
         </div>
-
         <div class="modal-body" v-if="citaSeleccionada">
           <div class="info-grid">
             <div><strong>Estado:</strong> <span class="estado-badge" :style="{ background: estadoColor(citaSeleccionada.estado) }">{{ citaSeleccionada.estado }}</span></div>
@@ -182,7 +397,6 @@ function estadoColor(estado) {
             </div>
           </div>
 
-          <!-- Acciones -->
           <div class="acciones">
             <h3>Acciones</h3>
             <div class="btn-group">
@@ -194,7 +408,6 @@ function estadoColor(estado) {
             </div>
           </div>
 
-          <!-- Nota -->
           <div class="nota-section">
             <h3>Agregar Nota</h3>
             <div class="nota-input">
@@ -203,12 +416,11 @@ function estadoColor(estado) {
             </div>
           </div>
 
-          <!-- Bitácora -->
           <div class="bitacora-section">
             <h3>Bitácora de Cambios</h3>
             <div v-for="b in bitacora" :key="b.id" class="bitacora-entry">
               <span class="bit-time">{{ new Date(b.created_at).toLocaleString('es-MX') }}</span>
-              <span class="bit-user">{{ b.tipo_usuario }}{{ b.asistente_nombre ? ` (${b.asistente_nombre})` : '' }}</span>
+              <span class="bit-user">{{ b.tipo_usuario }}{{ b.asistente_nombre ? ' (' + b.asistente_nombre + ')' : '' }}</span>
               <span class="bit-action">{{ b.accion }}</span>
               <span v-if="b.estado_anterior" class="bit-from">{{ b.estado_anterior }} →</span>
               <span v-if="b.estado_nuevo" class="bit-to">{{ b.estado_nuevo }}</span>
@@ -216,7 +428,6 @@ function estadoColor(estado) {
             </div>
           </div>
 
-          <!-- WhatsApp log -->
           <div class="wa-section">
             <h3>Mensajes WhatsApp</h3>
             <div v-for="wm in mensajesWA" :key="wm.id" class="wa-entry">
@@ -251,7 +462,8 @@ nav a.active { background: #0984e3; color: white; }
 .btn-logout { background: none; border: 1px solid #dfe6e9; padding: 0.3rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
 
 .content { max-width: 1200px; margin: 1.5rem auto; padding: 0 1rem; }
-h1 { font-size: 1.5rem; color: #2d3436; margin-bottom: 1rem; }
+.content-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+h1 { font-size: 1.5rem; color: #2d3436; }
 
 .filters { display: flex; gap: 0.8rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
 .filters input { flex: 1; min-width: 200px; padding: 0.6rem 1rem; border: 1px solid #dfe6e9; border-radius: 8px; }
@@ -268,13 +480,34 @@ h1 { font-size: 1.5rem; color: #2d3436; margin-bottom: 1rem; }
 .phone { font-size: 0.8rem; color: #25d366; margin-left: 0.5rem; cursor: pointer; }
 
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-.modal { background: white; border-radius: 12px; width: 90%; max-width: 800px; max-height: 90vh; overflow-y: auto; }
+.modal { background: white; border-radius: 12px; width: 90%; max-width: 700px; max-height: 90vh; overflow-y: auto; }
 .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; border-bottom: 1px solid #e0e0e0; }
 .modal-header h2 { font-size: 1.2rem; margin: 0; }
 .close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #636e72; }
 .modal-body { padding: 1.5rem; }
-.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
-.link-wa { color: #25d366; margin-left: 0.5rem; cursor: pointer; font-size: 0.85rem; text-decoration: underline; }
+
+.field { margin-bottom: 1rem; position: relative; }
+.field label { display: block; font-size: 0.85rem; font-weight: 600; color: #2d3436; margin-bottom: 0.3rem; }
+.field input, .field textarea { width: 100%; padding: 0.7rem 1rem; border: 1px solid #dfe6e9; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box; font-family: inherit; }
+.field textarea { resize: vertical; }
+.field-row { display: flex; gap: 1rem; }
+.field-row .field { flex: 1; }
+.selected { color: #00b894; font-size: 0.85rem; margin: 0.3rem 0 0; }
+.selected-card { background: #f0fff4; border: 1px solid #00b894; border-radius: 8px; padding: 0.8rem 1rem; margin-top: 0.5rem; }
+.selected-header { display: flex; align-items: center; gap: 0.5rem; }
+.selected-header .check { color: #00b894; font-weight: bold; font-size: 1.1rem; }
+.selected-header strong { flex: 1; color: #2d3436; }
+.btn-remove { background: none; border: none; color: #d63031; cursor: pointer; font-size: 1rem; padding: 0.2rem; }
+.selected-details { display: flex; gap: 1rem; margin-top: 0.4rem; font-size: 0.82rem; color: #636e72; flex-wrap: wrap; }
+
+.btn-parse { background: #fdcb6e; color: #2d3436; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; margin-top: 0.5rem; font-weight: 600; }
+.btn-parse:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.search-results { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #dfe6e9; border-radius: 8px; max-height: 200px; overflow-y: auto; z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.search-item { padding: 0.6rem 1rem; cursor: pointer; border-bottom: 1px solid #f0f2f5; }
+.search-item:hover { background: #f8f9fa; }
+.search-item strong { display: block; font-size: 0.9rem; }
+.search-item span { font-size: 0.8rem; color: #636e72; }
 
 .acciones { margin-bottom: 1.5rem; }
 .acciones h3, .nota-section h3, .bitacora-section h3, .wa-section h3 { font-size: 1rem; margin-bottom: 0.8rem; color: #2d3436; }
@@ -308,7 +541,13 @@ h1 { font-size: 1.5rem; color: #2d3436; margin-bottom: 1rem; }
 .wa-new input { padding: 0.5rem 0.8rem; border: 1px solid #dfe6e9; border-radius: 6px; font-size: 0.85rem; }
 .wa-new input:nth-child(4) { grid-column: 1 / -1; }
 
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+.link-wa { color: #25d366; margin-left: 0.5rem; cursor: pointer; font-size: 0.85rem; text-decoration: underline; }
+
 .btn-primary { background: #0984e3; color: white; border: none; padding: 0.7rem 1.5rem; border-radius: 8px; cursor: pointer; font-size: 0.95rem; }
+.btn-primary.full { width: 100%; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-secondary { background: white; color: #0984e3; border: 1px solid #0984e3; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
+.error { background: #ffeaa7; color: #d63031; padding: 0.6rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 1rem; }
 .loading, .empty { text-align: center; padding: 2rem; color: #636e72; }
 </style>
