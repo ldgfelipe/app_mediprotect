@@ -60,20 +60,20 @@ async function parsearMensaje() {
   errorCita.value = ''
 
   // Extract doctor name
-  const medicoMatch = text.match(/médico\s+(Dr\.?\s+.+?)(?:\.|\n|$)/i) || text.match(/doctor\s+(Dr\.?\s+.+?)(?:\.|\n|$)/i)
+  const medicoMatch = text.match(/médico\s+([^\n.]+)/i) || text.match(/doctor\s+([^\n.]+)/i) || text.match(/con\s+(?:el\s+)?(?:médico|doctor)\s+([^\n.]+)/i)
   if (medicoMatch) {
-    nuevaCita.value.medico_search = medicoMatch[1].trim()
+    nuevaCita.value.medico_search = medicoMatch[1].trim().replace(/^(Dr\.?\s*|Dra\.?\s*)/i, '')
     await buscarMedicos()
   }
 
   // Extract patient ID
-  const idMatch = text.match(/ID\s+de\s+usuario\s+es:\s*([a-f0-9-]+)/i)
+  const idMatch = text.match(/ID\s+de\s+usuario\s+es:\s*([a-f0-9-]+)/i) || text.match(/ID\s*[:=]\s*([a-f0-9-]+)/i)
   if (idMatch) {
     nuevaCita.value.paciente_search = idMatch[1].trim()
     await buscarPacientesById()
   } else {
     // Try name
-    const nombreMatch = text.match(/nombre\s+es:\s*(.+?)(?:\.|\n|$)/i)
+    const nombreMatch = text.match(/nombre\s+es:\s*(.+?)(?:\.|\n|$)/i) || text.match(/nombre\s*[:=]\s*(.+?)(?:\.|\n|$)/i)
     if (nombreMatch) {
       nuevaCita.value.paciente_search = nombreMatch[1].trim()
       await buscarPacientes()
@@ -289,7 +289,7 @@ function estadoColor(estado) {
     <div v-if="showNuevaCita" class="modal-overlay" @click.self="showNuevaCita = false">
       <div class="modal">
         <div class="modal-header">
-          <h2>Nueva Cita (desde WhatsApp)</h2>
+          <h2>Alta Cita (desde WhatsApp)</h2>
           <button @click="showNuevaCita = false" class="close">&times;</button>
         </div>
         <div class="modal-body">
@@ -308,7 +308,7 @@ function estadoColor(estado) {
           <div class="field">
             <label>Paciente (ID o nombre)</label>
             <input v-model="nuevaCita.paciente_search" placeholder="ID del paciente o nombre..." @input="buscarPacientes" />
-            <div v-if="pacientesSearch.length > 1 && !pacienteSeleccionado" class="search-results">
+            <div v-if="pacientesSearch.length > 0 && !pacienteSeleccionado" class="search-results">
               <div v-for="p in pacientesSearch" :key="p.id" class="search-item" @click="seleccionarPaciente(p)">
                 <strong>{{ p.nombre }} {{ p.apellido }}</strong>
                 <span>{{ p.telefono || p.email }}</span>
@@ -332,7 +332,7 @@ function estadoColor(estado) {
           <div class="field">
             <label>Médico</label>
             <input v-model="nuevaCita.medico_search" placeholder="Nombre del médico..." @input="buscarMedicos" />
-            <div v-if="medicosSearch.length > 1 && !medicoSeleccionado" class="search-results">
+            <div v-if="medicosSearch.length > 0 && !medicoSeleccionado" class="search-results">
               <div v-for="m in medicosSearch" :key="m.id" class="search-item" @click="seleccionarMedico(m)">
                 <strong>{{ m.titulo || 'Dr.' }} {{ m.nombre }} {{ m.apellido }}</strong>
                 <span>{{ m.especialidad_nombre || m.subespecialidad }}</span>
