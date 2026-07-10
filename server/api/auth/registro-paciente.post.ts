@@ -1,8 +1,9 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
+import { getPool } from '#server/utils/db'
 
 export default defineEventHandler(async (event) => {
-  const { nombre, apellido, email, password, telefono, fecha_nacimiento, genero, direccion } = await readBody(event)
+  const { nombre, apellido, email, password, telefono, fecha_nacimiento, genero, direccion, id_paquete } = await readBody(event)
 
   const pool = getPool()
   const existing = await pool.query('SELECT id FROM pacientes WHERE email = $1', [email])
@@ -19,6 +20,26 @@ export default defineEventHandler(async (event) => {
   )
 
   const paciente = result.rows[0]
+
+  // Assign package if provided
+  if (id_paquete) {
+    await pool.query(
+      `INSERT INTO paciente_paquete (id_paciente, id_paquete, fecha_inicio, estado)
+       VALUES ($1, $2, NOW(), 'activo')`,
+      [paciente.id, id_paquete]
+    )
+  } else {
+    // Default to Básico
+    const basico = await pool.query("SELECT id FROM paquetes WHERE slug = 'basico' AND activo = true LIMIT 1")
+    if (basico.rows.length > 0) {
+      await pool.query(
+        `INSERT INTO paciente_paquete (id_paciente, id_paquete, fecha_inicio, estado)
+         VALUES ($1, $2, NOW(), 'activo')`,
+        [paciente.id, basico.rows[0].id]
+      )
+    }
+  }
+
   const token = jwt.sign(
     { id: paciente.id, email: paciente.email, tipo: 'paciente' },
     process.env.JWT_SECRET || 'default_secret',
