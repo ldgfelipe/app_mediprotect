@@ -3,9 +3,10 @@ export default defineEventHandler(async (event) => {
   const pool = getPool()
 
   let sql = `
-    SELECT m.id, m.nombre, m.apellido, m.cedula_profesional, m.consultorio_direccion,
+    SELECT m.id, m.nombre, m.apellido, m.titulo, m.cedula_profesional, m.consultorio_direccion,
            m.consultorio_ciudad, m.consultorio_estado, m.bio, m.foto_url, m.score_confianza,
-           e.nombre as especialidad, e.id as especialidad_id
+           e.nombre as especialidad_nombre, e.id as especialidad_id,
+           m.subespecialidad
     FROM medicos m
     JOIN especialidades e ON e.id = m.id_especialidad
     WHERE m.activo = true
@@ -26,9 +27,9 @@ export default defineEventHandler(async (event) => {
     params.push(`%${query.estado}%`)
   }
   if (query.search) {
-    sql += ` AND (LOWER(m.nombre) LIKE LOWER($${idx++}) OR LOWER(m.apellido) LIKE LOWER($${idx++}) OR LOWER(m.bio) LIKE LOWER($${idx++}))`
+    sql += ` AND (LOWER(m.nombre) LIKE LOWER($${idx++}) OR LOWER(m.apellido) LIKE LOWER($${idx++}) OR LOWER(m.bio) LIKE LOWER($${idx++}) OR m.id::text ILIKE $${idx++})`
     const s = `%${query.search}%`
-    params.push(s, s, s)
+    params.push(s, s, s, s)
   }
 
   sql += ' ORDER BY m.score_confianza DESC, m.nombre ASC'

@@ -26,7 +26,7 @@ export default defineEventHandler(async (event) => {
   const params = []
 
   if (search) {
-    sql += ' WHERE nombre ILIKE $1 OR apellido ILIKE $1 OR email ILIKE $1 OR telefono ILIKE $1'
+    sql += ' WHERE nombre ILIKE $1 OR apellido ILIKE $1 OR email ILIKE $1 OR telefono ILIKE $1 OR id::text ILIKE $1'
     params.push('%' + search + '%')
   }
 

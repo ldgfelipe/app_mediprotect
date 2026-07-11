@@ -102,6 +102,9 @@ async function buscarPacientes() {
       headers: { Authorization: 'Bearer ' + useCookie('token').value }
     })
     pacientesSearch.value = data.pacientes || []
+    if (pacientesSearch.value.length === 1) {
+      seleccionarPaciente(pacientesSearch.value[0])
+    }
   } catch (e) { pacientesSearch.value = [] }
 }
 
@@ -335,7 +338,7 @@ function estadoColor(estado) {
             <div v-if="medicosSearch.length > 0 && !medicoSeleccionado" class="search-results">
               <div v-for="m in medicosSearch" :key="m.id" class="search-item" @click="seleccionarMedico(m)">
                 <strong>{{ m.titulo || 'Dr.' }} {{ m.nombre }} {{ m.apellido }}</strong>
-                <span>{{ m.especialidad_nombre || m.subespecialidad }}</span>
+                <span>{{ m.especialidad_nombre || m.subespecialidad || m.especialidad }}</span>
               </div>
             </div>
             <div v-if="medicoSeleccionado" class="selected-card">
