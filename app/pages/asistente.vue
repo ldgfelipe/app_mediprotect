@@ -374,7 +374,7 @@ function estadoColor(estado) {
             </div>
 
             <div class="btn-row">
-              <button @click="siguientePaso" class="btn-primary" :disabled="!pacienteSeleccionado">Siguiente: Médico →</button>
+              <button @click="siguientePaso" class="btn-primary">Siguiente: Médico →</button>
             </div>
           </div>
 
@@ -406,7 +406,7 @@ function estadoColor(estado) {
 
             <div class="btn-row">
               <button @click="pasoAnterior" class="btn-secondary">← Paciente</button>
-              <button @click="siguientePaso" class="btn-primary" :disabled="!medicoSeleccionado">Siguiente: Fecha →</button>
+              <button @click="siguientePaso" class="btn-primary">Siguiente: Fecha →</button>
             </div>
           </div>
 
