@@ -158,10 +158,9 @@ function seleccionarMedico(m) {
 
 async function crearCita() {
   errorCita.value = ''
-  if (!pacienteSeleccionado.value || !medicoSeleccionado.value || !nuevaCita.value.fecha || !nuevaCita.value.hora) {
-    errorCita.value = 'Selecciona paciente, médico, fecha y hora'
-    return
-  }
+  if (!pacienteSeleccionado.value) { errorCita.value = 'Selecciona un paciente en el paso 1'; pasoActual.value = 1; return }
+  if (!medicoSeleccionado.value) { errorCita.value = 'Selecciona un médico en el paso 2'; pasoActual.value = 2; return }
+  if (!nuevaCita.value.fecha || !nuevaCita.value.hora) { errorCita.value = 'Selecciona fecha y hora'; return }
   creandoCita.value = true
   try {
     const fecha_hora = nuevaCita.value.fecha + 'T' + nuevaCita.value.hora + ':00'
@@ -349,9 +348,8 @@ function estadoColor(estado) {
               </button>
             </div>
 
-            <!-- Búsqueda manual de paciente -->
             <div class="field">
-              <label>¿No tienes mensaje? Busca el paciente manualmente</label>
+              <label>Buscar paciente manualmente</label>
               <input v-model="nuevaCita.paciente_search" placeholder="Nombre, apellido o UUID del paciente..." @input="buscarPacientes" />
               <div v-if="pacientesSearch.length > 0 && !pacienteSeleccionado" class="search-results">
                 <div v-for="p in pacientesSearch" :key="p.id" class="search-item" @click="seleccionarPaciente(p)">
@@ -361,7 +359,6 @@ function estadoColor(estado) {
               </div>
             </div>
 
-            <!-- Paciente encontrado -->
             <div v-if="pacienteSeleccionado" class="selected-card">
               <div class="selected-header">
                 <span class="check">✓</span>
@@ -373,18 +370,19 @@ function estadoColor(estado) {
                     <span v-if="pacienteSeleccionado.id">🔑 {{ pacienteSeleccionado.id.substring(0,8) }}...</span>
                   </div>
                 </div>
-                <button @click="pacienteSeleccionado = null; pasoActual = 1" class="btn-remove">✕</button>
               </div>
             </div>
 
-            <button v-if="pacienteSeleccionado" @click="siguientePaso" class="btn-primary full">Continuar →</button>
+            <div class="btn-row">
+              <button @click="siguientePaso" class="btn-primary" :disabled="!pacienteSeleccionado">Siguiente: Médico →</button>
+            </div>
           </div>
 
           <!-- PASO 2: Médico -->
           <div v-if="pasoActual === 2">
             <div class="field">
               <label>Buscar médico</label>
-              <input v-model="nuevaCita.medico_search" placeholder="Nombre del médico..." @input="buscarMedicos" autofocus />
+              <input v-model="nuevaCita.medico_search" placeholder="Nombre del médico..." @input="buscarMedicos" />
               <div v-if="medicosSearch.length > 0 && !medicoSeleccionado" class="search-results">
                 <div v-for="m in medicosSearch" :key="m.id" class="search-item" @click="seleccionarMedico(m)">
                   <strong>{{ m.titulo || 'Dr.' }} {{ m.nombre }} {{ m.apellido }}</strong>
@@ -393,7 +391,6 @@ function estadoColor(estado) {
               </div>
             </div>
 
-            <!-- Médico seleccionado -->
             <div v-if="medicoSeleccionado" class="selected-card">
               <div class="selected-header">
                 <span class="check">✓</span>
@@ -404,27 +401,27 @@ function estadoColor(estado) {
                     <span v-if="medicoSeleccionado.subespecialidad">| {{ medicoSeleccionado.subespecialidad }}</span>
                   </div>
                 </div>
-                <button @click="medicoSeleccionado = null; pasoActual = 2" class="btn-remove">✕</button>
               </div>
             </div>
 
             <div class="btn-row">
-              <button @click="pasoAnterior" class="btn-secondary">← Atrás</button>
-              <button v-if="medicoSeleccionado" @click="siguientePaso" class="btn-primary">Continuar →</button>
+              <button @click="pasoAnterior" class="btn-secondary">← Paciente</button>
+              <button @click="siguientePaso" class="btn-primary" :disabled="!medicoSeleccionado">Siguiente: Fecha →</button>
             </div>
           </div>
 
           <!-- PASO 3: Fecha y hora -->
           <div v-if="pasoActual === 3">
-            <!-- Resumen -->
             <div class="resumen">
               <div class="resumen-item">
                 <span class="resumen-label">Paciente:</span>
-                <span>{{ pacienteSeleccionado?.nombre }} {{ pacienteSeleccionado?.apellido }}</span>
+                <span v-if="pacienteSeleccionado">{{ pacienteSeleccionado.nombre }} {{ pacienteSeleccionado.apellido }}</span>
+                <span v-else style="color:#d63031">No seleccionado</span>
               </div>
               <div class="resumen-item">
                 <span class="resumen-label">Médico:</span>
-                <span>{{ medicoSeleccionado?.titulo || 'Dr.' }} {{ medicoSeleccionado?.nombre }} {{ medicoSeleccionado?.apellido }}</span>
+                <span v-if="medicoSeleccionado">{{ medicoSeleccionado.titulo || 'Dr.' }} {{ medicoSeleccionado.nombre }} {{ medicoSeleccionado.apellido }}</span>
+                <span v-else style="color:#d63031">No seleccionado</span>
               </div>
             </div>
 
@@ -445,8 +442,8 @@ function estadoColor(estado) {
             </div>
 
             <div class="btn-row">
-              <button @click="pasoAnterior" class="btn-secondary">← Atrás</button>
-              <button @click="crearCita" :disabled="creandoCita || !nuevaCita.fecha || !nuevaCita.hora" class="btn-primary">
+              <button @click="pasoAnterior" class="btn-secondary">← Médico</button>
+              <button @click="crearCita" :disabled="creandoCita" class="btn-primary btn-create">
                 {{ creandoCita ? 'Creando...' : '✓ Crear Cita' }}
               </button>
             </div>
@@ -627,6 +624,8 @@ h1 { font-size: 1.5rem; color: #2d3436; }
 .btn-primary { background: #0984e3; color: white; border: none; padding: 0.7rem 1.5rem; border-radius: 8px; cursor: pointer; font-size: 0.95rem; }
 .btn-primary.full { width: 100%; }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-primary.btn-create { background: #00b894; flex: 1; }
+.btn-primary.btn-create:hover { background: #00a884; }
 .btn-secondary { background: #dfe6e9; color: #2d3436; border: none; padding: 0.7rem 1.5rem; border-radius: 8px; cursor: pointer; font-size: 0.95rem; }
 .btn-row { display: flex; gap: 0.8rem; margin-top: 1rem; }
 
