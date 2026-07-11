@@ -30,6 +30,26 @@ const medicoSeleccionado = ref(null)
 const creandoCita = ref(false)
 const errorCita = ref('')
 const parseando = ref(false)
+const pasoActual = ref(1)
+
+function abrirNuevaCita() {
+  showNuevaCita.value = true
+  pasoActual.value = 1
+  pacienteSeleccionado.value = null
+  medicoSeleccionado.value = null
+  nuevaCita.value = { wa_text: '', paciente_search: '', medico_search: '', fecha: '', hora: '', notas: '' }
+  errorCita.value = ''
+  pacientesSearch.value = []
+  medicosSearch.value = []
+}
+
+function siguientePaso() {
+  if (pasoActual.value < 3) pasoActual.value++
+}
+
+function pasoAnterior() {
+  if (pasoActual.value > 1) pasoActual.value--
+}
 
 onMounted(() => {
   const saved = localStorage.getItem('usuario')
@@ -80,6 +100,9 @@ async function parsearMensaje() {
     }
   }
   parseando.value = false
+  if (pacienteSeleccionado.value) {
+    pasoActual.value = 2
+  }
 }
 
 async function buscarPacientesById() {
@@ -123,12 +146,14 @@ function seleccionarPaciente(p) {
   pacienteSeleccionado.value = { ...p }
   nuevaCita.value.paciente_search = p.nombre + ' ' + p.apellido
   pacientesSearch.value = []
+  pasoActual.value = 2
 }
 
 function seleccionarMedico(m) {
   medicoSeleccionado.value = { ...m }
   nuevaCita.value.medico_search = (m.titulo || 'Dr.') + ' ' + m.nombre + ' ' + m.apellido
   medicosSearch.value = []
+  pasoActual.value = 3
 }
 
 async function crearCita() {
@@ -151,6 +176,7 @@ async function crearCita() {
       }
     })
     showNuevaCita.value = false
+    pasoActual.value = 1
     nuevaCita.value = { wa_text: '', paciente_search: '', medico_search: '', fecha: '', hora: '', notas: '' }
     pacienteSeleccionado.value = null
     medicoSeleccionado.value = null
@@ -246,7 +272,7 @@ function estadoColor(estado) {
     <main class="content">
       <div class="content-header">
         <h1>Gestión de Citas</h1>
-        <button @click="showNuevaCita = true" class="btn-primary">+ Nueva Cita</button>
+        <button @click="abrirNuevaCita" class="btn-primary">+ Nueva Cita</button>
       </div>
 
       <!-- Filtros -->
@@ -292,89 +318,140 @@ function estadoColor(estado) {
     <div v-if="showNuevaCita" class="modal-overlay" @click.self="showNuevaCita = false">
       <div class="modal">
         <div class="modal-header">
-          <h2>Alta Cita (desde WhatsApp)</h2>
+          <h2>Nueva Cita</h2>
           <button @click="showNuevaCita = false" class="close">&times;</button>
         </div>
         <div class="modal-body">
           <div v-if="errorCita" class="error">{{ errorCita }}</div>
 
-          <!-- Paso 1: Pegar mensaje de WhatsApp -->
-          <div class="field">
-            <label>Mensaje de WhatsApp (copia y pega)</label>
-            <textarea v-model="nuevaCita.wa_text" rows="5" placeholder="Pega aquí el mensaje que llegó por WhatsApp..."></textarea>
-            <button @click="parsearMensaje" :disabled="parseando || !nuevaCita.wa_text.trim()" class="btn-parse">
-              {{ parseando ? 'Analizando...' : '🔍 Analizar mensaje' }}
-            </button>
+          <!-- Stepper -->
+          <div class="stepper">
+            <div class="step" :class="{ active: pasoActual === 1, done: pacienteSeleccionado }">
+              <span class="step-num">1</span> Paciente
+            </div>
+            <div class="step-line" :class="{ done: pacienteSeleccionado }"></div>
+            <div class="step" :class="{ active: pasoActual === 2, done: medicoSeleccionado }">
+              <span class="step-num">2</span> Médico
+            </div>
+            <div class="step-line" :class="{ done: medicoSeleccionado }"></div>
+            <div class="step" :class="{ active: pasoActual === 3 }">
+              <span class="step-num">3</span> Fecha/Hora
+            </div>
           </div>
 
-          <!-- Paso 2: Paciente -->
-          <div class="field">
-            <label>Paciente (ID o nombre)</label>
-            <input v-model="nuevaCita.paciente_search" placeholder="ID del paciente o nombre..." @input="buscarPacientes" />
-            <div v-if="pacientesSearch.length > 0 && !pacienteSeleccionado" class="search-results">
-              <div v-for="p in pacientesSearch" :key="p.id" class="search-item" @click="seleccionarPaciente(p)">
-                <strong>{{ p.nombre }} {{ p.apellido }}</strong>
-                <span>{{ p.telefono || p.email }}</span>
+          <!-- PASO 1: Mensaje de WhatsApp -->
+          <div v-if="pasoActual === 1">
+            <div class="field">
+              <label>Pegar mensaje de WhatsApp</label>
+              <textarea v-model="nuevaCita.wa_text" rows="5" placeholder="Pega aquí el mensaje que llegó por WhatsApp...&#10;&#10;Ejemplo:&#10;Hola, quiero una cita con el médico Dr Carlos Ramirez.&#10;Mi nombre es: Juan Pérez&#10;Mi ID de usuario es: abc-123-uuid"></textarea>
+              <button @click="parsearMensaje" :disabled="parseando || !nuevaCita.wa_text.trim()" class="btn-parse">
+                {{ parseando ? 'Analizando...' : '🔍 Analizar mensaje' }}
+              </button>
+            </div>
+
+            <!-- Búsqueda manual de paciente -->
+            <div class="field">
+              <label>¿No tienes mensaje? Busca el paciente manualmente</label>
+              <input v-model="nuevaCita.paciente_search" placeholder="Nombre, apellido o UUID del paciente..." @input="buscarPacientes" />
+              <div v-if="pacientesSearch.length > 0 && !pacienteSeleccionado" class="search-results">
+                <div v-for="p in pacientesSearch" :key="p.id" class="search-item" @click="seleccionarPaciente(p)">
+                  <strong>{{ p.nombre }} {{ p.apellido }}</strong>
+                  <span>{{ p.telefono || p.email }}</span>
+                </div>
               </div>
             </div>
+
+            <!-- Paciente encontrado -->
             <div v-if="pacienteSeleccionado" class="selected-card">
               <div class="selected-header">
                 <span class="check">✓</span>
-                <strong>{{ pacienteSeleccionado.nombre }} {{ pacienteSeleccionado.apellido }}</strong>
-                <button @click="pacienteSeleccionado = null; nuevaCita.paciente_search = ''" class="btn-remove">✕</button>
-              </div>
-              <div class="selected-details">
-                <span v-if="pacienteSeleccionado.telefono">📱 {{ pacienteSeleccionado.telefono }}</span>
-                <span v-if="pacienteSeleccionado.email">✉️ {{ pacienteSeleccionado.email }}</span>
-                <span v-if="pacienteSeleccionado.id">🔑 ID: {{ pacienteSeleccionado.id.substring(0,8) }}...</span>
+                <div>
+                  <strong>{{ pacienteSeleccionado.nombre }} {{ pacienteSeleccionado.apellido }}</strong>
+                  <div class="selected-details">
+                    <span v-if="pacienteSeleccionado.telefono">📱 {{ pacienteSeleccionado.telefono }}</span>
+                    <span v-if="pacienteSeleccionado.email">✉️ {{ pacienteSeleccionado.email }}</span>
+                    <span v-if="pacienteSeleccionado.id">🔑 {{ pacienteSeleccionado.id.substring(0,8) }}...</span>
+                  </div>
+                </div>
+                <button @click="pacienteSeleccionado = null; pasoActual = 1" class="btn-remove">✕</button>
               </div>
             </div>
+
+            <button v-if="pacienteSeleccionado" @click="siguientePaso" class="btn-primary full">Continuar →</button>
           </div>
 
-          <!-- Paso 3: Médico -->
-          <div class="field">
-            <label>Médico</label>
-            <input v-model="nuevaCita.medico_search" placeholder="Nombre del médico..." @input="buscarMedicos" />
-            <div v-if="medicosSearch.length > 0 && !medicoSeleccionado" class="search-results">
-              <div v-for="m in medicosSearch" :key="m.id" class="search-item" @click="seleccionarMedico(m)">
-                <strong>{{ m.titulo || 'Dr.' }} {{ m.nombre }} {{ m.apellido }}</strong>
-                <span>{{ m.especialidad_nombre || m.subespecialidad || m.especialidad }}</span>
+          <!-- PASO 2: Médico -->
+          <div v-if="pasoActual === 2">
+            <div class="field">
+              <label>Buscar médico</label>
+              <input v-model="nuevaCita.medico_search" placeholder="Nombre del médico..." @input="buscarMedicos" autofocus />
+              <div v-if="medicosSearch.length > 0 && !medicoSeleccionado" class="search-results">
+                <div v-for="m in medicosSearch" :key="m.id" class="search-item" @click="seleccionarMedico(m)">
+                  <strong>{{ m.titulo || 'Dr.' }} {{ m.nombre }} {{ m.apellido }}</strong>
+                  <span>{{ m.especialidad_nombre || m.subespecialidad }}</span>
+                </div>
               </div>
             </div>
+
+            <!-- Médico seleccionado -->
             <div v-if="medicoSeleccionado" class="selected-card">
               <div class="selected-header">
                 <span class="check">✓</span>
-                <strong>{{ medicoSeleccionado.titulo || 'Dr.' }} {{ medicoSeleccionado.nombre }} {{ medicoSeleccionado.apellido }}</strong>
-                <button @click="medicoSeleccionado = null; nuevaCita.medico_search = ''" class="btn-remove">✕</button>
+                <div>
+                  <strong>{{ medicoSeleccionado.titulo || 'Dr.' }} {{ medicoSeleccionado.nombre }} {{ medicoSeleccionado.apellido }}</strong>
+                  <div class="selected-details">
+                    <span v-if="medicoSeleccionado.especialidad_nombre">🩺 {{ medicoSeleccionado.especialidad_nombre }}</span>
+                    <span v-if="medicoSeleccionado.subespecialidad">| {{ medicoSeleccionado.subespecialidad }}</span>
+                  </div>
+                </div>
+                <button @click="medicoSeleccionado = null; pasoActual = 2" class="btn-remove">✕</button>
               </div>
-              <div class="selected-details">
-                <span v-if="medicoSeleccionado.especialidad_nombre">🩺 {{ medicoSeleccionado.especialidad_nombre }}</span>
-                <span v-if="medicoSeleccionado.subespecialidad">| {{ medicoSeleccionado.subespecialidad }}</span>
+            </div>
+
+            <div class="btn-row">
+              <button @click="pasoAnterior" class="btn-secondary">← Atrás</button>
+              <button v-if="medicoSeleccionado" @click="siguientePaso" class="btn-primary">Continuar →</button>
+            </div>
+          </div>
+
+          <!-- PASO 3: Fecha y hora -->
+          <div v-if="pasoActual === 3">
+            <!-- Resumen -->
+            <div class="resumen">
+              <div class="resumen-item">
+                <span class="resumen-label">Paciente:</span>
+                <span>{{ pacienteSeleccionado?.nombre }} {{ pacienteSeleccionado?.apellido }}</span>
+              </div>
+              <div class="resumen-item">
+                <span class="resumen-label">Médico:</span>
+                <span>{{ medicoSeleccionado?.titulo || 'Dr.' }} {{ medicoSeleccionado?.nombre }} {{ medicoSeleccionado?.apellido }}</span>
               </div>
             </div>
-          </div>
 
-          <!-- Paso 4: Fecha y hora -->
-          <div class="field-row">
-            <div class="field">
-              <label>Fecha</label>
-              <input v-model="nuevaCita.fecha" type="date" />
+            <div class="field-row">
+              <div class="field">
+                <label>Fecha</label>
+                <input v-model="nuevaCita.fecha" type="date" />
+              </div>
+              <div class="field">
+                <label>Hora</label>
+                <input v-model="nuevaCita.hora" type="time" />
+              </div>
             </div>
+
             <div class="field">
-              <label>Hora</label>
-              <input v-model="nuevaCita.hora" type="time" />
+              <label>Notas (opcional)</label>
+              <textarea v-model="nuevaCita.notas" placeholder="Notas adicionales..." rows="2"></textarea>
+            </div>
+
+            <div class="btn-row">
+              <button @click="pasoAnterior" class="btn-secondary">← Atrás</button>
+              <button @click="crearCita" :disabled="creandoCita || !nuevaCita.fecha || !nuevaCita.hora" class="btn-primary">
+                {{ creandoCita ? 'Creando...' : '✓ Crear Cita' }}
+              </button>
             </div>
           </div>
 
-          <!-- Notas -->
-          <div class="field">
-            <label>Notas (opcional)</label>
-            <textarea v-model="nuevaCita.notas" placeholder="Notas adicionales..." rows="2"></textarea>
-          </div>
-
-          <button @click="crearCita" :disabled="creandoCita || !pacienteSeleccionado || !medicoSeleccionado || !nuevaCita.fecha || !nuevaCita.hora" class="btn-primary full">
-            {{ creandoCita ? 'Creando...' : 'Crear Cita' }}
-          </button>
         </div>
       </div>
     </div>
@@ -550,6 +627,22 @@ h1 { font-size: 1.5rem; color: #2d3436; }
 .btn-primary { background: #0984e3; color: white; border: none; padding: 0.7rem 1.5rem; border-radius: 8px; cursor: pointer; font-size: 0.95rem; }
 .btn-primary.full { width: 100%; }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-secondary { background: #dfe6e9; color: #2d3436; border: none; padding: 0.7rem 1.5rem; border-radius: 8px; cursor: pointer; font-size: 0.95rem; }
+.btn-row { display: flex; gap: 0.8rem; margin-top: 1rem; }
+
+.stepper { display: flex; align-items: center; justify-content: center; margin-bottom: 1.5rem; gap: 0; }
+.step { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: #b2bec3; font-weight: 500; }
+.step.active { color: #0984e3; font-weight: 700; }
+.step.done { color: #00b894; }
+.step-num { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; border: 2px solid #dfe6e9; font-size: 0.75rem; font-weight: 700; }
+.step.active .step-num { background: #0984e3; color: white; border-color: #0984e3; }
+.step.done .step-num { background: #00b894; color: white; border-color: #00b894; }
+.step-line { width: 40px; height: 2px; background: #dfe6e9; margin: 0 0.3rem; }
+.step-line.done { background: #00b894; }
+
+.resumen { background: #f8f9fa; border-radius: 8px; padding: 0.8rem 1rem; margin-bottom: 1rem; }
+.resumen-item { font-size: 0.9rem; margin-bottom: 0.3rem; }
+.resumen-label { font-weight: 600; margin-right: 0.5rem; color: #636e72; }
 .btn-secondary { background: white; color: #0984e3; border: 1px solid #0984e3; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
 .error { background: #ffeaa7; color: #d63031; padding: 0.6rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 1rem; }
 .loading, .empty { text-align: center; padding: 2rem; color: #636e72; }
