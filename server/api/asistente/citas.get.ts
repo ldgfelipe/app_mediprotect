@@ -43,7 +43,7 @@ export default defineEventHandler(async (event) => {
   }
 
   if (search) {
-    sql += ` AND (p.nombre ILIKE $${paramIdx} OR p.apellido ILIKE $${paramIdx} OR m.nombre ILIKE $${paramIdx} OR m.apellido ILIKE $${paramIdx})`
+    sql += ` AND (p.nombre ILIKE $${paramIdx} OR p.apellido ILIKE $${paramIdx} OR m.nombre ILIKE $${paramIdx} OR m.apellido ILIKE $${paramIdx} OR p.id::text ILIKE $${paramIdx} OR m.id::text ILIKE $${paramIdx} OR c.id_paciente::text ILIKE $${paramIdx} OR c.id_medico::text ILIKE $${paramIdx})`
     params.push(`%${search}%`)
     paramIdx++
   }

@@ -248,7 +248,7 @@ function estadoColor(estado) {
 
       <!-- Filtros -->
       <div class="filters">
-        <input v-model="busqueda" placeholder="Buscar paciente o médico..." @keyup.enter="cargarCitas" />
+        <input v-model="busqueda" placeholder="Buscar por nombre, apellido, ID o UUID..." @keyup.enter="cargarCitas" />
         <select v-model="filtroEstado" @change="cargarCitas">
           <option value="">Todos los estados</option>
           <option value="pendiente">Pendiente</option>
