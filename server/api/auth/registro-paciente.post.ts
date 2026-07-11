@@ -1,6 +1,5 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import { getPool } from '#server/utils/db'
 
 export default defineEventHandler(async (event) => {
   const { nombre, apellido, email, password, telefono, fecha_nacimiento, genero, direccion, id_paquete } = await readBody(event)
