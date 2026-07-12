@@ -2,7 +2,11 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 
 export default defineEventHandler(async (event) => {
-  const { nombre, apellido, email, password, telefono, fecha_nacimiento, genero, direccion, id_paquete } = await readBody(event)
+  const b = await readBody(event)
+  const { nombre, apellido, email, password, telefono, fecha_nacimiento, genero, direccion, id_paquete,
+    ciudad, como_nos_conociste, acepta_terminos, acepta_marketing,
+    curp, estado_civil, ocupacion, beneficiario_nombre, beneficiario_parentesco, beneficiario_telefono,
+    identificacion_tipo, identificacion_numero, acepta_seguro } = b
 
   const pool = getPool()
   const existing = await pool.query('SELECT id FROM pacientes WHERE email = $1', [email])
@@ -12,15 +16,21 @@ export default defineEventHandler(async (event) => {
 
   const password_hash = await bcrypt.hash(password, 10)
   const result = await pool.query(
-    `INSERT INTO pacientes (nombre, apellido, email, password_hash, telefono, fecha_nacimiento, genero, direccion)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+    `INSERT INTO pacientes (nombre, apellido, email, password_hash, telefono, fecha_nacimiento, genero, direccion,
+      ciudad, como_nos_conociste, acepta_terminos, acepta_marketing,
+      curp, estado_civil, ocupacion, beneficiario_nombre, beneficiario_parentesco, beneficiario_telefono,
+      identificacion_tipo, identificacion_numero, acepta_seguro, plan_contratado)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
      RETURNING id, nombre, apellido, email, telefono, created_at`,
-    [nombre, apellido, email, password_hash, telefono, fecha_nacimiento, genero, direccion]
+    [nombre, apellido, email, password_hash, telefono, fecha_nacimiento, genero, direccion,
+      ciudad || null, como_nos_conociste || null, acepta_terminos || false, acepta_marketing || false,
+      curp || null, estado_civil || null, ocupacion || null, beneficiario_nombre || null, beneficiario_parentesco || null, beneficiario_telefono || null,
+      identificacion_tipo || null, identificacion_numero || null, acepta_seguro || false, null]
   )
 
   const paciente = result.rows[0]
 
-  // Assign package if provided
+  // Assign package
   if (id_paquete) {
     await pool.query(
       `INSERT INTO paciente_paquete (id_paciente, id_paquete, fecha_inicio, estado)
@@ -28,7 +38,6 @@ export default defineEventHandler(async (event) => {
       [paciente.id, id_paquete]
     )
   } else {
-    // Default to Básico
     const basico = await pool.query("SELECT id FROM paquetes WHERE slug = 'basico' AND activo = true LIMIT 1")
     if (basico.rows.length > 0) {
       await pool.query(
