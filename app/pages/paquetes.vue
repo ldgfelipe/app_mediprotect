@@ -1,27 +1,17 @@
 <script setup lang="ts">
-definePageMeta({ middleware: 'auth' })
-const usuario = useCookie('usuario')
-const token = useCookie('token')
 const paquetes = ref<any[]>([])
-const miPlanActual = ref<any>(null)
 const cargando = ref(true)
 
 onMounted(async () => {
-  const [r1, r2] = await Promise.all([
-    useFetch('/api/paquetes'),
-    useFetch('/api/paquetes/mi-plan')
-  ])
-  paquetes.value = ((r1.data.value as any)?.paquetes || [])
-  miPlanActual.value = (r2.data.value as any)?.plan
+  try {
+    const r1 = await $fetch('/api/paquetes')
+    paquetes.value = r1.paquetes || []
+  } catch (e) { console.error(e) }
   cargando.value = false
 })
 
-function esActual(p: any) {
-  return miPlanActual.value?.id === p.id
-}
-
-function puedeMejorar(p: any) {
-  return p.precio > (miPlanActual.value?.precio || 0)
+function contratar(slug: string) {
+  navigateTo({ path: '/registro', query: { plan: slug } })
 }
 </script>
 
@@ -36,9 +26,8 @@ function puedeMejorar(p: any) {
     <p v-if="cargando" class="loading">Cargando planes...</p>
 
     <div v-else class="planes-grid">
-      <div v-for="p in paquetes" :key="p.id" :class="['plan-card', esActual(p) ? 'actual' : '', puedeMejorar(p) ? 'mejorable' : '']">
-        <div v-if="esActual(p)" class="badge-actual">Plan Actual</div>
-        <div v-else-if="p.slug === 'esencial'" class="badge-popular">Más Popular</div>
+      <div v-for="p in paquetes" :key="p.id" class="plan-card">
+        <div v-if="p.slug === 'esencial'" class="badge-popular">Más Popular</div>
         <div v-else-if="p.slug === 'integral'" class="badge-recomendado">Recomendado</div>
 
         <h2>{{ p.nombre }}</h2>
@@ -57,11 +46,9 @@ function puedeMejorar(p: any) {
           </li>
         </ul>
 
-        <button v-if="!esActual(p) && puedeMejorar(p)" class="btn-primary">
-          Mejorar a {{ p.nombre }}
+        <button @click="contratar(p.slug)" class="btn-primary">
+          {{ p.precio === 0 ? 'Afiliarme Gratis' : 'Contratar ' + p.nombre }}
         </button>
-        <div v-else-if="esActual(p)" class="btn-actual">Plan Actual</div>
-        <div v-else class="btn-inferior">Plan inferior</div>
       </div>
     </div>
   </div>

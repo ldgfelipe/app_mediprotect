@@ -39,10 +39,22 @@ async function cargarDatos() {
     ])
     especialidades.value = esp.especialidades || []
     paquetes.value = paq.paquetes || []
-    const basico = paquetes.value.find(p => p.slug === 'basico')
-    if (basico) {
-      paqueteSeleccionado.value = basico.id
-      formPaciente.value.id_paquete = basico.id
+
+    // Si viene plan desde URL, pre-seleccionar e ir al paso 2
+    const planSlug = route.query.plan as string
+    if (planSlug) {
+      const plan = paquetes.value.find((p: any) => p.slug === planSlug)
+      if (plan) {
+        paqueteSeleccionado.value = plan.id
+        formPaciente.value.id_paquete = plan.id
+        paso.value = 'plan'
+      }
+    } else {
+      const basico = paquetes.value.find(p => p.slug === 'basico')
+      if (basico) {
+        paqueteSeleccionado.value = basico.id
+        formPaciente.value.id_paquete = basico.id
+      }
     }
   } catch (e) {
     console.error('Error cargando datos:', e)
@@ -125,7 +137,11 @@ async function handleSubmit() {
 
       <!-- PASO 1: AFILIACIÓN GRATUITA -->
       <form v-if="tipo === 'paciente' && paso === 'datos'" @submit.prevent="continuarAlPlan" class="auth-form">
-        <h2 class="form-section-title">Afiliación Gratuita</h2>
+        <div v-if="route.query.plan" class="plan-seleccionado-banner">
+          <span>📋 Plan seleccionado: <strong>{{ paquetes.find(p => p.id === paqueteSeleccionado)?.nombre }}</strong></span>
+          <NuxtLink to="/paquetes" class="cambiar-plan">Cambiar</NuxtLink>
+        </div>
+        <h2 class="form-section-title">{{ route.query.plan ? 'Completa tus datos' : 'Afiliación Gratuita' }}</h2>
 
         <div class="form-group">
           <label>Nombre completo *</label>
@@ -291,6 +307,8 @@ async function handleSubmit() {
 
 <style scoped>
 .form-section-title { font-size: 1.1rem; color: #2d3436; margin-bottom: 1rem; font-weight: 700; }
+.plan-seleccionado-banner { display: flex; justify-content: space-between; align-items: center; background: #f0fff4; border: 1px solid #00b894; border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 1rem; font-size: 0.9rem; }
+.cambiar-plan { color: #0984e3; font-size: 0.85rem; text-decoration: none; }
 .form-section-subtitle { font-size: 0.95rem; color: #2d3436; margin: 1.2rem 0 0.6rem; font-weight: 600; border-top: 1px solid #eee; padding-top: 0.8rem; }
 .form-row { display: flex; gap: 1rem; }
 .form-row > .form-group { flex: 1; }
