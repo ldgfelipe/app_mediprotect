@@ -33,16 +33,16 @@ export default defineEventHandler(async (event) => {
   // Assign package
   if (id_paquete) {
     await pool.query(
-      `INSERT INTO paciente_paquete (id_paciente, id_paquete, fecha_inicio, estado)
-       VALUES ($1, $2, NOW(), 'activo')`,
+      `INSERT INTO paciente_paquete (id_paciente, id_paquete, fecha_inicio, activo)
+       VALUES ($1, $2, NOW(), true)`,
       [paciente.id, id_paquete]
     )
   } else {
     const basico = await pool.query("SELECT id FROM paquetes WHERE slug = 'basico' AND activo = true LIMIT 1")
     if (basico.rows.length > 0) {
       await pool.query(
-        `INSERT INTO paciente_paquete (id_paciente, id_paquete, fecha_inicio, estado)
-         VALUES ($1, $2, NOW(), 'activo')`,
+        `INSERT INTO paciente_paquete (id_paciente, id_paquete, fecha_inicio, activo)
+         VALUES ($1, $2, NOW(), true)`,
         [paciente.id, basico.rows[0].id]
       )
     }
