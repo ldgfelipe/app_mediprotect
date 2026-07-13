@@ -24,30 +24,24 @@ const nuevaCita = ref({
   notas: '',
 })
 const pacientesSearch = ref([])
-const medicosSearch = ref([])
 const pacienteSeleccionado = ref(null)
-const medicoSeleccionado = ref(null)
 const creandoCita = ref(false)
 const errorCita = ref('')
 const parseando = ref(false)
 const pasoActual = ref(1)
-const medicoManual = ref(false)
 
 function abrirNuevaCita() {
   showNuevaCita.value = true
   pasoActual.value = 1
   pacienteSeleccionado.value = null
-  medicoSeleccionado.value = null
-  medicoManual.value = false
   nuevaCita.value = { wa_text: '', paciente_search: '', medico_search: '', fecha: '', hora: '', notas: '' }
   errorCita.value = ''
   pacientesSearch.value = []
-  medicosSearch.value = []
 }
 
 function siguientePaso() {
-  if (pasoActual.value === 2 && !medicoSeleccionado.value && !medicoManual.value) {
-    errorCita.value = 'Selecciona o escribe el nombre del médico'
+  if (pasoActual.value === 2 && !nuevaCita.value.medico_search.trim()) {
+    errorCita.value = 'Escribe el nombre del médico'
     return
   }
   errorCita.value = ''
@@ -89,8 +83,7 @@ async function parsearMensaje() {
   // Extract doctor name
   const medicoMatch = text.match(/médico\s+([^\n.]+)/i) || text.match(/doctor\s+([^\n.]+)/i) || text.match(/con\s+(?:el\s+)?(?:médico|doctor)\s+([^\n.]+)/i)
   if (medicoMatch) {
-    nuevaCita.value.medico_search = medicoMatch[1].trim().replace(/^(Dr\.?\s*|Dra\.?\s*)/i, '')
-    await buscarMedicos()
+    nuevaCita.value.medico_search = medicoMatch[1].trim()
   }
 
   // Extract patient ID
@@ -138,17 +131,6 @@ async function buscarPacientes() {
   } catch (e) { pacientesSearch.value = [] }
 }
 
-async function buscarMedicos() {
-  if (!nuevaCita.value.medico_search.trim()) { medicosSearch.value = []; return }
-  try {
-    const data = await $fetch('/api/medicos?search=' + encodeURIComponent(nuevaCita.value.medico_search))
-    medicosSearch.value = data.medicos || []
-    if (medicosSearch.value.length === 1) {
-      seleccionarMedico(medicosSearch.value[0])
-    }
-  } catch (e) { medicosSearch.value = [] }
-}
-
 function seleccionarPaciente(p) {
   pacienteSeleccionado.value = { ...p }
   nuevaCita.value.paciente_search = p.nombre + ' ' + p.apellido
@@ -156,25 +138,10 @@ function seleccionarPaciente(p) {
   pasoActual.value = 2
 }
 
-function seleccionarMedico(m) {
-  medicoSeleccionado.value = { ...m }
-  medicoManual.value = false
-  nuevaCita.value.medico_search = (m.titulo || 'Dr.') + ' ' + m.nombre + ' ' + m.apellido
-  medicosSearch.value = []
-  pasoActual.value = 3
-}
-
-function usarMedicoManual() {
-  medicoSeleccionado.value = null
-  medicoManual.value = true
-  medicosSearch.value = []
-  pasoActual.value = 3
-}
-
 async function crearCita() {
   errorCita.value = ''
   if (!pacienteSeleccionado.value) { errorCita.value = 'Selecciona un paciente en el paso 1'; pasoActual.value = 1; return }
-  if (!medicoSeleccionado.value && !medicoManual.value) { errorCita.value = 'Selecciona un médico en el paso 2'; pasoActual.value = 2; return }
+  if (!nuevaCita.value.medico_search.trim()) { errorCita.value = 'Escribe el nombre del médico'; pasoActual.value = 2; return }
   if (!nuevaCita.value.fecha || !nuevaCita.value.hora) { errorCita.value = 'Selecciona fecha y hora'; return }
   creandoCita.value = true
   try {
@@ -184,8 +151,7 @@ async function crearCita() {
       headers: { Authorization: 'Bearer ' + useCookie('token').value },
       body: {
         id_paciente: pacienteSeleccionado.value.id,
-        id_medico: medicoSeleccionado.value?.id || null,
-        medico_nombre: medicoManual.value ? nuevaCita.value.medico_search : null,
+        medico_nombre: nuevaCita.value.medico_search.trim(),
         fecha_hora,
         notas_asistente: nuevaCita.value.notas || nuevaCita.value.wa_text,
       }
@@ -194,8 +160,6 @@ async function crearCita() {
     pasoActual.value = 1
     nuevaCita.value = { wa_text: '', paciente_search: '', medico_search: '', fecha: '', hora: '', notas: '' }
     pacienteSeleccionado.value = null
-    medicoSeleccionado.value = null
-    medicoManual.value = false
     await cargarCitas()
   } catch (e) {
     errorCita.value = e.data?.message || 'Error al crear cita'
@@ -346,10 +310,10 @@ function estadoColor(estado) {
               <span class="step-num">1</span> Paciente
             </div>
             <div class="step-line" :class="{ done: pacienteSeleccionado }"></div>
-            <div class="step" :class="{ active: pasoActual === 2, done: medicoSeleccionado }">
+            <div class="step" :class="{ active: pasoActual === 2, done: nuevaCita.medico_search.trim() }">
               <span class="step-num">2</span> Médico
             </div>
-            <div class="step-line" :class="{ done: medicoSeleccionado }"></div>
+            <div class="step-line" :class="{ done: nuevaCita.medico_search.trim() }"></div>
             <div class="step" :class="{ active: pasoActual === 3 }">
               <span class="step-num">3</span> Fecha/Hora
             </div>
@@ -398,43 +362,9 @@ function estadoColor(estado) {
           <!-- PASO 2: Médico -->
           <div v-if="pasoActual === 2">
             <div class="field">
-              <label>Buscar médico</label>
-              <input v-model="nuevaCita.medico_search" placeholder="Nombre del médico..." @input="buscarMedicos" />
-              <div v-if="medicosSearch.length > 0 && !medicoSeleccionado" class="search-results">
-                <div v-for="m in medicosSearch" :key="m.id" class="search-item" @click="seleccionarMedico(m)">
-                  <strong>{{ m.titulo || 'Dr.' }} {{ m.nombre }} {{ m.apellido }}</strong>
-                  <span>{{ m.especialidad_nombre || m.subespecialidad }}</span>
-                </div>
-              </div>
-              <div v-if="medicosSearch.length === 0 && nuevaCita.medico_search.trim() && !medicoSeleccionado && !medicoManual" class="manual-entry">
-                <p>No se encontró "{{ nuevaCita.medico_search }}" en la base de datos</p>
-                <button @click="usarMedicoManual" class="btn-secondary btn-small">Usar este nombre</button>
-              </div>
-            </div>
-
-            <div v-if="medicoSeleccionado" class="selected-card">
-              <div class="selected-header">
-                <span class="check">✓</span>
-                <div>
-                  <strong>{{ medicoSeleccionado.titulo || 'Dr.' }} {{ medicoSeleccionado.nombre }} {{ medicoSeleccionado.apellido }}</strong>
-                  <div class="selected-details">
-                    <span v-if="medicoSeleccionado.especialidad_nombre">🩺 {{ medicoSeleccionado.especialidad_nombre }}</span>
-                    <span v-if="medicoSeleccionado.subespecialidad">| {{ medicoSeleccionado.subespecialidad }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div v-if="medicoManual && nuevaCita.medico_search" class="selected-card manual">
-              <div class="selected-header">
-                <span class="check">✎</span>
-                <div>
-                  <strong>{{ nuevaCita.medico_search }}</strong>
-                  <div class="selected-details">
-                    <span>Médico registrado manualmente</span>
-                  </div>
-                </div>
-              </div>
+              <label>Nombre del médico</label>
+              <input v-model="nuevaCita.medico_search" placeholder="Ej. Dr. Carlos Ramirez" />
+              <p class="field-hint">Escribe el nombre según el mensaje o ingrésalo manualmente</p>
             </div>
 
             <div class="btn-row">
@@ -453,9 +383,8 @@ function estadoColor(estado) {
               </div>
               <div class="resumen-item">
                 <span class="resumen-label">Médico:</span>
-                <span v-if="medicoSeleccionado">{{ medicoSeleccionado.titulo || 'Dr.' }} {{ medicoSeleccionado.nombre }} {{ medicoSeleccionado.apellido }}</span>
-                <span v-else-if="medicoManual && nuevaCita.medico_search">{{ nuevaCita.medico_search }} <em>(manual)</em></span>
-                <span v-else style="color:#d63031">No seleccionado</span>
+                <span v-if="nuevaCita.medico_search">{{ nuevaCita.medico_search }}</span>
+                <span v-else style="color:#d63031">No especificado</span>
               </div>
             </div>
 
@@ -620,12 +549,7 @@ h1 { font-size: 1.5rem; color: #2d3436; }
 .search-item strong { display: block; font-size: 0.9rem; }
 .search-item span { font-size: 0.8rem; color: #636e72; }
 
-.manual-entry { padding: 0.8rem 1rem; background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; margin-top: 0.5rem; }
-.manual-entry p { font-size: 0.85rem; color: #856404; margin-bottom: 0.5rem; }
-.btn-small { padding: 0.4rem 0.8rem; font-size: 0.8rem; }
-
-.selected-card.manual { border: 2px dashed #636e72; background: #f8f9fa; }
-.selected-card.manual .check { color: #636e72; }
+.field-hint { font-size: 0.8rem; color: #636e72; margin-top: 0.3rem; }
 
 .acciones { margin-bottom: 1.5rem; }
 .acciones h3, .nota-section h3, .bitacora-section h3, .wa-section h3 { font-size: 1rem; margin-bottom: 0.8rem; color: #2d3436; }
