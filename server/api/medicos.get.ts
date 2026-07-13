@@ -27,9 +27,9 @@ export default defineEventHandler(async (event) => {
     params.push(`%${query.estado}%`)
   }
   if (query.search) {
-    sql += ` AND (LOWER(m.nombre) LIKE LOWER($${idx++}) OR LOWER(m.apellido) LIKE LOWER($${idx++}) OR LOWER(m.bio) LIKE LOWER($${idx++}) OR m.id::text ILIKE $${idx++})`
+    sql += ` AND (LOWER(m.nombre) LIKE LOWER($${idx++}) OR LOWER(m.apellido) LIKE LOWER($${idx++}) OR LOWER(m.titulo) LIKE LOWER($${idx++}) OR LOWER(m.bio) LIKE LOWER($${idx++}) OR LOWER(CONCAT(m.titulo, ' ', m.nombre, ' ', m.apellido)) LIKE LOWER($${idx++}) OR m.id::text ILIKE $${idx++})`
     const s = `%${query.search}%`
-    params.push(s, s, s, s)
+    params.push(s, s, s, s, s, s)
   }
 
   sql += ' ORDER BY m.score_confianza DESC, m.nombre ASC'

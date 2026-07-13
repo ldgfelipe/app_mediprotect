@@ -20,16 +20,22 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event)
-  const { id_paciente, id_medico, fecha_hora, notas_paciente, notas_asistente } = body
+  const { id_paciente, id_medico, medico_nombre, fecha_hora, notas_paciente, notas_asistente } = body
 
-  if (!id_paciente || !id_medico || !fecha_hora) {
-    throw createError({ statusCode: 400, message: 'Paciente, médico y fecha/hora son requeridos' })
+  if (!id_paciente || !fecha_hora) {
+    throw createError({ statusCode: 400, message: 'Paciente y fecha/hora son requeridos' })
+  }
+  if (!id_medico && !medico_nombre) {
+    throw createError({ statusCode: 400, message: 'Se requiere un médico (seleccionado o nombre manual)' })
   }
 
-  // Verify doctor exists and is active
-  const medico = await pool.query('SELECT id, nombre, apellido FROM medicos WHERE id = $1 AND activo = true', [id_medico])
-  if (medico.rows.length === 0) {
-    throw createError({ statusCode: 404, message: 'Médico no encontrado o inactivo' })
+  let medicoData = null
+  if (id_medico) {
+    const medico = await pool.query('SELECT id, nombre, apellido FROM medicos WHERE id = $1 AND activo = true', [id_medico])
+    if (medico.rows.length === 0) {
+      throw createError({ statusCode: 404, message: 'Médico no encontrado o inactivo' })
+    }
+    medicoData = medico.rows[0]
   }
 
   // Verify patient exists
@@ -38,30 +44,42 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, message: 'Paciente no encontrado' })
   }
 
-  // Check for scheduling conflicts
-  const conflicto = await pool.query(
-    `SELECT id FROM citas WHERE id_medico = $1 AND fecha_hora = $2 AND estado NOT IN ('cancelada', 'no_asistida')`,
-    [id_medico, fecha_hora]
-  )
-  if (conflicto.rows.length > 0) {
-    throw createError({ statusCode: 409, message: 'El médico ya tiene una cita agendada en esa fecha y hora' })
+  // Check for scheduling conflicts (only if doctor has an ID)
+  if (id_medico) {
+    const conflicto = await pool.query(
+      `SELECT id FROM citas WHERE id_medico = $1 AND fecha_hora = $2 AND estado NOT IN ('cancelada', 'no_asistida')`,
+      [id_medico, fecha_hora]
+    )
+    if (conflicto.rows.length > 0) {
+      throw createError({ statusCode: 409, message: 'El médico ya tiene una cita agendada en esa fecha y hora' })
+    }
   }
+
+  // Build notas with manual doctor name if needed
+  const notasFinales = [notas_paciente, notas_asistente].filter(Boolean).join('\n') || null
+  const notasConMedico = medico_nombre
+    ? `${notasFinales || ''}\n[Médico: ${medico_nombre}]`.trim()
+    : notasFinales
 
   // Create the cita
   const result = await pool.query(
     `INSERT INTO citas (id_paciente, id_medico, fecha_hora, notas_paciente, notas_asistente, asistente_id, estado)
      VALUES ($1, $2, $3, $4, $5, $6, 'pendiente')
      RETURNING *`,
-    [id_paciente, id_medico, fecha_hora, notas_paciente || null, notas_asistente || null, user.id]
+    [id_paciente, id_medico || null, fecha_hora, notas_paciente || null, notasConMedico, user.id]
   )
 
   const cita = result.rows[0]
+
+  const medicoDesc = medicoData
+    ? `${medicoData.nombre} ${medicoData.apellido}`
+    : medico_nombre || 'No especificado'
 
   // Log in bitácora
   await pool.query(
     `INSERT INTO citas_bitacora (id_cita, id_usuario, tipo_usuario, accion, estado_nuevo, descripcion, created_at)
      VALUES ($1, $2, 'asistente', 'creacion', 'pendiente', $3, NOW())`,
-    [cita.id, user.id, `Cita creada por asistente. Paciente: ${paciente.rows[0].nombre} ${paciente.rows[0].apellido}. Médico: ${medico.rows[0].nombre} ${medico.rows[0].apellido}`]
+    [cita.id, user.id, `Cita creada por asistente. Paciente: ${paciente.rows[0].nombre} ${paciente.rows[0].apellido}. Médico: ${medicoDesc}`]
   )
 
   return { cita }
