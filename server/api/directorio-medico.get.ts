@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
       m.frase_inspiradora, m.whatsapp, m.precio_regular, m.precio_miembro,
       m.score_confianza, m.destacado,
       m.consultorio_direccion, m.consultorio_ciudad as ciudad, m.consultorio_estado as estado,
-      e.id as especialidad_id, e.slug as especialidad_slug, e.nombre as especialidad_nombre, e.icono as especialidad_icono,
+      e.id as especialidad_id, e.slug as especialidad_slug, e.nombre as especialidad_nombre, e.icono as especialidad_icono, e.color as especialidad_color,
       c.id as centro_id, c.nombre as centro_nombre, c.direccion as centro_direccion,
       c.ciudad as centro_ciudad, c.estado as centro_estado, c.telefono as centro_telefono,
       COALESCE(
@@ -90,6 +90,7 @@ export default defineEventHandler(async (event) => {
       slug: r.especialidad_slug,
       nombre: r.especialidad_nombre,
       icono: r.especialidad_icono,
+      color: r.especialidad_color,
     },
     centro: r.centro_id ? {
       id: r.centro_id,
