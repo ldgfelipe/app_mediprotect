@@ -7,7 +7,8 @@ export default defineEventHandler(async (event) => {
 
   if (tipo === 'medico') {
     const result = await pool.query(
-      `SELECT m.*, e.nombre as especialidad FROM medicos m
+      `SELECT m.id, m.nombre, m.apellido, m.email, m.telefono, m.fecha_nacimiento, m.genero, m.direccion, m.foto_url, m.cedula_profesional, m.consultorio_direccion, m.consultorio_ciudad, m.consultorio_estado, m.bio, m.created_at, e.nombre as especialidad
+       FROM medicos m
        LEFT JOIN especialidades e ON m.id_especialidad = e.id WHERE m.id = $1`, [id]
     )
     if (result.rows.length === 0) throw createError({ statusCode: 404, message: 'No encontrado' })

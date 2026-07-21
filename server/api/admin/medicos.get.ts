@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
 
   const pool = getPool()
   const result = await pool.query(`
-    SELECT m.id, m.nombre, m.apellido, m.email, m.telefono, m.cedula_profesional, e.nombre as especialidad, m.activo, m.created_at
+    SELECT m.id, m.nombre, m.apellido, m.email, m.telefono, m.cedula_profesional, m.titulo, m.foto_url, m.consultorio_ciudad, e.nombre as especialidad_nombre, m.activo, m.created_at
     FROM medicos m LEFT JOIN especialidades e ON m.id_especialidad = e.id
     ORDER BY m.created_at DESC
   `)

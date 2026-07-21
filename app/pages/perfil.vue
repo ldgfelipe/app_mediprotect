@@ -4,8 +4,10 @@ definePageMeta({ middleware: 'auth' })
 const token = useCookie('token')
 const usuario = useCookie('usuario')
 const loading = ref(false)
+const uploadingPhoto = ref(false)
 const success = ref('')
 const error = ref('')
+const photoPreview = ref<string | null>(null)
 
 const form = ref({
   nombre: usuario.value?.nombre || '',
@@ -22,6 +24,7 @@ const form = ref({
 })
 
 const esMedico = computed(() => usuario.value?.tipo === 'medico')
+const fotoUrl = computed(() => usuario.value?.foto_url || photoPreview.value)
 
 onMounted(async () => {
   try {
@@ -67,6 +70,80 @@ async function guardar() {
   }
 }
 
+async function uploadPhoto(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  // Validar tipo
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
+  if (!allowedTypes.includes(file.type)) {
+    error.value = 'Solo se permiten archivos JPG, PNG o WebP'
+    return
+  }
+
+  // Validar tamaño (2MB)
+  if (file.size > 2 * 1024 * 1024) {
+    error.value = 'La imagen no puede superar 2MB'
+    return
+  }
+
+  error.value = ''
+  uploadingPhoto.value = true
+
+  // Preview local
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    photoPreview.value = e.target?.result as string
+  }
+  reader.readAsDataURL(file)
+
+  try {
+    const formData = new FormData()
+    formData.append('foto', file)
+    if (esMedico.value) {
+      formData.append('medico_id', usuario.value.id)
+    }
+
+    const response = await $fetch('/api/upload/foto-medico', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token.value}` },
+      body: formData,
+    })
+
+    const data = response as any
+    if (data.foto_url) {
+      usuario.value = { ...usuario.value, foto_url: data.foto_url }
+      photoPreview.value = null
+      success.value = 'Foto actualizada correctamente'
+    }
+  } catch (e: any) {
+    error.value = e.data?.message || 'Error al subir foto'
+    photoPreview.value = null
+  } finally {
+    uploadingPhoto.value = false
+    input.value = ''
+  }
+}
+
+async function deletePhoto() {
+  if (!confirm('¿Eliminar tu foto de perfil?')) return
+
+  error.value = ''
+  try {
+    await $fetch('/api/upload/delete-foto', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token.value}` },
+      body: { medico_id: usuario.value.id },
+    })
+    usuario.value = { ...usuario.value, foto_url: null }
+    photoPreview.value = null
+    success.value = 'Foto eliminada correctamente'
+  } catch (e: any) {
+    error.value = e.data?.message || 'Error al eliminar foto'
+  }
+}
+
 function cerrarSesion() {
   token.value = null
   usuario.value = null
@@ -95,6 +172,30 @@ function cerrarSesion() {
 
       <div v-if="success" class="success-msg">{{ success }}</div>
       <div v-if="error" class="error-msg">{{ error }}</div>
+
+      <div v-if="esMedico" class="photo-section">
+        <h3>Foto de Perfil</h3>
+        <div class="photo-container">
+          <div class="photo-preview">
+            <img v-if="fotoUrl" :src="fotoUrl" alt="Foto de perfil" />
+            <div v-else class="photo-placeholder">
+              <i class="fa-solid fa-user-doctor"></i>
+              <span>Sin foto</span>
+            </div>
+          </div>
+          <div class="photo-actions">
+            <label class="btn-photo-upload" :class="{ disabled: uploadingPhoto }">
+              <input type="file" accept="image/jpeg,image/png,image/webp" @change="uploadPhoto" hidden />
+              <i class="fa-solid fa-camera"></i>
+              {{ uploadingPhoto ? 'Subiendo...' : 'Cambiar foto' }}
+            </label>
+            <button v-if="fotoUrl" type="button" class="btn-photo-delete" @click="deletePhoto">
+              <i class="fa-solid fa-trash"></i> Eliminar
+            </button>
+          </div>
+          <p class="photo-hint">JPG, PNG o WebP. Máximo 2MB. Mínimo 200x200px.</p>
+        </div>
+      </div>
 
       <form @submit.prevent="guardar" class="perfil-form">
         <div class="form-row">
@@ -171,4 +272,18 @@ function cerrarSesion() {
 .btn-logout:hover { background: #d63031; color: white; border-color: #d63031; }
 .perfil-form { max-width: 600px; display: flex; flex-direction: column; gap: 1.2rem; margin-top: 0.5rem; }
 .success-msg { color: #00b894; background: #e6fcf5; padding: 0.7rem; border-radius: 8px; font-size: 0.9rem; border: 1px solid #b2dfdb; }
+.photo-section { margin-bottom: 2rem; padding: 1.5rem; background: #f8f9fa; border-radius: 12px; }
+.photo-section h3 { margin: 0 0 1rem 0; font-size: 1.1rem; color: #2d3436; }
+.photo-container { display: flex; flex-direction: column; gap: 1rem; }
+.photo-preview { width: 150px; height: 150px; border-radius: 50%; overflow: hidden; background: #e0e0e0; display: flex; align-items: center; justify-content: center; }
+.photo-preview img { width: 100%; height: 100%; object-fit: cover; }
+.photo-placeholder { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; color: #636e72; }
+.photo-placeholder i { font-size: 3rem; }
+.photo-actions { display: flex; gap: 1rem; }
+.btn-photo-upload { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1.2rem; background: #0984e3; color: white; border-radius: 8px; cursor: pointer; font-size: 0.9rem; transition: background 0.2s; }
+.btn-photo-upload:hover { background: #0773c5; }
+.btn-photo-upload.disabled { background: #b2bec3; cursor: not-allowed; }
+.btn-photo-delete { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1.2rem; background: white; color: #d63031; border: 1px solid #d63031; border-radius: 8px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; }
+.btn-photo-delete:hover { background: #d63031; color: white; }
+.photo-hint { margin: 0; font-size: 0.8rem; color: #636e72; }
 </style>
