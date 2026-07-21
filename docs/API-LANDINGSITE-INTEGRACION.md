@@ -79,7 +79,101 @@ GET https://app.mediprotect.com.mx/api/directorio-medico/categorias
 
 ---
 
-### 2.2 Médicos por Especialidad
+### 2.2 Perfil Individual del Médico
+```
+GET https://app.mediprotect.com.mx/api/directorio-medico/perfil/{id}
+```
+
+El `{id}` puede ser:
+- **UUID** del médico (ej: `02b5c192-210f-4e07-b0d3-7ded59e9e759`)
+- **Slug** del médico (ej: `karen-alba-hernandez`)
+
+**Respuesta completa:**
+```json
+{
+  "id": "02b5c192-210f-4e07-b0d3-7ded59e9e759",
+  "slug": "karen-alba-hernandez",
+  "titulo": "Dra.",
+  "nombre": "Karen",
+  "apellido": "Alba Hernández",
+  "nombre_completo": "Dra. Karen Alba Hernández",
+  "foto_url": null,
+  "bio": "Médica cirujana pediatra con 10 años de experiencia...",
+  "subespecialidad": "Médico Cirujano — Pediatra",
+  "frase_inspiradora": "Cuidar de los más pequeños es mi pasión",
+  "cedula_profesional": "11647942",
+  "cedula_especialidad": "14839740",
+  "universidad": "UAEM",
+  "whatsapp": "522228021933",
+  "telefono": "2228021933",
+  "email": "karen.alba@directorio.mediprotect.com.mx",
+  "precio_regular": 800,
+  "precio_miembro": 500,
+  "score_confianza": 5.0,
+  "destacado": true,
+  "direccion": "Av. 5 de Mayo 123",
+  "ciudad": "Puebla",
+  "estado": "Puebla",
+  "horario_atencion": "Lun-Vie 9:00-18:00",
+  "idiomas": ["Español", "Inglés"],
+  "formacion_academica": [
+    { "titulo": "Medicina General", "universidad": "UAEM", "año": 2015 }
+  ],
+  "informacion_consulta": [
+    { "concepto": "Consulta general", "precio": 800 }
+  ],
+  "perfil_url": null,
+  "created_at": "2026-06-29T21:11:46.569Z",
+  "especialidad": {
+    "id": 2,
+    "slug": "pediatria",
+    "nombre": "Pediatría",
+    "icono": "fa-solid fa-children",
+    "color": "amber-600"
+  },
+  "centro": {
+    "id": 2,
+    "nombre": "Mediwork Centro Médico",
+    "direccion": "Boulevard 5 de Mayo 2307",
+    "ciudad": "Puebla",
+    "estado": "Puebla",
+    "telefono": "2221234567"
+  },
+  "servicios": [
+    { "id": 1, "nombre": "Consulta Pediátrica", "descripcion": "Atención integral para niños" }
+  ],
+  "especialidades_adicionales": [
+    { "id": 5, "slug": "dermatologia", "nombre": "Dermatología" }
+  ]
+}
+```
+
+**Campos para LandingSite (perfil):**
+| Campo API | Uso |
+|-----------|-----|
+| `nombre_completo` | Nombre grande del perfil |
+| `foto_url` | Foto principal (si null, mostrar avatar con iniciales) |
+| `bio` | Descripción larga del médico |
+| `subespecialidad` | Especialidad principal |
+| `especialidad.nombre` + `icono` + `color` | Badge de especialidad |
+| `cedula_profesional` | Cédula profesional |
+| `cedula_especialidad` | Cédula de especialidad (si existe) |
+| `universidad` | Universidad de procedencia |
+| `frase_inspiradora` | Cita personal del médico |
+| `ciudad` + `estado` | Ubicación |
+| `centro.nombre` | Clínica donde atiende |
+| `horario_atencion` | Horarios disponibles |
+| `whatsapp` | Link a WhatsApp: `https://wa.me/{whatsapp}` |
+| `precio_regular` / `precio_miembro` | Precios de consulta |
+| `servicios` | Lista de servicios que ofrece |
+| `formacion_academica` | Estudios y títulos |
+| `idiomas` | Idiomas que habla |
+| `destacado` | Badge "Destacado" |
+| `score_confianza` | Rating (1-5) |
+
+---
+
+### 2.3 Médicos por Especialidad
 ```
 GET https://app.mediprotect.com.mx/api/directorio-medico?especialidad={slug}
 ```
@@ -272,7 +366,32 @@ const { medicos } = await res.json()
 // - Botón "Cita" → /agendar-cita?doctor=${m.nombre_completo}
 ```
 
-### 5.3 Filtro de Ciudad
+### 5.3 `/perfil-dr-{slug}` (Perfil del Médico)
+```javascript
+// ANTES: HTML hardcodeado (solo ~11 doctores)
+// DESPUÉS: Fetch desde API con slug
+const slug = window.location.pathname.replace('/perfil-dr-', '')
+const res = await fetch(`https://app.mediprotect.com.mx/api/directorio-medico/perfil/${slug}`)
+const medico = await res.json()
+
+// Renderizar perfil completo con:
+// - Foto o avatar con iniciales
+// - nombre_completo + frase_inspiradora
+// - especialidad + subespecialidad
+// - bio completa
+// - cedula_profesional + cedula_especialidad
+// - universidad + formacion_academica
+// - horario_atencion
+// - servicios que ofrece
+// - idiomas
+// - precio_regular / precio_miembro
+// - boton WhatsApp: https://wa.me/{whatsapp}
+// - centro medico (nombre, direccion, ciudad)
+// - score_confianza (estrellas)
+// - badge "Destacado" si destacado === true
+```
+
+### 5.4 Filtro de Ciudad
 ```javascript
 // Actualmente: dropdown hardcodeado (Puebla, CDMX, etc.)
 // Opción 1: Mantener el dropdown hardcodeado (más simple)
