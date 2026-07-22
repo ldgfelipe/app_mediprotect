@@ -267,7 +267,7 @@ const loadConfig = async () => {
     })
 
     const config = data.value?.configuracion || []
-    const configMap: Record<string, string> = {}
+    const configMap = {}
     for (const c of config) {
       configMap[c.clave] = c.valor
     }
