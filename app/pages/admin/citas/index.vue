@@ -43,6 +43,7 @@ const estadoColors: Record<string, string> = {
         <NuxtLink to="/admin/pagos">Pagos</NuxtLink>
         <NuxtLink to="/admin/citas" class="active">Citas</NuxtLink>
         <NuxtLink to="/admin/planes">Planes</NuxtLink>
+        <NuxtLink to="/admin/configuracion">Configuración</NuxtLink>
       </nav>
       <NuxtLink to="/admin/login" class="btn-logout">Cerrar Sesión</NuxtLink>
     </aside>

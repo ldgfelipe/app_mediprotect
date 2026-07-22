@@ -7,8 +7,27 @@ const loading = ref(true)
 const search = ref('')
 const uploadingId = ref<string | null>(null)
 
+// Modal de nuevo médico
+const showModal = ref(false)
+const savingNew = ref(false)
+const newMedico = ref({
+  nombre: '', apellido: '', email: '', telefono: '',
+  cedula_profesional: '', titulo: '', especialidad: '',
+  ciudad: '', hospital: '', bio: '', servicios: '',
+  universidad: '', horario_atencion: '', idiomas: 'Español'
+})
+
+// Búsqueda IA
+const searchingAI = ref(false)
+const aiResult = ref<any>(null)
+const aiError = ref('')
+const showAiPreview = ref(false)
+
+const especialidades = ref<any[]>([])
+
 onMounted(async () => {
   await loadMedicos()
+  await loadEspecialidades()
 })
 
 async function loadMedicos() {
@@ -101,6 +120,109 @@ function cerrarSesion() {
   t.value = null; u.value = null
   navigateTo('/admin/login')
 }
+
+async function loadEspecialidades() {
+  try {
+    const { data } = await useFetch('/api/especialidades')
+    especialidades.value = (data.value as any)?.especialidades || []
+  } catch (e) {
+    console.error(e)
+  }
+}
+
+function openNewModal() {
+  newMedico.value = {
+    nombre: '', apellido: '', email: '', telefono: '',
+    cedula_profesional: '', titulo: '', especialidad: '',
+    ciudad: '', hospital: '', bio: '', servicios: '',
+    universidad: '', horario_atencion: '', idiomas: 'Español'
+  }
+  aiResult.value = null
+  aiError.value = ''
+  showAiPreview.value = false
+  showModal.value = true
+}
+
+async function searchWithAI() {
+  const { nombre, especialidad } = newMedico.value
+  if (!nombre || !especialidad) {
+    aiError.value = 'Ingresa al menos el nombre y la especialidad del médico'
+    return
+  }
+
+  searchingAI.value = true
+  aiError.value = ''
+  aiResult.value = null
+
+  try {
+    const result = await $fetch('/api/ia/buscar-medico', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token.value}` },
+      body: {
+        nombre,
+        cedula: newMedico.value.cedula_profesional,
+        especialidad
+      }
+    })
+
+    const data = result as any
+    if (data.success && data.perfil) {
+      aiResult.value = data.perfil
+      showAiPreview.value = true
+    } else {
+      aiError.value = 'No se encontró información del médico'
+    }
+  } catch (err: any) {
+    aiError.value = err.data?.message || err.message || 'Error al buscar información'
+  } finally {
+    searchingAI.value = false
+  }
+}
+
+function applyAiData() {
+  if (!aiResult.value) return
+  const p = aiResult.value
+
+  if (p.nombre) newMedico.value.nombre = p.nombre
+  if (p.apellido) newMedico.value.apellido = p.apellido
+  if (p.titulo) newMedico.value.titulo = p.titulo
+  if (p.cedula_profesional) newMedico.value.cedula_profesional = p.cedula_profesional
+  if (p.ciudad) newMedico.value.ciudad = p.ciudad
+  if (p.hospital) newMedico.value.hospital = p.hospital
+  if (p.bio) newMedico.value.bio = p.bio
+  if (p.universidad) newMedico.value.universidad = p.universidad
+  if (p.horario_atencion) newMedico.value.horario_atencion = p.horario_atencion
+  if (p.idiomas && Array.isArray(p.idiomas)) newMedico.value.idiomas = p.idiomas.join(', ')
+  if (p.servicios && Array.isArray(p.servicios)) newMedico.value.servicios = p.servicios.join(', ')
+
+  showAiPreview.value = false
+}
+
+async function saveNewMedico() {
+  if (!newMedico.value.nombre || !newMedico.value.apellido || !newMedico.value.especialidad) {
+    alert('Nombre, apellido y especialidad son requeridos')
+    return
+  }
+
+  savingNew.value = true
+  try {
+    const response = await $fetch('/api/admin/medicos', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token.value}` },
+      body: newMedico.value
+    })
+
+    const data = response as any
+    if (data.medico) {
+      medicos.value.unshift(data.medico)
+      showModal.value = false
+    }
+  } catch (err: any) {
+    alert(err.data?.message || 'Error al guardar médico')
+  } finally {
+    savingNew.value = false
+  }
+}
 </script>
 
 <template>
@@ -128,6 +250,7 @@ function cerrarSesion() {
           <h1>Gestión de Médicos</h1>
           <p>Administrar información y fotos de los médicos</p>
         </div>
+        <button class="btn-primary" @click="openNewModal">+ Nuevo Médico</button>
       </header>
 
       <div class="search-bar">
@@ -162,6 +285,207 @@ function cerrarSesion() {
           </div>
         </div>
       </div>
+
+      <!-- Modal Nuevo Médico -->
+      <div class="modal-overlay" v-if="showModal" @click.self="showModal = false">
+        <div class="modal-content modal-lg">
+          <div class="modal-header">
+            <h2>Registrar Nuevo Médico</h2>
+            <button class="modal-close" @click="showModal = false">&times;</button>
+          </div>
+
+          <div class="modal-body">
+            <!-- Búsqueda IA -->
+            <div class="ai-search-section">
+              <div class="ai-search-header">
+                <span class="ai-icon">🤖</span>
+                <div>
+                  <h4>Búsqueda con Inteligencia Artificial</h4>
+                  <p>Ingresa el nombre y especialidad para buscar automáticamente la información del médico</p>
+                </div>
+              </div>
+
+              <div class="ai-search-form">
+                <input
+                  v-model="newMedico.nombre"
+                  type="text"
+                  placeholder="Nombre del médico"
+                  class="ai-input"
+                >
+                <input
+                  v-model="newMedico.cedula_profesional"
+                  type="text"
+                  placeholder="Cédula (opcional)"
+                  class="ai-input ai-input-sm"
+                >
+                <select v-model="newMedico.especialidad" class="ai-input ai-input-md">
+                  <option value="">Especialidad</option>
+                  <option v-for="e in especialidades" :key="e.id" :value="e.nombre">{{ e.nombre }}</option>
+                </select>
+                <button
+                  class="btn-ai-search"
+                  @click="searchWithAI"
+                  :disabled="searchingAI || !newMedico.nombre || !newMedico.especialidad"
+                >
+                  {{ searchingAI ? '🔍 Buscando...' : '🔍 Buscar con IA' }}
+                </button>
+              </div>
+
+              <div v-if="aiError" class="ai-error">{{ aiError }}</div>
+
+              <!-- Preview de resultados IA -->
+              <div v-if="showAiPreview && aiResult" class="ai-preview">
+                <div class="ai-preview-header">
+                  <span>📋 Información encontrada</span>
+                  <span class="ai-provider">vía {{ aiResult.fuentes?.length ? 'IA' : 'base de datos' }}</span>
+                </div>
+
+                <div class="ai-preview-grid">
+                  <div class="ai-field" v-if="aiResult.titulo">
+                    <label>Título</label>
+                    <span>{{ aiResult.titulo }}</span>
+                  </div>
+                  <div class="ai-field" v-if="aiResult.universidad">
+                    <label>Universidad</label>
+                    <span>{{ aiResult.universidad }}</span>
+                  </div>
+                  <div class="ai-field" v-if="aiResult.ciudad">
+                    <label>Ciudad</label>
+                    <span>{{ aiResult.ciudad }}</span>
+                  </div>
+                  <div class="ai-field" v-if="aiResult.hospital">
+                    <label>Hospital</label>
+                    <span>{{ aiResult.hospital }}</span>
+                  </div>
+                  <div class="ai-field full" v-if="aiResult.bio">
+                    <label>Biografía</label>
+                    <span class="bio-text">{{ aiResult.bio }}</span>
+                  </div>
+                  <div class="ai-field full" v-if="aiResult.servicios?.length">
+                    <label>Servicios</label>
+                    <span>{{ aiResult.servicios.join(', ') }}</span>
+                  </div>
+                  <div class="ai-field" v-if="aiResult.idiomas?.length">
+                    <label>Idiomas</label>
+                    <span>{{ aiResult.idiomas.join(', ') }}</span>
+                  </div>
+                  <div class="ai-field" v-if="aiResult.horario_atencion">
+                    <label>Horario</label>
+                    <span>{{ aiResult.horario_atencion }}</span>
+                  </div>
+                  <div class="ai-field full" v-if="aiResult.formacion_academica?.length">
+                    <label>Formación Académica</label>
+                    <div v-for="(f, i) in aiResult.formacion_academica" :key="i" class="formacion-item">
+                      {{ f.titulo }} - {{ f.institucion }} ({{ f.anio }})
+                    </div>
+                  </div>
+                  <div class="ai-field full" v-if="aiResult.certificaciones?.length">
+                    <label>Certificaciones</label>
+                    <span>{{ aiResult.certificaciones.join(', ') }}</span>
+                  </div>
+                </div>
+
+                <div class="ai-preview-actions">
+                  <button class="btn-cancel" @click="showAiPreview = false">Cancelar</button>
+                  <button class="btn-ai-apply" @click="applyAiData">✅ Usar estos datos</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Formulario manual -->
+            <div class="form-divider">
+              <span>o completa los datos manualmente</span>
+            </div>
+
+            <form @submit.prevent="saveNewMedico">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Nombre *</label>
+                  <input v-model="newMedico.nombre" required>
+                </div>
+                <div class="form-group">
+                  <label>Apellido *</label>
+                  <input v-model="newMedico.apellido" required>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Email</label>
+                  <input v-model="newMedico.email" type="email">
+                </div>
+                <div class="form-group">
+                  <label>Teléfono</label>
+                  <input v-model="newMedico.telefono">
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Cédula Profesional</label>
+                  <input v-model="newMedico.cedula_profesional">
+                </div>
+                <div class="form-group">
+                  <label>Título</label>
+                  <input v-model="newMedico.titulo" placeholder="Ej: Médico Cirujano">
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Especialidad *</label>
+                  <select v-model="newMedico.especialidad" required>
+                    <option value="">Seleccionar...</option>
+                    <option v-for="e in especialidades" :key="e.id" :value="e.nombre">{{ e.nombre }}</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Ciudad</label>
+                  <input v-model="newMedico.ciudad" placeholder="Ej: Puebla">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Hospital / Clínica</label>
+                <input v-model="newMedico.hospital">
+              </div>
+
+              <div class="form-group">
+                <label>Universidad</label>
+                <input v-model="newMedico.universidad">
+              </div>
+
+              <div class="form-group">
+                <label>Biografía</label>
+                <textarea v-model="newMedico.bio" rows="3"></textarea>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Servicios (separados por coma)</label>
+                  <input v-model="newMedico.servicios">
+                </div>
+                <div class="form-group">
+                  <label>Idiomas</label>
+                  <input v-model="newMedico.idiomas">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Horario de Atención</label>
+                <input v-model="newMedico.horario_atencion" placeholder="Ej: Lun-Vie 9:00-18:00">
+              </div>
+
+              <div class="form-actions">
+                <button type="button" class="btn-cancel" @click="showModal = false">Cancelar</button>
+                <button type="submit" class="btn-primary" :disabled="savingNew">
+                  {{ savingNew ? 'Guardando...' : 'Guardar Médico' }}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
     </main>
   </div>
 </template>
@@ -177,8 +501,9 @@ function cerrarSesion() {
 .btn-logout { background: none; border: 1px solid #636e72; color: #b2bec3; padding: 0.5rem; border-radius: 6px; cursor: pointer; margin-top: 1rem; font-size: 0.85rem; }
 .btn-logout:hover { border-color: #d63031; color: #d63031; }
 .admin-content { flex: 1; padding: 2rem; background: #f5f6fa; overflow-y: auto; }
+.content-header { display: flex; justify-content: space-between; align-items: flex-start; }
 .content-header h1 { margin: 0; color: #2d3436; font-size: 1.5rem; }
-.content-header p { color: #636e72; font-size: 0.85rem; margin: 0.25rem 0 2rem; }
+.content-header p { color: #636e72; font-size: 0.85rem; margin: 0.25rem 0 0; }
 .loading { text-align: center; color: #636e72; padding: 3rem; }
 .search-bar { margin-bottom: 1.5rem; }
 .search-bar input { width: 100%; max-width: 400px; padding: 0.75rem 1rem; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 0.9rem; }
@@ -202,4 +527,78 @@ function cerrarSesion() {
 .medico-info .especialidad { margin: 0; font-size: 0.85rem; color: #0984e3; font-weight: 500; }
 .medico-info .cedula { margin: 0.25rem 0 0; font-size: 0.8rem; color: #636e72; }
 .medico-info .ciudad { margin: 0.15rem 0 0; font-size: 0.8rem; color: #636e72; }
+
+/* Botón primario */
+.btn-primary { background: #00b894; color: white; border: none; padding: 0.6rem 1.25rem; border-radius: 6px; font-size: 0.9rem; cursor: pointer; font-weight: 500; }
+.btn-primary:hover:not(:disabled) { background: #00a884; }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
+.modal-content { background: white; border-radius: 12px; width: 100%; max-height: 90vh; overflow-y: auto; }
+.modal-lg { max-width: 720px; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 1.5rem; border-bottom: 1px solid #f0f0f0; }
+.modal-header h2 { margin: 0; font-size: 1.2rem; color: #2d3436; }
+.modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #636e72; padding: 0.25rem; }
+.modal-close:hover { color: #d63031; }
+.modal-body { padding: 1.5rem; }
+
+/* AI Search Section */
+.ai-search-section { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 10px; padding: 1.25rem; margin-bottom: 1rem; }
+.ai-search-header { display: flex; gap: 0.75rem; align-items: flex-start; margin-bottom: 1rem; }
+.ai-icon { font-size: 1.8rem; }
+.ai-search-header h4 { margin: 0; color: #2d3436; font-size: 0.95rem; }
+.ai-search-header p { margin: 0.2rem 0 0; color: #636e72; font-size: 0.8rem; }
+.ai-search-form { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.ai-input { padding: 0.55rem 0.75rem; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 0.85rem; font-family: inherit; }
+.ai-input:focus { outline: none; border-color: #00b894; }
+.ai-input-sm { max-width: 160px; }
+.ai-input-md { max-width: 200px; }
+.btn-ai-search { background: #6c5ce7; color: white; border: none; padding: 0.55rem 1rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; font-weight: 500; white-space: nowrap; }
+.btn-ai-search:hover:not(:disabled) { background: #5a4bd1; }
+.btn-ai-search:disabled { opacity: 0.6; cursor: not-allowed; }
+.ai-error { background: #ffeaa7; color: #d63031; padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.8rem; margin-top: 0.75rem; }
+
+/* AI Preview */
+.ai-preview { background: white; border: 1px solid #00b894; border-radius: 8px; margin-top: 1rem; overflow: hidden; }
+.ai-preview-header { display: flex; justify-content: space-between; align-items: center; background: #f0fff4; padding: 0.6rem 1rem; border-bottom: 1px solid #00b894; font-size: 0.85rem; font-weight: 500; color: #00b894; }
+.ai-provider { font-size: 0.75rem; color: #636e72; font-weight: 400; }
+.ai-preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; padding: 1rem; }
+.ai-field { display: flex; flex-direction: column; }
+.ai-field.full { grid-column: 1 / -1; }
+.ai-field label { font-size: 0.75rem; color: #636e72; margin-bottom: 0.2rem; text-transform: uppercase; letter-spacing: 0.3px; }
+.ai-field span { font-size: 0.85rem; color: #2d3436; }
+.bio-text { white-space: pre-line; line-height: 1.4; }
+.formacion-item { font-size: 0.8rem; color: #2d3436; padding: 0.2rem 0; }
+.ai-preview-actions { display: flex; justify-content: flex-end; gap: 0.75rem; padding: 0.75rem 1rem; border-top: 1px solid #f0f0f0; }
+.btn-ai-apply { background: #00b894; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; font-weight: 500; }
+.btn-ai-apply:hover { background: #00a884; }
+
+/* Form Divider */
+.form-divider { text-align: center; margin: 1rem 0; position: relative; }
+.form-divider::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: #e0e0e0; }
+.form-divider span { background: white; padding: 0 1rem; position: relative; color: #636e72; font-size: 0.8rem; }
+
+/* Form */
+.form-row { display: flex; gap: 1rem; margin-bottom: 0.75rem; }
+.form-group { display: flex; flex-direction: column; flex: 1; margin-bottom: 0.75rem; }
+.form-group label { font-size: 0.8rem; color: #636e72; margin-bottom: 0.3rem; font-weight: 500; }
+.form-group input, .form-group select, .form-group textarea {
+  padding: 0.55rem 0.75rem; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 0.85rem; font-family: inherit;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #00b894; }
+.form-group textarea { resize: vertical; }
+.form-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #f0f0f0; }
+.btn-cancel { background: #f5f5f5; border: 1px solid #e0e0e0; padding: 0.55rem 1.25rem; border-radius: 6px; font-size: 0.9rem; cursor: pointer; }
+.btn-cancel:hover { background: #eee; }
+
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .admin-content { margin-left: 0; }
+  .ai-search-form { flex-direction: column; }
+  .ai-input-sm, .ai-input-md { max-width: 100%; }
+  .ai-preview-grid { grid-template-columns: 1fr; }
+  .form-row { flex-direction: column; }
+  .content-header { flex-direction: column; gap: 1rem; }
+}
 </style>

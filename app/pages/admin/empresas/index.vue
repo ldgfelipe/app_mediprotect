@@ -53,6 +53,7 @@ async function toggleEstado(e: any) {
         <NuxtLink to="/admin/pagos">Pagos</NuxtLink>
         <NuxtLink to="/admin/citas">Citas</NuxtLink>
         <NuxtLink to="/admin/planes">Planes</NuxtLink>
+        <NuxtLink to="/admin/configuracion">Configuración</NuxtLink>
       </nav>
     </aside>
     <main class="admin-content">

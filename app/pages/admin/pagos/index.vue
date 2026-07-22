@@ -51,6 +51,7 @@ const estatusColors: Record<string, string> = {
         <NuxtLink to="/admin/pagos" class="active">Pagos</NuxtLink>
         <NuxtLink to="/admin/citas">Citas</NuxtLink>
         <NuxtLink to="/admin/planes">Planes</NuxtLink>
+        <NuxtLink to="/admin/configuracion">Configuración</NuxtLink>
       </nav>
       <NuxtLink to="/admin/login" class="btn-logout">Cerrar Sesión</NuxtLink>
     </aside>

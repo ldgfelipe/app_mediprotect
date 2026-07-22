@@ -35,6 +35,7 @@ function cerrarSesion() {
         <NuxtLink to="/admin/citas">Citas</NuxtLink>
         <NuxtLink to="/admin/asistentes">Asistentes</NuxtLink>
         <NuxtLink to="/admin/planes">Planes</NuxtLink>
+        <NuxtLink to="/admin/configuracion">Configuración</NuxtLink>
       </nav>
       <button @click="cerrarSesion" class="btn-logout">Cerrar Sesión</button>
     </aside>
