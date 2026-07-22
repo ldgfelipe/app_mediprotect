@@ -10,6 +10,7 @@ const uploadingId = ref<string | null>(null)
 // Modal de nuevo médico
 const showModal = ref(false)
 const savingNew = ref(false)
+const formText = ref('')
 const newMedico = ref({
   nombre: '', apellido: '', email: '', telefono: '',
   cedula_profesional: '', titulo: '', especialidad: '',
@@ -137,6 +138,7 @@ function openNewModal() {
     ciudad: '', hospital: '', bio: '', servicios: '',
     universidad: '', horario_atencion: '', idiomas: 'Español'
   }
+  formText.value = ''
   aiResult.value = null
   aiError.value = ''
   showAiPreview.value = false
@@ -144,9 +146,8 @@ function openNewModal() {
 }
 
 async function searchWithAI() {
-  const { nombre, especialidad } = newMedico.value
-  if (!nombre || !especialidad) {
-    aiError.value = 'Ingresa al menos el nombre y la especialidad del médico'
+  if (!formText.value || formText.value.trim().length < 20) {
+    aiError.value = 'Pega la información completa del médico (respuesta del Google Form)'
     return
   }
 
@@ -158,11 +159,7 @@ async function searchWithAI() {
     const result = await $fetch('/api/ia/buscar-medico', {
       method: 'POST',
       headers: { Authorization: `Bearer ${token.value}` },
-      body: {
-        nombre,
-        cedula: newMedico.value.cedula_profesional,
-        especialidad
-      }
+      body: { texto: formText.value }
     })
 
     const data = result as any
@@ -170,10 +167,10 @@ async function searchWithAI() {
       aiResult.value = data.perfil
       showAiPreview.value = true
     } else {
-      aiError.value = 'No se encontró información del médico'
+      aiError.value = 'No se pudo extraer información del texto proporcionado'
     }
   } catch (err: any) {
-    aiError.value = err.data?.message || err.message || 'Error al buscar información'
+    aiError.value = err.data?.message || err.message || 'Error al procesar información'
   } finally {
     searchingAI.value = false
   }
@@ -187,6 +184,9 @@ function applyAiData() {
   if (p.apellido) newMedico.value.apellido = p.apellido
   if (p.titulo) newMedico.value.titulo = p.titulo
   if (p.cedula_profesional) newMedico.value.cedula_profesional = p.cedula_profesional
+  if (p.email) newMedico.value.email = p.email
+  if (p.telefono) newMedico.value.telefono = p.telefono
+  if (p.especialidad) newMedico.value.especialidad = p.especialidad
   if (p.ciudad) newMedico.value.ciudad = p.ciudad
   if (p.hospital) newMedico.value.hospital = p.hospital
   if (p.bio) newMedico.value.bio = p.bio
@@ -295,40 +295,46 @@ async function saveNewMedico() {
           </div>
 
           <div class="modal-body">
-            <!-- Búsqueda IA -->
+            <!-- Chat IA - Pegar información del Google Form -->
             <div class="ai-search-section">
               <div class="ai-search-header">
                 <span class="ai-icon">🤖</span>
                 <div>
-                  <h4>Búsqueda con Inteligencia Artificial</h4>
-                  <p>Ingresa el nombre y especialidad para buscar automáticamente la información del médico</p>
+                  <h4>Generar perfil con Inteligencia Artificial</h4>
+                  <p>Copia la respuesta del Google Form del médico y pégala aquí. La IA extraerá automáticamente todos los datos para crear el perfil.</p>
                 </div>
               </div>
 
-              <div class="ai-search-form">
-                <input
-                  v-model="newMedico.nombre"
-                  type="text"
-                  placeholder="Nombre del médico"
-                  class="ai-input"
-                >
-                <input
-                  v-model="newMedico.cedula_profesional"
-                  type="text"
-                  placeholder="Cédula (opcional)"
-                  class="ai-input ai-input-sm"
-                >
-                <select v-model="newMedico.especialidad" class="ai-input ai-input-md">
-                  <option value="">Especialidad</option>
-                  <option v-for="e in especialidades" :key="e.id" :value="e.nombre">{{ e.nombre }}</option>
-                </select>
-                <button
-                  class="btn-ai-search"
-                  @click="searchWithAI"
-                  :disabled="searchingAI || !newMedico.nombre || !newMedico.especialidad"
-                >
-                  {{ searchingAI ? '🔍 Buscando...' : '🔍 Buscar con IA' }}
-                </button>
+              <div class="ai-chat-area">
+                <textarea
+                  v-model="formText"
+                  class="ai-textarea"
+                  rows="8"
+                  placeholder="Pega aquí la información del médico...
+
+Ejemplo:
+Nombre: Dr. Juan Pérez López
+Cédula: 12345678
+Especialidad: Cardiología
+Teléfono: 222 123 4567
+Email: juan@email.com
+Universidad: UNAM
+Hospital: Hospital Ángeles Puebla
+Biografía: El Dr. Pérez es especialista en cardiología intervencionista con más de 10 años de experiencia...
+Servicios: Consulta general, Electrocardiograma, Ecocardiograma
+Horario: Lun-Vie 9:00-18:00
+Idiomas: Español, Inglés"
+                ></textarea>
+
+                <div class="ai-chat-actions">
+                  <button
+                    class="btn-ai-search"
+                    @click="searchWithAI"
+                    :disabled="searchingAI || !formText || formText.trim().length < 20"
+                  >
+                    {{ searchingAI ? '⏳ Procesando con IA...' : '✨ Generar perfil' }}
+                  </button>
+                </div>
               </div>
 
               <div v-if="aiError" class="ai-error">{{ aiError }}</div>
@@ -336,14 +342,26 @@ async function saveNewMedico() {
               <!-- Preview de resultados IA -->
               <div v-if="showAiPreview && aiResult" class="ai-preview">
                 <div class="ai-preview-header">
-                  <span>📋 Información encontrada</span>
-                  <span class="ai-provider">vía {{ aiResult.fuentes?.length ? 'IA' : 'base de datos' }}</span>
+                  <span>📋 Información extraída del formulario</span>
+                  <span class="ai-provider">procesado con IA</span>
                 </div>
 
                 <div class="ai-preview-grid">
+                  <div class="ai-field" v-if="aiResult.nombre || aiResult.apellido">
+                    <label>Nombre completo</label>
+                    <span>{{ aiResult.nombre }} {{ aiResult.apellido }}</span>
+                  </div>
                   <div class="ai-field" v-if="aiResult.titulo">
                     <label>Título</label>
                     <span>{{ aiResult.titulo }}</span>
+                  </div>
+                  <div class="ai-field" v-if="aiResult.cedula_profesional">
+                    <label>Cédula</label>
+                    <span>{{ aiResult.cedula_profesional }}</span>
+                  </div>
+                  <div class="ai-field" v-if="aiResult.especialidad">
+                    <label>Especialidad</label>
+                    <span>{{ aiResult.especialidad }}</span>
                   </div>
                   <div class="ai-field" v-if="aiResult.universidad">
                     <label>Universidad</label>
@@ -357,6 +375,18 @@ async function saveNewMedico() {
                     <label>Hospital</label>
                     <span>{{ aiResult.hospital }}</span>
                   </div>
+                  <div class="ai-field" v-if="aiResult.clinica">
+                    <label>Clínica</label>
+                    <span>{{ aiResult.clinica }}</span>
+                  </div>
+                  <div class="ai-field" v-if="aiResult.telefono">
+                    <label>Teléfono</label>
+                    <span>{{ aiResult.telefono }}</span>
+                  </div>
+                  <div class="ai-field" v-if="aiResult.email">
+                    <label>Email</label>
+                    <span>{{ aiResult.email }}</span>
+                  </div>
                   <div class="ai-field full" v-if="aiResult.bio">
                     <label>Biografía</label>
                     <span class="bio-text">{{ aiResult.bio }}</span>
@@ -364,6 +394,10 @@ async function saveNewMedico() {
                   <div class="ai-field full" v-if="aiResult.servicios?.length">
                     <label>Servicios</label>
                     <span>{{ aiResult.servicios.join(', ') }}</span>
+                  </div>
+                  <div class="ai-field full" v-if="aiResult.enfermedades_tratadas?.length">
+                    <label>Enfermedades que trata</label>
+                    <span>{{ aiResult.enfermedades_tratadas.join(', ') }}</span>
                   </div>
                   <div class="ai-field" v-if="aiResult.idiomas?.length">
                     <label>Idiomas</label>
@@ -548,13 +582,26 @@ async function saveNewMedico() {
 .ai-search-header { display: flex; gap: 0.75rem; align-items: flex-start; margin-bottom: 1rem; }
 .ai-icon { font-size: 1.8rem; }
 .ai-search-header h4 { margin: 0; color: #2d3436; font-size: 0.95rem; }
-.ai-search-header p { margin: 0.2rem 0 0; color: #636e72; font-size: 0.8rem; }
-.ai-search-form { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-.ai-input { padding: 0.55rem 0.75rem; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 0.85rem; font-family: inherit; }
-.ai-input:focus { outline: none; border-color: #00b894; }
-.ai-input-sm { max-width: 160px; }
-.ai-input-md { max-width: 200px; }
-.btn-ai-search { background: #6c5ce7; color: white; border: none; padding: 0.55rem 1rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; font-weight: 500; white-space: nowrap; }
+.ai-search-header p { margin: 0.2rem 0 0; color: #636e72; font-size: 0.8rem; line-height: 1.4; }
+
+/* Chat Area */
+.ai-chat-area { display: flex; flex-direction: column; gap: 0.75rem; }
+.ai-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.5;
+  background: white;
+}
+.ai-textarea:focus { outline: none; border-color: #6c5ce7; }
+.ai-textarea::placeholder { color: #b2bec3; }
+.ai-chat-actions { display: flex; justify-content: flex-end; }
+.btn-ai-search { background: #6c5ce7; color: white; border: none; padding: 0.6rem 1.25rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; font-weight: 500; white-space: nowrap; transition: 0.15s; }
 .btn-ai-search:hover:not(:disabled) { background: #5a4bd1; }
 .btn-ai-search:disabled { opacity: 0.6; cursor: not-allowed; }
 .ai-error { background: #ffeaa7; color: #d63031; padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.8rem; margin-top: 0.75rem; }
@@ -595,8 +642,7 @@ async function saveNewMedico() {
 @media (max-width: 768px) {
   .sidebar { display: none; }
   .admin-content { margin-left: 0; }
-  .ai-search-form { flex-direction: column; }
-  .ai-input-sm, .ai-input-md { max-width: 100%; }
+  .ai-textarea { min-height: 100px; }
   .ai-preview-grid { grid-template-columns: 1fr; }
   .form-row { flex-direction: column; }
   .content-header { flex-direction: column; gap: 1rem; }

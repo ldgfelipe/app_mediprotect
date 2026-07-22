@@ -8,10 +8,10 @@ export default defineEventHandler(async (event) => {
   catch { throw createError({ statusCode: 401, message: 'Token inválido' }) }
 
   const body = await readBody(event)
-  const { nombre, cedula, especialidad } = body
+  const { texto } = body
 
-  if (!nombre || !especialidad) {
-    throw createError({ statusCode: 400, message: 'Nombre y especialidad son requeridos' })
+  if (!texto || texto.trim().length < 20) {
+    throw createError({ statusCode: 400, message: 'La información del médico es requerida (mínimo 20 caracteres)' })
   }
 
   const pool = getPool()
@@ -58,40 +58,50 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Prompt para buscar información del médico
-  const prompt = `Eres un asistente médico especializado en encontrar información pública de médicos en México.
+  // Prompt para procesar información del médico desde Google Form
+  const prompt = `Eres un asistente que procesa información de médicos proveniente de formularios de Google Forms.
 
-Busca información del siguiente médico y devuelve un JSON con estos campos:
+El usuario te va a pegar la respuesta de un Google Form con información de un médico. Tu tarea es extraer y organizar toda la información en un perfil estructurado.
+
+IMPORTANTE: Extrae la información TAL COMO VIENE en el texto. No inventes datos que no estén presentes.
+
+Devuelve un JSON con estos campos:
 
 {
-  "nombre": "Nombre completo del médico",
+  "nombre": "Nombre del médico (sin título como Dr.)",
   "apellido": "Apellido(s)",
-  "cedula_profesional": "Número de cédula si se encuentra",
-  "titulo": "Título profesional (ej: Médico Cirujano)",
-  "especialidad": "Especialidad médica",
+  "cedula_profesional": "Número de cédula",
+  "titulo": "Título profesional (ej: Médico Cirujano, Doctor en Medicina)",
+  "especialidad": "Especialidad médica principal",
   "subespecialidad": "Subespecialidad si aplica",
   "universidad": "Universidad donde estudió",
   "ciudad": "Ciudad de práctica",
-  "hospital": "Hospital o clínica principal",
-  "bio": "Breve biografía profesional (2-3 párrafos)",
+  "hospital": "Hospital o clínica donde trabaja",
+  "clinica": "Nombre de clínica propia si tiene",
+  "consultorio": "Dirección del consultorio",
+  "telefono": "Teléfono de contacto",
+  "email": "Correo electrónico",
+  "web": "Sitio web personal si tiene",
+  "linkedin": "Perfil de LinkedIn si tiene",
+  "bio": "Breve biografía profesional (2-3 párrafos bien escritos, estilo perfil profesional para web)",
   "servicios": ["Lista de servicios que ofrece"],
   "idiomas": ["Idiomas que habla"],
   "formacion_academica": [{"titulo": "...", "institucion": "...", "anio": "..."}],
-  "certificaciones": ["Certificaciones y membresías"],
+  "certificaciones": ["Certificaciones, membresías y títulos adicionales"],
   "horario_atencion": "Horario general de atención",
-  "experiencia_anos": "Años de experiencia aproximados",
-  "url_perfil": "URL de perfil público si se encuentra",
-  "foto_url": "URL de foto si se encuentra",
-  "fuentes": ["URLs de donde se obtuvo la información"]
+  "experiencia_anos": "Años de experiencia si se menciona",
+  "enfermedades_tratadas": ["Enfermedades o condiciones que trata"],
+  "procedimientos": ["Procedimientos especiales que realiza"],
+  "fotos_urls": ["URLs de fotos si se mencionan"]
 }
 
-Médico a buscar:
-- Nombre: ${nombre}
-- Cédula: ${cedula || 'No proporcionada'}
-- Especialidad: ${especialidad}
+Información del médico (respuesta del Google Form):
+---
+${texto}
+---
 
-Si no encuentras información para algún campo, déjalo como null o string vacío. No inventes información.
-Busca en fuentes como: páginas oficiales de hospitales, directorios médicos, LinkedIn, páginas personales de doctores.
+Si un campo no se encuentra en el texto, déjalo como null o string vacío. Para la biografía, reforma el texto de forma profesional y atractiva para un perfil de página web.
+Para servicios y enfermedades, extrae y organiza la información de forma clara.
 
 Responde SOLO con el JSON, sin explicaciones adicionales.`
 
