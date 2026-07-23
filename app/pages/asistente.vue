@@ -25,18 +25,23 @@ const nuevaCita = ref({
 })
 const pacientesSearch = ref([])
 const pacienteSeleccionado = ref(null)
+const medicosSearch = ref([])
+const medicoSeleccionado = ref(null)
 const creandoCita = ref(false)
 const errorCita = ref('')
 const parseando = ref(false)
 const pasoActual = ref(1)
+const buscandoMedico = ref(false)
 
 function abrirNuevaCita() {
   showNuevaCita.value = true
   pasoActual.value = 1
   pacienteSeleccionado.value = null
+  medicoSeleccionado.value = null
   nuevaCita.value = { wa_text: '', paciente_search: '', medico_search: '', fecha: '', hora: '', notas: '' }
   errorCita.value = ''
   pacientesSearch.value = []
+  medicosSearch.value = []
 }
 
 function siguientePaso() {
@@ -83,7 +88,11 @@ async function parsearMensaje() {
   // Extract doctor name
   const medicoMatch = text.match(/médico\s+([^\n.]+)/i) || text.match(/doctor\s+([^\n.]+)/i) || text.match(/con\s+(?:el\s+)?(?:médico|doctor)\s+([^\n.]+)/i)
   if (medicoMatch) {
-    nuevaCita.value.medico_search = medicoMatch[1].trim()
+    const nombreMedico = medicoMatch[1].trim()
+    // Limpiar "Dr." o "Dra." del inicio si está presente
+    nuevaCita.value.medico_search = nombreMedico.replace(/^(dra?\.?\s*)/i, '').trim()
+    // Buscar médico con disponibilidad
+    await buscarMedicoConDisponibilidadDirecto(nuevaCita.value.medico_search)
   }
 
   // Extract patient ID
@@ -131,6 +140,78 @@ async function buscarPacientes() {
   } catch (e) { pacientesSearch.value = [] }
 }
 
+let searchTimeout = null
+async function buscarMedicoConDisponibilidad() {
+  const termino = nuevaCita.value.medico_search.trim()
+  if (!termino || termino.length < 2) {
+    medicosSearch.value = []
+    medicoSeleccionado.value = null
+    return
+  }
+
+  // Debounce: esperar 400ms después de dejar de escribir
+  if (searchTimeout) clearTimeout(searchTimeout)
+  searchTimeout = setTimeout(async () => {
+    buscandoMedico.value = true
+    try {
+      const data = await $fetch('/api/medicos/buscar?q=' + encodeURIComponent(termino), {
+        headers: { Authorization: 'Bearer ' + useCookie('token').value }
+      })
+      medicosSearch.value = data.medicos || []
+    } catch (e) {
+      medicosSearch.value = []
+    }
+    buscandoMedico.value = false
+  }, 400)
+}
+
+async function buscarMedicoConDisponibilidadDirecto(termino) {
+  if (!termino || termino.length < 2) {
+    medicosSearch.value = []
+    return
+  }
+  buscandoMedico.value = true
+  try {
+    const data = await $fetch('/api/medicos/buscar?q=' + encodeURIComponent(termino), {
+      headers: { Authorization: 'Bearer ' + useCookie('token').value }
+    })
+    medicosSearch.value = data.medicos || []
+    // Si solo hay un resultado, seleccionarlo automáticamente
+    if (medicosSearch.value.length === 1) {
+      seleccionarMedico(medicosSearch.value[0])
+    }
+  } catch (e) {
+    medicosSearch.value = []
+  }
+  buscandoMedico.value = false
+}
+
+function seleccionarMedico(medico) {
+  medicoSeleccionado.value = medico
+  nuevaCita.value.medico_search = `${medico.titulo || 'Dr.'} ${medico.nombre} ${medico.apellido}`
+  medicosSearch.value = []
+}
+
+function formatearFecha(fechaISO) {
+  const fecha = new Date(fechaISO)
+  const opciones = { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }
+  return fecha.toLocaleDateString('es-MX', opciones)
+}
+
+function estadoBadge(estado) {
+  const colores = {
+    pendiente: '#fdcb6e',
+    confirmada: '#00b894',
+    paciente_llego: '#0984e3',
+    en_atencion: '#6c5ce7',
+    asistida: '#00cec9',
+    no_asistida: '#d63031',
+    cancelada: '#b2bec3',
+    reagendada: '#e17055'
+  }
+  return colores[estado] || '#636e72'
+}
+
 function seleccionarPaciente(p) {
   pacienteSeleccionado.value = { ...p }
   nuevaCita.value.paciente_search = p.nombre + ' ' + p.apellido
@@ -146,20 +227,26 @@ async function crearCita() {
   creandoCita.value = true
   try {
     const fecha_hora = nuevaCita.value.fecha + 'T' + nuevaCita.value.hora + ':00'
+    const body: any = {
+      id_paciente: pacienteSeleccionado.value.id,
+      medico_nombre: nuevaCita.value.medico_search.trim(),
+      fecha_hora,
+      notas_asistente: nuevaCita.value.notas || nuevaCita.value.wa_text,
+    }
+    // Si se seleccionó un médico de la búsqueda, incluir su ID
+    if (medicoSeleccionado.value) {
+      body.id_medico = medicoSeleccionado.value.id
+    }
     await $fetch('/api/asistente/citas', {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + useCookie('token').value },
-      body: {
-        id_paciente: pacienteSeleccionado.value.id,
-        medico_nombre: nuevaCita.value.medico_search.trim(),
-        fecha_hora,
-        notas_asistente: nuevaCita.value.notas || nuevaCita.value.wa_text,
-      }
+      body
     })
     showNuevaCita.value = false
     pasoActual.value = 1
     nuevaCita.value = { wa_text: '', paciente_search: '', medico_search: '', fecha: '', hora: '', notas: '' }
     pacienteSeleccionado.value = null
+    medicoSeleccionado.value = null
     await cargarCitas()
   } catch (e) {
     errorCita.value = e.data?.message || 'Error al crear cita'
@@ -363,8 +450,90 @@ function estadoColor(estado) {
           <div v-if="pasoActual === 2">
             <div class="field">
               <label>Nombre del médico</label>
-              <input v-model="nuevaCita.medico_search" placeholder="Ej. Dr. Carlos Ramirez" />
-              <p class="field-hint">Escribe el nombre según el mensaje o ingrésalo manualmente</p>
+              <div class="search-input-wrapper">
+                <input
+                  v-model="nuevaCita.medico_search"
+                  placeholder="Ej. Carlos Ramirez"
+                  @input="buscarMedicoConDisponibilidad"
+                />
+                <span v-if="buscandoMedico" class="search-spinner">⏳</span>
+              </div>
+              <p class="field-hint">Escribe el nombre y selecciona de los resultados</p>
+            </div>
+
+            <!-- Resultados de búsqueda de médico -->
+            <div v-if="medicosSearch.length > 0 && !medicoSeleccionado" class="medicos-results">
+              <div
+                v-for="medico in medicosSearch"
+                :key="medico.id"
+                class="medico-result-card"
+                @click="seleccionarMedico(medico)"
+              >
+                <div class="medico-result-header">
+                  <div class="medico-avatar" :style="{ background: medico.especialidad_color ? '#' + medico.especialidad_color : '#0984e3' }">
+                    <img v-if="medico.foto_url" :src="medico.foto_url" :alt="medico.nombre" />
+                    <span v-else>{{ medico.nombre?.charAt(0) }}{{ medico.apellido?.charAt(0) }}</span>
+                  </div>
+                  <div class="medico-result-info">
+                    <strong>{{ medico.titulo || 'Dr.' }} {{ medico.nombre }} {{ medico.apellido }}</strong>
+                    <span class="medico-especialidad">{{ medico.especialidad_nombre || 'Sin especialidad' }}</span>
+                    <span v-if="medico.cedula_profesional" class="medico-cedula">Cédula: {{ medico.cedula_profesional }}</span>
+                  </div>
+                </div>
+
+                <!-- Estadísticas rápidas -->
+                <div class="medico-stats">
+                  <span class="stat" title="Citas pendientes">
+                    📋 {{ medico.estadisticas?.pendientes || 0 }} pendientes
+                  </span>
+                  <span class="stat" title="Citas confirmadas">
+                    ✅ {{ medico.estadisticas?.confirmadas || 0 }} confirmadas
+                  </span>
+                  <span class="stat" title="Citas hoy">
+                    📅 {{ medico.estadisticas?.hoy || 0 }} hoy
+                  </span>
+                </div>
+
+                <!-- Citas existentes (próximas 5) -->
+                <div v-if="medico.citas && medico.citas.length > 0" class="medico-citas-list">
+                  <div class="citas-header">Próximas citas:</div>
+                  <div v-for="cita in medico.citas.slice(0, 5)" :key="cita.id" class="cita-item">
+                    <span class="cita-fecha">{{ formatearFecha(cita.fecha_hora) }}</span>
+                    <span class="cita-paciente">{{ cita.paciente_nombre }} {{ cita.paciente_apellido }}</span>
+                    <span class="cita-estado" :style="{ background: estadoBadge(cita.estado) }">{{ cita.estado }}</span>
+                  </div>
+                  <div v-if="medico.citas.length > 5" class="citas-more">
+                    +{{ medico.citas.length - 5 }} citas más
+                  </div>
+                </div>
+                <div v-else class="medico-citas-empty">
+                  Sin citas programadas
+                </div>
+              </div>
+            </div>
+
+            <!-- Médico seleccionado -->
+            <div v-if="medicoSeleccionado" class="selected-card medico-selected">
+              <div class="selected-header">
+                <span class="check">✓</span>
+                <div class="selected-info">
+                  <strong>{{ medicoSeleccionado.titulo || 'Dr.' }} {{ medicoSeleccionado.nombre }} {{ medicoSeleccionado.apellido }}</strong>
+                  <span class="selected-especialidad">{{ medicoSeleccionado.especialidad_nombre }}</span>
+                </div>
+                <button class="btn-change" @click="medicoSeleccionado = null; medicosSearch = []">Cambiar</button>
+              </div>
+
+              <!-- Resumen de disponibilidad del médico seleccionado -->
+              <div class="medico-availability" v-if="medicoSeleccionado.citas && medicoSeleccionado.citas.length > 0">
+                <div class="availability-header">Horarios ocupados del médico:</div>
+                <div class="availability-grid">
+                  <div v-for="cita in medicoSeleccionado.citas.slice(0, 8)" :key="cita.id" class="availability-slot">
+                    <span class="slot-fecha">{{ formatearFecha(cita.fecha_hora) }}</span>
+                    <span class="slot-estado" :style="{ color: estadoBadge(cita.estado) }">{{ cita.estado }}</span>
+                  </div>
+                </div>
+                <p class="availability-hint">⚠️ Verifica que el nuevo horario no se encime con estos</p>
+              </div>
             </div>
 
             <div class="btn-row">
@@ -610,4 +779,52 @@ h1 { font-size: 1.5rem; color: #2d3436; }
 .btn-secondary { background: white; color: #0984e3; border: 1px solid #0984e3; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
 .error { background: #ffeaa7; color: #d63031; padding: 0.6rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 1rem; }
 .loading, .empty { text-align: center; padding: 2rem; color: #636e72; }
+
+/* Doctor Search Results */
+.search-input-wrapper { position: relative; }
+.search-spinner { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 1rem; }
+.medicos-results { max-height: 400px; overflow-y: auto; margin-top: 0.5rem; }
+.medico-result-card {
+  background: white;
+  border: 1px solid #dfe6e9;
+  border-radius: 10px;
+  padding: 1rem;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.medico-result-card:hover { border-color: #0984e3; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.medico-result-header { display: flex; gap: 0.75rem; align-items: center; margin-bottom: 0.5rem; }
+.medico-avatar {
+  width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  color: white; font-weight: bold; font-size: 0.85rem; flex-shrink: 0; overflow: hidden;
+}
+.medico-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.medico-result-info { display: flex; flex-direction: column; }
+.medico-result-info strong { font-size: 0.9rem; color: #2d3436; }
+.medico-especialidad { font-size: 0.8rem; color: #0984e3; }
+.medico-cedula { font-size: 0.75rem; color: #636e72; }
+.medico-stats { display: flex; gap: 1rem; padding: 0.4rem 0; border-top: 1px solid #f0f2f5; font-size: 0.8rem; color: #636e72; }
+.medico-citas-list { margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #f0f2f5; }
+.citas-header { font-size: 0.75rem; color: #636e72; font-weight: 600; margin-bottom: 0.3rem; }
+.cita-item { display: flex; gap: 0.5rem; align-items: center; font-size: 0.8rem; padding: 0.2rem 0; }
+.cita-fecha { color: #636e72; min-width: 120px; }
+.cita-paciente { flex: 1; color: #2d3436; }
+.cita-estado { padding: 0.1rem 0.4rem; border-radius: 8px; color: white; font-size: 0.7rem; font-weight: 600; }
+.citas-more { font-size: 0.75rem; color: #636e72; margin-top: 0.3rem; }
+.medico-citas-empty { font-size: 0.8rem; color: #00b894; margin-top: 0.3rem; }
+
+/* Selected Doctor */
+.medico-selected { background: #f0f7ff; border-color: #0984e3; }
+.selected-info { flex: 1; }
+.selected-especialidad { display: block; font-size: 0.8rem; color: #0984e3; }
+.btn-change { background: none; border: 1px solid #dfe6e9; color: #636e72; padding: 0.3rem 0.6rem; border-radius: 6px; cursor: pointer; font-size: 0.75rem; }
+.btn-change:hover { border-color: #0984e3; color: #0984e3; }
+.medico-availability { margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid #b8daff; }
+.availability-header { font-size: 0.8rem; color: #2d3436; font-weight: 600; margin-bottom: 0.5rem; }
+.availability-grid { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.availability-slot { display: flex; gap: 0.3rem; align-items: center; background: white; padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.75rem; border: 1px solid #dfe6e9; }
+.slot-fecha { color: #2d3436; }
+.slot-estado { font-weight: 600; text-transform: capitalize; }
+.availability-hint { font-size: 0.75rem; color: #e17055; margin-top: 0.5rem; }
 </style>
