@@ -395,43 +395,11 @@ function estadoColor(estado) {
           <button @click="abrirNuevaCita" class="btn-primary">+ Nueva Cita</button>
         </div>
 
-      <!-- Filtros -->
-      <div class="filters">
-        <input v-model="busqueda" placeholder="Buscar por nombre, apellido, ID o UUID..." @keyup.enter="cargarCitas" />
-        <select v-model="filtroEstado" @change="cargarCitas">
-          <option value="">Todos los estados</option>
-          <option value="pendiente">Pendiente</option>
-          <option value="confirmada">Confirmada</option>
-          <option value="paciente_llego">Paciente llegó</option>
-          <option value="en_atencion">En atención</option>
-          <option value="asistida">Asistida</option>
-          <option value="no_asistida">No asistida</option>
-          <option value="cancelada">Cancelada</option>
-        </select>
-        <button @click="cargarCitas" class="btn-secondary">Actualizar</button>
-      </div>
-
-      <div v-if="loading" class="loading">Cargando...</div>
-      <div v-else-if="citas.length === 0" class="empty">No hay citas con esos filtros.</div>
-
-      <div v-else class="citas-list">
-        <div v-for="c in citas" :key="c.id" class="cita-card" @click="abrirCita(c)">
-          <div class="cita-header">
-            <span class="estado-badge" :style="{ background: estadoColor(c.estado) }">{{ c.estado }}</span>
-            <span class="fecha">{{ new Date(c.fecha_hora).toLocaleString('es-MX') }}</span>
-          </div>
-          <div class="cita-body">
-            <div class="cita-col">
-              <strong>Paciente:</strong> {{ c.paciente_nombre }} {{ c.paciente_apellido }}
-              <span v-if="c.paciente_telefono" class="phone" @click.stop="abrirWA(c.paciente_telefono)">📱 WhatsApp</span>
-            </div>
-            <div class="cita-col">
-              <strong>Médico:</strong> {{ c.medico_nombre }} {{ c.medico_apellido }}
-              <span v-if="c.medico_whatsapp" class="phone" @click.stop="abrirWA(c.medico_whatsapp)">📱 WhatsApp</span>
-            </div>
-          </div>
-        </div>
-      </div>
+        <!-- Calendario de citas -->
+        <CalendarioCitas
+          :citas="citas"
+          @seleccionar-cita="abrirCita"
+        />
 
       <!-- PESTAÑA: MÉDICOS -->
       <div v-if="activeTab === 'medicos'">
