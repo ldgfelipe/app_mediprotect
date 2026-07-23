@@ -227,7 +227,7 @@ async function crearCita() {
   creandoCita.value = true
   try {
     const fecha_hora = nuevaCita.value.fecha + 'T' + nuevaCita.value.hora + ':00'
-    const body: any = {
+    const body = {
       id_paciente: pacienteSeleccionado.value.id,
       medico_nombre: nuevaCita.value.medico_search.trim(),
       fecha_hora,
