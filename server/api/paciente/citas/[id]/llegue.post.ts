@@ -30,8 +30,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, message: 'Cita no encontrada' })
   }
 
-  const cita = current.rows[0
-  ]
+  const cita = current.rows[0]
 
   if (!['confirmada', 'pendiente'].includes(cita.estado)) {
     throw createError({ statusCode: 400, message: `No se puede confirmar llegada en estado: ${cita.estado}` })
