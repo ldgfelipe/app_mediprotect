@@ -400,6 +400,7 @@ function estadoColor(estado) {
           :citas="citas"
           @seleccionar-cita="abrirCita"
         />
+      </div>
 
       <!-- PESTAÑA: MÉDICOS -->
       <div v-if="activeTab === 'medicos'">
