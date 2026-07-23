@@ -33,6 +33,15 @@ const parseando = ref(false)
 const pasoActual = ref(1)
 const buscandoMedico = ref(false)
 
+// Pestañas
+const activeTab = ref('citas')
+
+// Buscador de médicos (pestaña Médicos)
+const medicoBusqueda = ref('')
+const medicoResults = ref([])
+const medicoSeleccionadoPerfil = ref(null)
+const buscandoPerfilMedico = ref(false)
+
 function abrirNuevaCita() {
   showNuevaCita.value = true
   pasoActual.value = 1
@@ -212,6 +221,47 @@ function estadoBadge(estado) {
   return colores[estado] || '#636e72'
 }
 
+// Funciones para pestaña de Médicos
+let perfilSearchTimeout = null
+async function buscarPerfilMedico() {
+  const termino = medicoBusqueda.value.trim()
+  if (!termino || termino.length < 2) {
+    medicoResults.value = []
+    medicoSeleccionadoPerfil.value = null
+    return
+  }
+
+  if (perfilSearchTimeout) clearTimeout(perfilSearchTimeout)
+  perfilSearchTimeout = setTimeout(async () => {
+    buscandoPerfilMedico.value = true
+    try {
+      const data = await $fetch('/api/medicos/buscar?q=' + encodeURIComponent(termino), {
+        headers: { Authorization: 'Bearer ' + useCookie('token').value }
+      })
+      medicoResults.value = data.medicos || []
+    } catch (e) {
+      medicoResults.value = []
+    }
+    buscandoPerfilMedico.value = false
+  }, 400)
+}
+
+function seleccionarPerfilMedico(medico) {
+  medicoSeleccionadoPerfil.value = medico
+  medicoResults.value = []
+}
+
+function cerrarPerfilMedico() {
+  medicoSeleccionadoPerfil.value = null
+  medicoBusqueda.value = ''
+}
+
+function formatearFechaCita(fechaISO) {
+  const fecha = new Date(fechaISO)
+  const opciones = { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }
+  return fecha.toLocaleDateString('es-MX', opciones)
+}
+
 function seleccionarPaciente(p) {
   pacienteSeleccionado.value = { ...p }
   nuevaCita.value.paciente_search = p.nombre + ' ' + p.apellido
@@ -327,7 +377,8 @@ function estadoColor(estado) {
       <div class="header-inner">
         <img src="https://imagedelivery.net/xaKlCos5cTg_1RWzIu_h-A/0a041066-aa69-4fe5-07ed-50ee74875100/public" alt="MediProtect" class="logo" />
         <nav>
-          <NuxtLink to="/asistente" class="active">Citas</NuxtLink>
+          <button :class="{ active: activeTab === 'citas' }" @click="activeTab = 'citas'">📋 Citas</button>
+          <button :class="{ active: activeTab === 'medicos' }" @click="activeTab = 'medicos'">👨‍⚕️ Médicos</button>
         </nav>
         <div class="user-info">
           <span>{{ usuario.nombre }} {{ usuario.apellido }}</span>
@@ -337,10 +388,12 @@ function estadoColor(estado) {
     </header>
 
     <main class="content">
-      <div class="content-header">
-        <h1>Gestión de Citas</h1>
-        <button @click="abrirNuevaCita" class="btn-primary">+ Nueva Cita</button>
-      </div>
+      <!-- PESTAÑA: CITAS -->
+      <div v-if="activeTab === 'citas'">
+        <div class="content-header">
+          <h1>Gestión de Citas</h1>
+          <button @click="abrirNuevaCita" class="btn-primary">+ Nueva Cita</button>
+        </div>
 
       <!-- Filtros -->
       <div class="filters">
@@ -377,6 +430,160 @@ function estadoColor(estado) {
               <span v-if="c.medico_whatsapp" class="phone" @click.stop="abrirWA(c.medico_whatsapp)">📱 WhatsApp</span>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- PESTAÑA: MÉDICOS -->
+      <div v-if="activeTab === 'medicos'">
+        <div class="content-header">
+          <h1>Directorio de Médicos</h1>
+        </div>
+
+        <!-- Buscador -->
+        <div class="medico-search-box">
+          <div class="search-input-wrapper">
+            <input
+              v-model="medicoBusqueda"
+              placeholder="Buscar médico por nombre..."
+              @input="buscarPerfilMedico"
+            />
+            <span v-if="buscandoPerfilMedico" class="search-spinner">⏳</span>
+          </div>
+        </div>
+
+        <!-- Resultados de búsqueda -->
+        <div v-if="medicoResults.length > 0 && !medicoSeleccionadoPerfil" class="medico-search-results">
+          <div
+            v-for="medico in medicoResults"
+            :key="medico.id"
+            class="medico-result-item"
+            @click="seleccionarPerfilMedico(medico)"
+          >
+            <div class="result-avatar" :style="{ background: medico.especialidad_color ? '#' + medico.especialidad_color : '#0984e3' }">
+              <img v-if="medico.foto_url" :src="medico.foto_url" :alt="medico.nombre" />
+              <span v-else>{{ medico.nombre?.charAt(0) }}{{ medico.apellido?.charAt(0) }}</span>
+            </div>
+            <div class="result-info">
+              <strong>{{ medico.titulo || 'Dr.' }} {{ medico.nombre }} {{ medico.apellido }}</strong>
+              <span>{{ medico.especialidad_nombre || 'Sin especialidad' }}</span>
+            </div>
+            <div class="result-stats">
+              <span>{{ medico.citas?.length || 0 }} citas</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Perfil del médico seleccionado -->
+        <div v-if="medicoSeleccionadoPerfil" class="medico-perfil">
+          <button class="btn-back" @click="cerrarPerfilMedico">← Volver a búsqueda</button>
+
+          <!-- Header del perfil -->
+          <div class="perfil-header">
+            <div class="perfil-avatar" :style="{ background: medicoSeleccionadoPerfil.especialidad_color ? '#' + medicoSeleccionadoPerfil.especialidad_color : '#0984e3' }">
+              <img v-if="medicoSeleccionadoPerfil.foto_url" :src="medicoSeleccionadoPerfil.foto_url" :alt="medicoSeleccionadoPerfil.nombre" />
+              <span v-else>{{ medicoSeleccionadoPerfil.nombre?.charAt(0) }}{{ medicoSeleccionadoPerfil.apellido?.charAt(0) }}</span>
+            </div>
+            <div class="perfil-info">
+              <h2>{{ medicoSeleccionadoPerfil.titulo || 'Dr.' }} {{ medicoSeleccionadoPerfil.nombre }} {{ medicoSeleccionadoPerfil.apellido }}</h2>
+              <span class="perfil-especialidad">{{ medicoSeleccionadoPerfil.especialidad_nombre }}</span>
+              <div class="perfil-meta">
+                <span v-if="medicoSeleccionadoPerfil.cedula_profesional">📋 Cédula: {{ medicoSeleccionadoPerfil.cedula_profesional }}</span>
+                <span v-if="medicoSeleccionadoPerfil.email">✉️ {{ medicoSeleccionadoPerfil.email }}</span>
+                <span v-if="medicoSeleccionadoPerfil.telefono">📱 {{ medicoSeleccionadoPerfil.telefono }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Datos del perfil -->
+          <div class="perfil-grid">
+            <div class="perfil-card" v-if="medicoSeleccionadoPerfil.bio">
+              <h3>Biografía</h3>
+              <p>{{ medicoSeleccionadoPerfil.bio }}</p>
+            </div>
+
+            <div class="perfil-card" v-if="medicoSeleccionadoPerfil.universidad">
+              <h3>Formación</h3>
+              <p>🎓 {{ medicoSeleccionadoPerfil.universidad }}</p>
+            </div>
+
+            <div class="perfil-card" v-if="medicoSeleccionadoPerfil.horario_atencion">
+              <h3>Horario de Atención</h3>
+              <p>🕐 {{ medicoSeleccionadoPerfil.horario_atencion }}</p>
+            </div>
+
+            <div class="perfil-card" v-if="medicoSeleccionadoPerfil.ciudad">
+              <h3>Ubicación</h3>
+              <p>📍 {{ medicoSeleccionadoPerfil.ciudad }}</p>
+            </div>
+
+            <div class="perfil-card" v-if="medicoSeleccionadoPerfil.precio_regular">
+              <h3>Precios</h3>
+              <p>
+                <span v-if="medicoSeleccionadoPerfil.precio_miembro">Miembro: ${{ medicoSeleccionadoPerfil.precio_miembro }}</span>
+                <span v-if="medicoSeleccionadoPerfil.precio_regular"> | Regular: ${{ medicoSeleccionadoPerfil.precio_regular }}</span>
+              </p>
+            </div>
+
+            <div class="perfil-card" v-if="medicoSeleccionadoPerfil.idiomas && medicoSeleccionadoPerfil.idiomas.length">
+              <h3>Idiomas</h3>
+              <p>🗣️ {{ medicoSeleccionadoPerfil.idiomas.join(', ') }}</p>
+            </div>
+          </div>
+
+          <!-- Estadísticas -->
+          <div class="perfil-stats">
+            <div class="stat-box">
+              <span class="stat-number">{{ medicoSeleccionadoPerfil.estadisticas?.pendientes || 0 }}</span>
+              <span class="stat-label">Pendientes</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-number">{{ medicoSeleccionadoPerfil.estadisticas?.confirmadas || 0 }}</span>
+              <span class="stat-label">Confirmadas</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-number">{{ medicoSeleccionadoPerfil.estadisticas?.hoy || 0 }}</span>
+              <span class="stat-label">Hoy</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-number">{{ medicoSeleccionadoPerfil.estadisticas?.total || 0 }}</span>
+              <span class="stat-label">Total</span>
+            </div>
+          </div>
+
+          <!-- Citas agendadas -->
+          <div class="perfil-citas">
+            <h3>Citas Agendadas</h3>
+            <div v-if="medicoSeleccionadoPerfil.citas && medicoSeleccionadoPerfil.citas.length > 0" class="citas-timeline">
+              <div v-for="cita in medicoSeleccionadoPerfil.citas" :key="cita.id" class="timeline-item">
+                <div class="timeline-dot" :style="{ background: estadoBadge(cita.estado) }"></div>
+                <div class="timeline-content">
+                  <div class="timeline-header">
+                    <span class="timeline-fecha">{{ formatearFechaCita(cita.fecha_hora) }}</span>
+                    <span class="timeline-estado" :style="{ background: estadoBadge(cita.estado) }">{{ cita.estado }}</span>
+                  </div>
+                  <div class="timeline-paciente">
+                    <strong>{{ cita.paciente_nombre }} {{ cita.paciente_apellido }}</strong>
+                    <span v-if="cita.paciente_telefono">📱 {{ cita.paciente_telefono }}</span>
+                  </div>
+                  <div v-if="cita.notas_paciente" class="timeline-notas">
+                    📝 {{ cita.notas_paciente }}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div v-else class="citas-empty">
+              <p>📅 No hay citas programadas para este médico</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Estado vacío -->
+        <div v-if="!medicoSeleccionadoPerfil && medicoResults.length === 0 && !buscandoPerfilMedico && medicoBusqueda.length >= 2" class="empty-state">
+          <p>No se encontraron médicos con "{{ medicoBusqueda }}"</p>
+        </div>
+
+        <div v-if="!medicoSeleccionadoPerfil && medicoBusqueda.length < 2" class="empty-state">
+          <p>🔍 Escribe al menos 2 caracteres para buscar un médico</p>
         </div>
       </div>
     </main>
@@ -664,9 +871,10 @@ function estadoColor(estado) {
 .header { background: white; padding: 0.8rem 2rem; border-bottom: 1px solid #e0e0e0; }
 .header-inner { display: flex; align-items: center; gap: 2rem; max-width: 1200px; margin: 0 auto; }
 .logo { height: 35px; }
-nav { display: flex; gap: 1rem; }
-nav a { text-decoration: none; color: #636e72; padding: 0.4rem 0.8rem; border-radius: 6px; }
-nav a.active { background: #0984e3; color: white; }
+nav { display: flex; gap: 0.25rem; }
+nav button { background: none; border: none; color: #636e72; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 500; transition: all 0.15s; }
+nav button:hover { background: #f0f2f5; }
+nav button.active { background: #0984e3; color: white; }
 .user-info { margin-left: auto; display: flex; align-items: center; gap: 1rem; font-size: 0.9rem; color: #636e72; }
 .btn-logout { background: none; border: 1px solid #dfe6e9; padding: 0.3rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
 
@@ -827,4 +1035,63 @@ h1 { font-size: 1.5rem; color: #2d3436; }
 .slot-fecha { color: #2d3436; }
 .slot-estado { font-weight: 600; text-transform: capitalize; }
 .availability-hint { font-size: 0.75rem; color: #e17055; margin-top: 0.5rem; }
+
+/* Pestaña de Médicos */
+.medico-search-box { margin-bottom: 1.5rem; }
+.medico-search-results { max-height: 300px; overflow-y: auto; margin-bottom: 1.5rem; }
+.medico-result-item {
+  display: flex; align-items: center; gap: 1rem; padding: 0.8rem 1rem;
+  background: white; border: 1px solid #dfe6e9; border-radius: 10px;
+  margin-bottom: 0.5rem; cursor: pointer; transition: all 0.15s;
+}
+.medico-result-item:hover { border-color: #0984e3; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.result-avatar {
+  width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  color: white; font-weight: bold; font-size: 0.9rem; flex-shrink: 0; overflow: hidden;
+}
+.result-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.result-info { flex: 1; display: flex; flex-direction: column; }
+.result-info strong { font-size: 0.95rem; color: #2d3436; }
+.result-info span { font-size: 0.8rem; color: #0984e3; }
+.result-stats { font-size: 0.8rem; color: #636e72; }
+
+/* Perfil del médico */
+.medico-perfil { background: white; border-radius: 12px; padding: 1.5rem; border: 1px solid #dfe6e9; }
+.btn-back { background: none; border: none; color: #0984e3; cursor: pointer; font-size: 0.9rem; margin-bottom: 1rem; padding: 0; }
+.btn-back:hover { text-decoration: underline; }
+
+.perfil-header { display: flex; gap: 1.5rem; align-items: center; margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid #f0f2f5; }
+.perfil-avatar {
+  width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  color: white; font-weight: bold; font-size: 1.5rem; flex-shrink: 0; overflow: hidden;
+}
+.perfil-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.perfil-info h2 { margin: 0 0 0.3rem; color: #2d3436; }
+.perfil-especialidad { color: #0984e3; font-weight: 500; display: block; margin-bottom: 0.5rem; }
+.perfil-meta { display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.85rem; color: #636e72; }
+
+.perfil-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+.perfil-card { background: #f8f9fa; border-radius: 8px; padding: 1rem; }
+.perfil-card h3 { margin: 0 0 0.5rem; font-size: 0.9rem; color: #2d3436; }
+.perfil-card p { margin: 0; font-size: 0.9rem; color: #636e72; }
+
+.perfil-stats { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
+.stat-box { flex: 1; background: #f8f9fa; border-radius: 8px; padding: 1rem; text-align: center; }
+.stat-number { display: block; font-size: 1.5rem; font-weight: bold; color: #2d3436; }
+.stat-label { font-size: 0.8rem; color: #636e72; }
+
+.perfil-citas h3 { margin: 0 0 1rem; color: #2d3436; }
+.citas-timeline { position: relative; padding-left: 1.5rem; }
+.citas-timeline::before { content: ''; position: absolute; left: 8px; top: 0; bottom: 0; width: 2px; background: #dfe6e9; }
+.timeline-item { position: relative; margin-bottom: 1rem; }
+.timeline-dot { position: absolute; left: -1.5rem; top: 0.3rem; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; }
+.timeline-content { background: #f8f9fa; border-radius: 8px; padding: 0.8rem 1rem; }
+.timeline-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem; }
+.timeline-fecha { font-size: 0.85rem; color: #2d3436; font-weight: 500; }
+.timeline-estado { padding: 0.15rem 0.5rem; border-radius: 10px; color: white; font-size: 0.7rem; font-weight: 600; text-transform: capitalize; }
+.timeline-paciente { font-size: 0.9rem; color: #2d3436; }
+.timeline-paciente span { margin-left: 0.5rem; font-size: 0.8rem; color: #636e72; }
+.timeline-notas { font-size: 0.8rem; color: #636e72; margin-top: 0.3rem; font-style: italic; }
+.citas-empty { text-align: center; padding: 2rem; color: #636e72; background: #f8f9fa; border-radius: 8px; }
+.empty-state { text-align: center; padding: 3rem; color: #636e72; }
 </style>
