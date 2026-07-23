@@ -11,6 +11,8 @@ const uploadingId = ref<string | null>(null)
 const showModal = ref(false)
 const savingNew = ref(false)
 const formText = ref('')
+const perfilUrl = ref('')
+const importMode = ref<'url' | 'text'>('url')
 const newMedico = ref({
   nombre: '', apellido: '', email: '', telefono: '',
   cedula_profesional: '', titulo: '', especialidad: '',
@@ -18,7 +20,7 @@ const newMedico = ref({
   universidad: '', horario_atencion: '', idiomas: 'Español'
 })
 
-// Búsqueda IA
+// Búsqueda IA / Importación
 const searchingAI = ref(false)
 const aiResult = ref<any>(null)
 const aiError = ref('')
@@ -139,6 +141,8 @@ function openNewModal() {
     universidad: '', horario_atencion: '', idiomas: 'Español'
   }
   formText.value = ''
+  perfilUrl.value = ''
+  importMode.value = 'url'
   aiResult.value = null
   aiError.value = ''
   showAiPreview.value = false
@@ -171,6 +175,37 @@ async function searchWithAI() {
     }
   } catch (err: any) {
     aiError.value = err.data?.message || err.message || 'Error al procesar información'
+  } finally {
+    searchingAI.value = false
+  }
+}
+
+async function importFromUrl() {
+  if (!perfilUrl.value || !perfilUrl.value.includes('mediprotect.com.mx')) {
+    aiError.value = 'Ingresa una URL válida de mediprotect.com.mx'
+    return
+  }
+
+  searchingAI.value = true
+  aiError.value = ''
+  aiResult.value = null
+
+  try {
+    const result = await $fetch('/api/ia/importar-perfil', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token.value}` },
+      body: { url: perfilUrl.value }
+    })
+
+    const data = result as any
+    if (data.success && data.perfil) {
+      aiResult.value = data.perfil
+      showAiPreview.value = true
+    } else {
+      aiError.value = 'No se pudo importar el perfil desde la URL proporcionada'
+    }
+  } catch (err: any) {
+    aiError.value = err.data?.message || err.message || 'Error al importar perfil'
   } finally {
     searchingAI.value = false
   }
@@ -295,22 +330,63 @@ async function saveNewMedico() {
           </div>
 
           <div class="modal-body">
-            <!-- Chat IA - Pegar información del Google Form -->
+            <!-- Importar perfil del médico -->
             <div class="ai-search-section">
               <div class="ai-search-header">
                 <span class="ai-icon">🤖</span>
                 <div>
-                  <h4>Generar perfil con Inteligencia Artificial</h4>
-                  <p>Copia la respuesta del Google Form del médico y pégala aquí. La IA extraerá automáticamente todos los datos para crear el perfil.</p>
+                  <h4>Importar perfil del médico</h4>
+                  <p>Importa los datos desde mediprotect.com.mx o pega la información del Google Form</p>
                 </div>
               </div>
 
-              <div class="ai-chat-area">
-                <textarea
-                  v-model="formText"
-                  class="ai-textarea"
-                  rows="8"
-                  placeholder="Pega aquí la información del médico...
+              <!-- Tabs de modo -->
+              <div class="import-tabs">
+                <button
+                  class="import-tab"
+                  :class="{ active: importMode === 'url' }"
+                  @click="importMode = 'url'"
+                >
+                  🔗 Desde mediprotect.com.mx
+                </button>
+                <button
+                  class="import-tab"
+                  :class="{ active: importMode === 'text' }"
+                  @click="importMode = 'text'"
+                >
+                  📋 Desde Google Form
+                </button>
+              </div>
+
+              <!-- Modo URL -->
+              <div v-if="importMode === 'url'" class="import-section">
+                <div class="url-input-group">
+                  <input
+                    v-model="perfilUrl"
+                    type="url"
+                    class="url-input"
+                    placeholder="https://www.mediprotect.com.mx/perfil-dr-nombre-apellido"
+                    @keydown.enter="importFromUrl"
+                  >
+                  <button
+                    class="btn-ai-search"
+                    @click="importFromUrl"
+                    :disabled="searchingAI || !perfilUrl || !perfilUrl.includes('mediprotect.com.mx')"
+                  >
+                    {{ searchingAI ? '⏳ Importando...' : '📥 Importar' }}
+                  </button>
+                </div>
+                <p class="url-hint">Pega la URL del perfil del médico en mediprotect.com.mx</p>
+              </div>
+
+              <!-- Modo Texto -->
+              <div v-if="importMode === 'text'" class="import-section">
+                <div class="ai-chat-area">
+                  <textarea
+                    v-model="formText"
+                    class="ai-textarea"
+                    rows="6"
+                    placeholder="Pega aquí la información del médico...
 
 Ejemplo:
 Nombre: Dr. Juan Pérez López
@@ -320,20 +396,18 @@ Teléfono: 222 123 4567
 Email: juan@email.com
 Universidad: UNAM
 Hospital: Hospital Ángeles Puebla
-Biografía: El Dr. Pérez es especialista en cardiología intervencionista con más de 10 años de experiencia...
-Servicios: Consulta general, Electrocardiograma, Ecocardiograma
-Horario: Lun-Vie 9:00-18:00
-Idiomas: Español, Inglés"
-                ></textarea>
+Biografía: El Dr. Pérez es especialista en cardiología intervencionista..."
+                  ></textarea>
 
-                <div class="ai-chat-actions">
-                  <button
-                    class="btn-ai-search"
-                    @click="searchWithAI"
-                    :disabled="searchingAI || !formText || formText.trim().length < 20"
-                  >
-                    {{ searchingAI ? '⏳ Procesando con IA...' : '✨ Generar perfil' }}
-                  </button>
+                  <div class="ai-chat-actions">
+                    <button
+                      class="btn-ai-search"
+                      @click="searchWithAI"
+                      :disabled="searchingAI || !formText || formText.trim().length < 20"
+                    >
+                      {{ searchingAI ? '⏳ Procesando con IA...' : '✨ Generar perfil' }}
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -342,8 +416,8 @@ Idiomas: Español, Inglés"
               <!-- Preview de resultados IA -->
               <div v-if="showAiPreview && aiResult" class="ai-preview">
                 <div class="ai-preview-header">
-                  <span>📋 Información extraída del formulario</span>
-                  <span class="ai-provider">procesado con IA</span>
+                  <span>📋 Datos importados del perfil</span>
+                  <span class="ai-provider">{{ aiResult.fuente === 'directorio' ? 'desde mediprotect.com.mx' : 'procesado con IA' }}</span>
                 </div>
 
                 <div class="ai-preview-grid">
@@ -586,6 +660,38 @@ Idiomas: Español, Inglés"
 
 /* Chat Area */
 .ai-chat-area { display: flex; flex-direction: column; gap: 0.75rem; }
+
+/* Import Tabs */
+.import-tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+.import-tab {
+  flex: 1;
+  padding: 0.6rem 1rem;
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: 0.15s;
+  font-weight: 500;
+}
+.import-tab:hover { border-color: #6c5ce7; }
+.import-tab.active { border-color: #6c5ce7; background: #f5f3ff; color: #6c5ce7; }
+
+/* Import Section */
+.import-section { margin-top: 0.5rem; }
+
+/* URL Input */
+.url-input-group { display: flex; gap: 0.5rem; }
+.url-input {
+  flex: 1;
+  padding: 0.65rem 0.75rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-family: inherit;
+}
+.url-input:focus { outline: none; border-color: #6c5ce7; }
+.url-hint { margin: 0.4rem 0 0; font-size: 0.75rem; color: #636e72; }
 .ai-textarea {
   width: 100%;
   padding: 0.75rem;
@@ -643,6 +749,8 @@ Idiomas: Español, Inglés"
   .sidebar { display: none; }
   .admin-content { margin-left: 0; }
   .ai-textarea { min-height: 100px; }
+  .import-tabs { flex-direction: column; }
+  .url-input-group { flex-direction: column; }
   .ai-preview-grid { grid-template-columns: 1fr; }
   .form-row { flex-direction: column; }
   .content-header { flex-direction: column; gap: 1rem; }
