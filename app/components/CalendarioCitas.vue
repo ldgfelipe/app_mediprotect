@@ -163,7 +163,10 @@ function crearDia(fecha, esMesActual) {
   const fechaStr = formatoFecha(fecha)
   const esHoy = formatoFecha(new Date()) === fechaStr
   const citasDelDia = props.citas.filter(c => {
-    const citaFecha = formatoFecha(new Date(c.fecha_hora))
+    // Convertir a fecha local para comparar correctamente
+    const fechaCita = new Date(c.fecha_hora)
+    const fechaLocal = new Date(fechaCita.getFullYear(), fechaCita.getMonth(), fechaCita.getDate())
+    const citaFecha = formatoFecha(fechaLocal)
     return citaFecha === fechaStr
   })
 
@@ -197,7 +200,10 @@ function formatoHora(fechaISO) {
 const citasDelDia = computed(() => {
   if (!diaSeleccionado.value) return []
   return props.citas.filter(c => {
-    const citaFecha = formatoFecha(new Date(c.fecha_hora))
+    // Convertir a fecha local para comparar correctamente
+    const fechaCita = new Date(c.fecha_hora)
+    const fechaLocal = new Date(fechaCita.getFullYear(), fechaCita.getMonth(), fechaCita.getDate())
+    const citaFecha = formatoFecha(fechaLocal)
     return citaFecha === diaSeleccionado.value
   }).sort((a, b) => new Date(a.fecha_hora) - new Date(b.fecha_hora))
 })
