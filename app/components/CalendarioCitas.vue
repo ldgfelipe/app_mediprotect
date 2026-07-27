@@ -28,14 +28,9 @@
         @click="seleccionarDia(dia)"
       >
         <span class="day-num">{{ dia.numero }}</span>
-        <div class="day-dots" v-if="dia.citas.length > 0">
-          <span
-            v-for="(cita, i) in dia.citas.slice(0, 4)"
-            :key="i"
-            class="dot"
-            :style="{ background: colorEstado(cita.estado) }"
-          ></span>
-          <span v-if="dia.citas.length > 4" class="dot-more">+{{ dia.citas.length - 4 }}</span>
+        <div class="day-badge" v-if="dia.citas.length > 0" :style="{ background: colorPrioritario(dia.citas) }">
+          <span class="badge-icon">📋</span>
+          <span class="badge-count">{{ dia.citas.length }}</span>
         </div>
       </div>
     </div>
@@ -123,6 +118,17 @@ const legendItems = [
 
 function colorEstado(estado) {
   return coloresEstado[estado] || '#636e72'
+}
+
+// Color prioritario: usa el color de la cita más importante del día
+function colorPrioritario(citas) {
+  const prioridad = ['en_atencion', 'paciente_llego', 'confirmada', 'pendiente', 'reagendada', 'asistida', 'no_asistida', 'cancelada']
+  for (const estado of prioridad) {
+    if (citas.some(c => c.estado === estado)) {
+      return coloresEstado[estado] || '#636e72'
+    }
+  }
+  return '#636e72'
 }
 
 // Generar días del mes
@@ -266,9 +272,12 @@ function irHoy() {
 .day-num { font-size: 0.85rem; font-weight: 500; display: block; margin-bottom: 2px; }
 .cal-day.today .day-num { color: #0984e3; font-weight: 700; }
 
-.day-dots { display: flex; gap: 2px; flex-wrap: wrap; }
-.dot { width: 6px; height: 6px; border-radius: 50%; }
-.dot-more { font-size: 0.6rem; color: #636e72; }
+.day-badge {
+  display: inline-flex; align-items: center; gap: 2px;
+  padding: 1px 5px; border-radius: 10px; font-size: 0.65rem; color: white; font-weight: 600;
+}
+.badge-icon { font-size: 0.6rem; }
+.badge-count { line-height: 1; }
 
 .day-appointments { margin-top: 1.5rem; border-top: 1px solid #f0f2f5; padding-top: 1rem; }
 .day-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
