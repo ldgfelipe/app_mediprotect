@@ -70,7 +70,7 @@
               v-for="cita in citasDelDia"
               :key="cita.id"
               class="table-row"
-              @click="$emit('seleccionar-cita', cita)"
+              @click="abrirCita(cita)"
             >
               <span class="col-hora">{{ formatoHora(cita.fecha_hora) }}</span>
               <span class="col-paciente">
@@ -259,6 +259,11 @@ function seleccionarDia(dia) {
 
 function cerrarModal() {
   showModal.value = false
+}
+
+function abrirCita(cita) {
+  showModal.value = false
+  emit('seleccionar-cita', cita)
 }
 
 function mesAnterior() {
