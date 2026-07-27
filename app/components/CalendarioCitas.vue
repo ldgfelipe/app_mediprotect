@@ -35,37 +35,57 @@
       </div>
     </div>
 
-    <!-- Lista de citas del día seleccionado -->
-    <div v-if="diaSeleccionado && citasDelDia.length > 0" class="day-appointments">
-      <div class="day-header">
-        <h4>📅 Citas del {{ formatoFechaLarga(diaSeleccionado) }}</h4>
-        <span class="day-count">{{ citasDelDia.length }} cita{{ citasDelDia.length > 1 ? 's' : '' }}</span>
-      </div>
-      <div class="appointments-list">
-        <div
-          v-for="cita in citasDelDia"
-          :key="cita.id"
-          class="appointment-row"
-          @click="$emit('seleccionar-cita', cita)"
-        >
-          <div class="appt-time">{{ formatoHora(cita.fecha_hora) }}</div>
-          <div class="appt-paciente">
-            <strong>{{ cita.paciente_nombre }} {{ cita.paciente_apellido }}</strong>
-            <span v-if="cita.paciente_telefono" class="appt-phone">📱 {{ cita.paciente_telefono }}</span>
+    <!-- Modal fullscreen de citas del día -->
+    <div v-if="showModal && diaSeleccionado && citasDelDia.length > 0" class="modal-overlay" @click.self="cerrarModal">
+      <div class="modal-fullscreen">
+        <div class="modal-header">
+          <div class="modal-title">
+            <h2>📅 Citas del {{ formatoFechaLarga(diaSeleccionado) }}</h2>
+            <span class="modal-count">{{ citasDelDia.length }} cita{{ citasDelDia.length > 1 ? 's' : '' }}</span>
           </div>
-          <div class="appt-medico">
-            {{ cita.medico_nombre }} {{ cita.medico_apellido }}
+          <button class="modal-close" @click="cerrarModal">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Resumen de estados -->
+          <div class="status-summary">
+            <div v-for="item in resumenEstados" :key="item.estado" class="status-chip" :style="{ background: item.color + '20', color: item.color, borderColor: item.color }">
+              <span class="chip-count">{{ item.count }}</span>
+              <span class="chip-label">{{ item.label }}</span>
+            </div>
           </div>
-          <div class="appt-estado">
-            <span class="estado-badge" :style="{ background: colorEstado(cita.estado) }">{{ cita.estado }}</span>
+
+          <!-- Lista de citas -->
+          <div class="appointments-table">
+            <div class="table-header">
+              <span class="col-hora">Hora</span>
+              <span class="col-paciente">Paciente</span>
+              <span class="col-medico">Médico</span>
+              <span class="col-telefono">Teléfono</span>
+              <span class="col-estado">Estado</span>
+              <span class="col-acciones">Acción</span>
+            </div>
+
+            <div
+              v-for="cita in citasDelDia"
+              :key="cita.id"
+              class="table-row"
+              @click="$emit('seleccionar-cita', cita)"
+            >
+              <span class="col-hora">{{ formatoHora(cita.fecha_hora) }}</span>
+              <span class="col-paciente">
+                <strong>{{ cita.paciente_nombre }} {{ cita.paciente_apellido }}</strong>
+              </span>
+              <span class="col-medico">{{ cita.medico_nombre }} {{ cita.medico_apellido }}</span>
+              <span class="col-telefono">{{ cita.paciente_telefono || '—' }}</span>
+              <span class="col-estado">
+                <span class="estado-badge" :style="{ background: colorEstado(cita.estado) }">{{ cita.estado }}</span>
+              </span>
+              <span class="col-acciones">→</span>
+            </div>
           </div>
-          <div class="appt-action">→</div>
         </div>
       </div>
-    </div>
-
-    <div v-if="diaSeleccionado && citasDelDia.length === 0" class="day-empty">
-      <p>Sin citas para el {{ formatoFechaLarga(diaSeleccionado) }}</p>
     </div>
 
     <!-- Leyenda -->
@@ -92,6 +112,7 @@ const hoy = new Date()
 const mesActual = ref(hoy.getMonth())
 const anio = ref(hoy.getFullYear())
 const diaSeleccionado = ref(null)
+const showModal = ref(false)
 
 const nombreMes = computed(() => meses[mesActual.value])
 
@@ -214,8 +235,30 @@ const citasDelDia = computed(() => {
   }).sort((a, b) => new Date(a.fecha_hora) - new Date(b.fecha_hora))
 })
 
+// Resumen de estados para el día seleccionado
+const resumenEstados = computed(() => {
+  if (!citasDelDia.value.length) return []
+  const counts = {}
+  for (const c of citasDelDia.value) {
+    counts[c.estado] = (counts[c.estado] || 0) + 1
+  }
+  return Object.entries(counts).map(([estado, count]) => ({
+    estado,
+    count,
+    color: coloresEstado[estado] || '#636e72',
+    label: estado.replace(/_/g, ' ')
+  }))
+})
+
 function seleccionarDia(dia) {
   diaSeleccionado.value = dia.fecha
+  if (dia.citas.length > 0) {
+    showModal.value = true
+  }
+}
+
+function cerrarModal() {
+  showModal.value = false
 }
 
 function mesAnterior() {
@@ -279,34 +322,64 @@ function irHoy() {
 .badge-icon { font-size: 0.6rem; }
 .badge-count { line-height: 1; }
 
-.day-appointments { margin-top: 1.5rem; border-top: 1px solid #f0f2f5; padding-top: 1rem; }
-.day-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-.day-header h4 { margin: 0; color: #2d3436; font-size: 0.95rem; }
-.day-count { font-size: 0.8rem; color: #636e72; background: #f0f2f5; padding: 0.2rem 0.6rem; border-radius: 10px; }
-
-.appointments-list { display: flex; flex-direction: column; gap: 0.5rem; }
-.appointment-row {
-  display: grid; grid-template-columns: 70px 1fr 1fr auto 30px; gap: 0.75rem; align-items: center;
-  background: #f8f9fa; padding: 0.75rem 1rem; border-radius: 8px; cursor: pointer; transition: all 0.15s;
+/* Modal Fullscreen */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 2000;
+  display: flex; align-items: center; justify-content: center; padding: 1rem;
 }
-.appointment-row:hover { background: #e8f4fd; }
-.appt-time { font-weight: 600; color: #2d3436; font-size: 0.9rem; }
-.appt-paciente strong { display: block; font-size: 0.9rem; color: #2d3436; }
-.appt-phone { font-size: 0.75rem; color: #636e72; }
-.appt-medico { font-size: 0.85rem; color: #636e72; }
-.estado-badge { padding: 0.2rem 0.5rem; border-radius: 10px; color: white; font-size: 0.7rem; font-weight: 600; text-transform: capitalize; }
-.appt-action { color: #0984e3; font-size: 1.1rem; }
+.modal-fullscreen {
+  background: white; border-radius: 16px; width: 100%; height: 90vh;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.modal-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 1.25rem 1.5rem; border-bottom: 1px solid #e0e0e0; background: #f8f9fa;
+}
+.modal-title { display: flex; align-items: center; gap: 1rem; }
+.modal-title h2 { margin: 0; font-size: 1.2rem; color: #2d3436; }
+.modal-count { background: #0984e3; color: white; padding: 0.2rem 0.6rem; border-radius: 10px; font-size: 0.8rem; font-weight: 600; }
+.modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #636e72; width: 40px; height: 40px; border-radius: 50%; }
+.modal-close:hover { background: #e0e0e0; }
 
-.day-empty { text-align: center; padding: 2rem; color: #636e72; margin-top: 1rem; border-top: 1px solid #f0f2f5; }
-.day-empty p { margin: 0; }
+.modal-body { flex: 1; overflow-y: auto; padding: 1.5rem; }
+
+.status-summary { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+.status-chip {
+  display: flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.8rem;
+  border: 1px solid; border-radius: 20px; font-size: 0.85rem; font-weight: 500;
+}
+.chip-count { font-weight: 700; font-size: 1rem; }
+.chip-label { text-transform: capitalize; font-size: 0.8rem; }
+
+.appointments-table { border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden; }
+.table-header {
+  display: grid; grid-template-columns: 70px 1fr 1fr 120px 100px 40px;
+  gap: 0.75rem; padding: 0.75rem 1rem; background: #f8f9fa; font-weight: 600;
+  font-size: 0.8rem; color: #636e72; text-transform: uppercase; letter-spacing: 0.3px;
+}
+.table-row {
+  display: grid; grid-template-columns: 70px 1fr 1fr 120px 100px 40px;
+  gap: 0.75rem; padding: 0.8rem 1rem; border-top: 1px solid #f0f0f0;
+  cursor: pointer; transition: background 0.1s; align-items: center;
+}
+.table-row:hover { background: #f0f7ff; }
+.col-hora { font-weight: 600; color: #2d3436; font-size: 0.9rem; }
+.col-paciente strong { color: #2d3436; }
+.col-medico { color: #636e72; font-size: 0.9rem; }
+.col-telefono { color: #636e72; font-size: 0.85rem; }
+.col-estado { text-align: center; }
+.col-acciones { color: #0984e3; font-weight: 600; text-align: center; }
+
+.estado-badge { padding: 0.2rem 0.5rem; border-radius: 10px; color: white; font-size: 0.7rem; font-weight: 600; text-transform: capitalize; }
 
 .cal-legend { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #f0f2f5; }
 .legend-item { display: flex; align-items: center; gap: 0.3rem; font-size: 0.75rem; color: #636e72; }
 .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
 
 @media (max-width: 768px) {
-  .appointment-row { grid-template-columns: 60px 1fr auto; }
-  .appt-medico, .appt-action { display: none; }
+  .modal-fullscreen { height: 95vh; border-radius: 0; }
+  .table-header, .table-row { grid-template-columns: 60px 1fr 100px 40px; }
+  .col-medico, .col-telefono { display: none; }
   .cal-day { min-height: 50px; }
 }
 </style>
