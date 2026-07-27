@@ -634,7 +634,13 @@ function estadoColor(estado) {
                 />
                 <span v-if="buscandoMedico" class="search-spinner">⏳</span>
               </div>
-              <p class="field-hint">Escribe el nombre y selecciona de los resultados</p>
+              <p class="field-hint">Escribe el nombre. Si lo encuentras, selecciónalo para ver disponibilidad. Si no, continua igual.</p>
+            </div>
+
+            <!-- Aviso cuando médico no encontrado -->
+            <div v-if="medicosSearch.length === 0 && !medicoSeleccionado && nuevaCita.medico_search.trim().length >= 2 && !buscandoMedico" class="medico-not-found">
+              <p>⚠️ No se encontró "<strong>{{ nuevaCita.medico_search }}</strong>" en el directorio.</p>
+              <p class="hint">La cita se registrará con el nombre proporcionado. El match con el médico se realizará después.</p>
             </div>
 
             <!-- Resultados de búsqueda de médico -->
@@ -960,6 +966,9 @@ h1 { font-size: 1.5rem; color: #2d3436; }
 /* Doctor Search Results */
 .search-input-wrapper { position: relative; }
 .search-spinner { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 1rem; }
+.medico-not-found { background: #fff8e1; border: 1px solid #ffe082; border-radius: 8px; padding: 1rem; margin-top: 0.75rem; }
+.medico-not-found p { margin: 0 0 0.25rem; font-size: 0.85rem; color: #f57f17; }
+.medico-not-found .hint { font-size: 0.8rem; color: #b2bec3; margin: 0; }
 .medicos-results { max-height: 400px; overflow-y: auto; margin-top: 0.5rem; }
 .medico-result-card {
   background: white;
