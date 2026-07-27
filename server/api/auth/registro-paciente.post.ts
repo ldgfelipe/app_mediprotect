@@ -30,21 +30,45 @@ export default defineEventHandler(async (event) => {
 
   const paciente = result.rows[0]
 
-  // Assign package
+  let pagoId: string | null = null
+
+  // Check if selected plan has a price
+  let planInfo = null
   if (id_paquete) {
-    await pool.query(
-      `INSERT INTO paciente_paquete (id_paciente, id_paquete, fecha_inicio, activo)
-       VALUES ($1, $2, NOW(), true)`,
-      [paciente.id, id_paquete]
+    const planResult = await pool.query('SELECT id, precio, nombre, slug FROM paquetes WHERE id = $1', [id_paquete])
+    if (planResult.rows.length > 0) {
+      planInfo = planResult.rows[0]
+    }
+  }
+
+  const esPlanPago = planInfo && parseFloat(planInfo.precio) > 0
+
+  if (esPlanPago) {
+    // Paid plan: create pending payment, do NOT activate plan yet
+    const pagoResult = await pool.query(
+      `INSERT INTO pagos (id_paciente, id_plan, monto, moneda, provedor, estado, sandbox, descripcion)
+       VALUES ($1, $2, $3, 'MXN', 'mercadopago', 'pendiente', true, $4)
+       RETURNING id`,
+      [paciente.id, id_paquete, planInfo.precio, `Plan ${planInfo.nombre} - Registro`]
     )
+    pagoId = pagoResult.rows[0].id
   } else {
-    const basico = await pool.query("SELECT id FROM paquetes WHERE slug = 'basico' AND activo = true LIMIT 1")
-    if (basico.rows.length > 0) {
+    // Free plan (basico): activate immediately
+    if (id_paquete) {
       await pool.query(
         `INSERT INTO paciente_paquete (id_paciente, id_paquete, fecha_inicio, activo)
          VALUES ($1, $2, NOW(), true)`,
-        [paciente.id, basico.rows[0].id]
+        [paciente.id, id_paquete]
       )
+    } else {
+      const basico = await pool.query("SELECT id FROM paquetes WHERE slug = 'basico' AND activo = true LIMIT 1")
+      if (basico.rows.length > 0) {
+        await pool.query(
+          `INSERT INTO paciente_paquete (id_paciente, id_paquete, fecha_inicio, activo)
+           VALUES ($1, $2, NOW(), true)`,
+          [paciente.id, basico.rows[0].id]
+        )
+      }
     }
   }
 
@@ -55,5 +79,5 @@ export default defineEventHandler(async (event) => {
   )
 
   setResponseStatus(event, 201)
-  return { usuario: paciente, token }
+  return { usuario: paciente, token, pago_id: pagoId }
 })

@@ -1,127 +1,240 @@
-<script setup lang="ts">
-definePageMeta({ middleware: 'admin-auth' })
-const pagos = ref<any[]>([])
-const loading = ref(true)
-const search = ref('')
-const filterEstatus = ref('')
-
-onMounted(async () => {
-  const { data } = await useFetch('/api/admin/pagos')
-  pagos.value = (data.value as any)?.pagos || []
-  loading.value = false
-})
-
-const filtered = computed(() => {
-  let r = pagos.value
-  if (filterEstatus.value) r = r.filter(p => p.estatus === filterEstatus.value)
-  if (search.value) {
-    const s = search.value.toLowerCase()
-    r = r.filter(p => p.paciente_nombre?.toLowerCase().includes(s) || p.referencia?.toLowerCase().includes(s))
-  }
-  return r
-})
-
-async function actualizarEstatus(id: number, estatus: string) {
-  const { error: err } = await useFetch(`/api/admin/pagos/${id}`, {
-    method: 'PUT',
-    body: { estatus },
-  })
-  if (err.value) { alert(err.value.message); return }
-  const { data } = await useFetch('/api/admin/pagos')
-  pagos.value = (data.value as any)?.pagos || []
-}
-
-const estatusColors: Record<string, string> = {
-  pendiente: '#f39c12',
-  completado: '#00b894',
-  fallido: '#d63031',
-  reembolsado: '#636e72',
-}
-</script>
-
 <template>
-  <div class="admin-layout">
-    <aside class="sidebar">
-      <div class="sidebar-brand"><h2>MediProtect</h2><span class="rol">Admin</span></div>
-      <nav>
-        <NuxtLink to="/admin">Dashboard</NuxtLink>
-        <NuxtLink to="/admin/pacientes">Pacientes</NuxtLink>
-        <NuxtLink to="/admin/medicos">Médicos</NuxtLink>
-        <NuxtLink to="/admin/empresas">Empresas</NuxtLink>
-        <NuxtLink to="/admin/pagos" class="active">Pagos</NuxtLink>
-        <NuxtLink to="/admin/citas">Citas</NuxtLink>
-        <NuxtLink to="/admin/planes">Planes</NuxtLink>
-        <NuxtLink to="/admin/configuracion">Configuración</NuxtLink>
-      </nav>
-      <NuxtLink to="/admin/login" class="btn-logout">Cerrar Sesión</NuxtLink>
-    </aside>
-    <main class="admin-content">
-      <header class="content-header">
-        <h1>Pagos</h1>
-        <div class="search-bar">
-          <input v-model="search" placeholder="Buscar por paciente o referencia..." />
-          <select v-model="filterEstatus" class="filter-select">
-            <option value="">Todos</option>
-            <option value="pendiente">Pendientes</option>
-            <option value="completado">Completados</option>
-            <option value="fallido">Fallidos</option>
-            <option value="reembolsado">Reembolsados</option>
-          </select>
-          <span class="count">{{ filtered.length }} pagos</span>
+  <div class="min-h-screen bg-gray-50">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200">
+      <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <NuxtLink to="/admin/dashboard" class="text-gray-400 hover:text-gray-600">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+          </NuxtLink>
+          <h1 class="text-xl font-bold text-gray-800">Dashboard de Pagos</h1>
         </div>
-      </header>
-      <p v-if="loading" class="loading">Cargando...</p>
-      <div v-else class="table-container">
-        <table>
-          <thead><tr><th>Paciente</th><th>Email</th><th>Plan</th><th>Monto</th><th>Método</th><th>Referencia</th><th>Estatus</th><th>Fecha</th><th>Acción</th></tr></thead>
-          <tbody>
-            <tr v-for="p in filtered" :key="p.id">
-              <td><strong>{{ p.paciente_nombre || '—' }}</strong></td>
-              <td>{{ p.paciente_email || '—' }}</td>
-              <td>{{ p.plan_nombre || '—' }}</td>
-              <td><strong>${{ Number(p.monto).toLocaleString() }}</strong></td>
-              <td>{{ p.metodo_pago || '—' }}</td>
-              <td>{{ p.referencia || '—' }}</td>
-              <td><span class="badge" :style="{ background: estatusColors[p.estatus] || '#636e72' }">{{ p.estatus }}</span></td>
-              <td>{{ new Date(p.fecha).toLocaleDateString('es-MX') }}</td>
-              <td>
-                <select v-if="p.estatus !== 'completado'" @change="actualizarEstatus(p.id, ($event.target as HTMLSelectElement).value)" class="action-select">
-                  <option value="">—</option>
-                  <option value="completado">Completar</option>
-                  <option value="fallido">Marcar Fallido</option>
-                  <option value="reembolsado">Reembolsar</option>
-                </select>
-              </td>
-            </tr>
-            <tr v-if="!filtered.length"><td colspan="9" class="empty">Sin resultados</td></tr>
-          </tbody>
-        </table>
+        <div class="flex gap-2">
+          <NuxtLink to="/admin/configuracion-pagos" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 text-sm">
+            Configurar Pagos
+          </NuxtLink>
+          <button @click="exportarExcel" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm">
+            Exportar Excel
+          </button>
+        </div>
       </div>
-    </main>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+      <!-- Estadísticas -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div class="bg-white rounded-xl border border-gray-200 p-4">
+          <p class="text-sm text-gray-500">Total Ingresos</p>
+          <p class="text-2xl font-bold text-green-600">${{ formatMoney(estadisticas.total_ingresos) }}</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-4">
+          <p class="text-sm text-gray-500">Pagados</p>
+          <p class="text-2xl font-bold text-blue-600">{{ estadisticas.pagados || 0 }}</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-4">
+          <p class="text-sm text-gray-500">Pendientes</p>
+          <p class="text-2xl font-bold text-yellow-600">{{ estadisticas.pendientes || 0 }}</p>
+          <p class="text-xs text-gray-400">${{ formatMoney(estadisticas.total_pendiente) }}</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-4">
+          <p class="text-sm text-gray-500">Fallidos / Cancelados</p>
+          <p class="text-2xl font-bold text-red-600">{{ (estadisticas.fallidos || 0) + (estadisticas.cancelados || 0) }}</p>
+        </div>
+      </div>
+
+      <!-- Filtros -->
+      <div class="bg-white rounded-xl border border-gray-200 p-4 mb-6">
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <input v-model="filtros.buscar" placeholder="Buscar paciente..."
+            class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+          <select v-model="filtros.estado" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            <option value="">Todos los estados</option>
+            <option value="pagado">Pagado</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="fallido">Fallido</option>
+            <option value="cancelado">Cancelado</option>
+            <option value="reembolsado">Reembolsado</option>
+          </select>
+          <select v-model="filtros.provedor" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            <option value="">Todos los provedores</option>
+            <option value="mercadopago">MercadoPago</option>
+            <option value="stripe">Stripe</option>
+            <option value="paypal">PayPal</option>
+          </select>
+          <select v-model="filtros.sandbox" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            <option value="">Todos</option>
+            <option value="true">Solo Sandbox</option>
+            <option value="false">Solo Producción</option>
+          </select>
+          <button @click="cargarPagos" class="bg-gray-100 text-gray-700 rounded-lg px-3 py-2 text-sm hover:bg-gray-200">
+            Filtrar
+          </button>
+        </div>
+      </div>
+
+      <!-- Tabla de pagos -->
+      <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="text-left px-4 py-3 font-medium text-gray-600">Fecha</th>
+                <th class="text-left px-4 py-3 font-medium text-gray-600">Paciente</th>
+                <th class="text-left px-4 py-3 font-medium text-gray-600">Plan</th>
+                <th class="text-left px-4 py-3 font-medium text-gray-600">Monto</th>
+                <th class="text-left px-4 py-3 font-medium text-gray-600">Provedor</th>
+                <th class="text-left px-4 py-3 font-medium text-gray-600">Estado</th>
+                <th class="text-left px-4 py-3 font-medium text-gray-600">Modo</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <tr v-for="pago in pagos" :key="pago.id" class="hover:bg-gray-50">
+                <td class="px-4 py-3 text-gray-600">{{ formatDate(pago.created_at) }}</td>
+                <td class="px-4 py-3">
+                  <p class="font-medium text-gray-800">{{ pago.paciente_nombre || 'N/A' }}</p>
+                  <p class="text-xs text-gray-400">{{ pago.paciente_email }}</p>
+                </td>
+                <td class="px-4 py-3 text-gray-600">{{ pago.plan_nombre || 'N/A' }}</td>
+                <td class="px-4 py-3 font-medium text-gray-800">${{ formatMoney(pago.monto) }} {{ pago.moneda }}</td>
+                <td class="px-4 py-3">
+                  <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium"
+                    :class="provedorClass(pago.provedor)">
+                    {{ pago.provedor }}
+                  </span>
+                </td>
+                <td class="px-4 py-3">
+                  <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium"
+                    :class="estadoClass(pago.estado)">
+                    {{ pago.estado }}
+                  </span>
+                </td>
+                <td class="px-4 py-3">
+                  <span v-if="pago.sandbox" class="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">Sandbox</span>
+                  <span v-else class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">Producción</span>
+                </td>
+              </tr>
+              <tr v-if="pagos.length === 0">
+                <td colspan="7" class="px-4 py-8 text-center text-gray-400">No hay pagos registrados</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Paginación -->
+        <div v-if="totalPaginas > 1" class="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+          <p class="text-sm text-gray-500">Mostrando {{ pagos.length }} de {{ totalRegistros }} pagos</p>
+          <div class="flex gap-1">
+            <button @click="paginaActual > 1 && (paginaActual--, cargarPagos())"
+              :disabled="paginaActual <= 1"
+              class="px-3 py-1 rounded border border-gray-300 text-sm disabled:opacity-40">
+              Anterior
+            </button>
+            <span class="px-3 py-1 text-sm text-gray-600">{{ paginaActual }} / {{ totalPaginas }}</span>
+            <button @click="paginaActual < totalPaginas && (paginaActual++, cargarPagos())"
+              :disabled="paginaActual >= totalPaginas"
+              class="px-3 py-1 rounded border border-gray-300 text-sm disabled:opacity-40">
+              Siguiente
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
-<style scoped>
-.admin-layout { display: flex; min-height: 100vh; }
-.sidebar { width: 240px; background: #2d3436; color: white; padding: 1.5rem; display: flex; flex-direction: column; flex-shrink: 0; }
-.sidebar-brand h2 { font-size: 1.1rem; margin: 0; }
-.sidebar-brand .rol { font-size: 0.75rem; color: #b2bec3; }
-.sidebar nav { margin-top: 2rem; display: flex; flex-direction: column; gap: 0.25rem; flex: 1; }
-.sidebar nav a { color: #dfe6e9; text-decoration: none; padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.9rem; }
-.sidebar nav a.active, .sidebar nav a:hover { background: #00b894; color: white; }
-.btn-logout { background: none; border: 1px solid #636e72; color: #b2bec3; padding: 0.5rem; border-radius: 6px; cursor: pointer; margin-top: 1rem; font-size: 0.85rem; text-align: center; text-decoration: none; }
-.admin-content { flex: 1; padding: 2rem; background: #f5f6fa; }
-.content-header h1 { margin: 0 0 1rem; color: #2d3436; font-size: 1.5rem; }
-.search-bar { display: flex; gap: 1rem; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; }
-.search-bar input { flex: 1; min-width: 200px; padding: 0.6rem 1rem; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 0.9rem; }
-.filter-select { padding: 0.6rem; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 0.85rem; }
-.count { font-size: 0.85rem; color: #636e72; white-space: nowrap; }
-.loading { text-align: center; color: #636e72; padding: 3rem; }
-.table-container { background: white; border-radius: 10px; border: 1px solid #e0e0e0; overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; min-width: 800px; }
-th, td { text-align: left; padding: 0.75rem 1rem; border-bottom: 1px solid #f0f0f0; font-size: 0.9rem; white-space: nowrap; }
-th { background: #f8f9fa; color: #636e72; font-weight: 600; }
-.empty { text-align: center; color: #b2bec3; padding: 2rem; }
-.badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 12px; color: white; font-size: 0.75rem; text-transform: capitalize; }
-.action-select { padding: 0.3rem; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 0.8rem; }
-</style>
+<script setup>
+definePageMeta({ layout: 'admin' })
+
+const estadisticas = ref({})
+const pagos = ref([])
+const paginaActual = ref(1)
+const totalRegistros = ref(0)
+const totalPaginas = ref(0)
+
+const filtros = reactive({
+  buscar: '',
+  estado: '',
+  provedor: '',
+  sandbox: ''
+})
+
+const formatMoney = (val) => {
+  return parseFloat(val || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })
+}
+
+const formatDate = (d) => {
+  if (!d) return ''
+  return new Date(d).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
+const estadoClass = (e) => {
+  const map = {
+    pagado: 'bg-green-100 text-green-700',
+    pendiente: 'bg-yellow-100 text-yellow-700',
+    fallido: 'bg-red-100 text-red-700',
+    cancelado: 'bg-gray-100 text-gray-700',
+    reembolsado: 'bg-blue-100 text-blue-700'
+  }
+  return map[e] || 'bg-gray-100 text-gray-700'
+}
+
+const provedorClass = (p) => {
+  const map = {
+    mercadopago: 'bg-blue-100 text-blue-700',
+    stripe: 'bg-purple-100 text-purple-700',
+    paypal: 'bg-yellow-100 text-yellow-700'
+  }
+  return map[p] || 'bg-gray-100 text-gray-700'
+}
+
+const cargarEstadisticas = async () => {
+  try {
+    const token = localStorage.getItem('admin_token')
+    const data = await $fetch('/api/admin/pagos-estadisticas', {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    estadisticas.value = data.estadisticas
+  } catch (err) {
+    console.error('Error:', err)
+  }
+}
+
+const cargarPagos = async () => {
+  try {
+    const token = localStorage.getItem('admin_token')
+    const params = new URLSearchParams({
+      page: paginaActual.value.toString(),
+      limit: '20',
+      ...filtros
+    })
+    const data = await $fetch(`/api/admin/pagos?${params}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    pagos.value = data.pagos
+    totalRegistros.value = data.total
+    totalPaginas.value = data.pages
+  } catch (err) {
+    console.error('Error:', err)
+  }
+}
+
+const exportarExcel = () => {
+  if (pagos.value.length === 0) return alert('No hay datos para exportar')
+  const headers = ['Fecha', 'Paciente', 'Email', 'Plan', 'Monto', 'Moneda', 'Provedor', 'Estado', 'Sandbox', 'ID Pago Provedor']
+  const rows = pagos.value.map(p => [
+    formatDate(p.created_at), p.paciente_nombre, p.paciente_email, p.plan_nombre,
+    p.monto, p.moneda, p.provedor, p.estado, p.sandbox ? 'Sí' : 'No', p.provedor_pago_id
+  ])
+  const csv = [headers, ...rows].map(r => r.map(c => `"${c || ''}"`).join(',')).join('\n')
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = `pagos_${new Date().toISOString().split('T')[0]}.csv`
+  link.click()
+}
+
+onMounted(() => {
+  cargarEstadisticas()
+  cargarPagos()
+})
+</script>

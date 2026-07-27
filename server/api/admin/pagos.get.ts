@@ -1,20 +1,85 @@
 import jwt from 'jsonwebtoken'
 
 export default defineEventHandler(async (event) => {
-  const token = getCookie(event, 'admin_token')
-  if (!token) throw createError({ statusCode: 401, message: 'No autorizado' })
-  try { jwt.verify(token, process.env.JWT_SECRET || 'default_secret') }
-  catch { throw createError({ statusCode: 401, message: 'Token inválido' }) }
+  const authHeader = getHeader(event, 'authorization')?.replace('Bearer ', '')
+  if (!authHeader) throw createError({ statusCode: 401, message: 'No autorizado' })
+
+  let user: any
+  try {
+    user = jwt.verify(authHeader, process.env.JWT_SECRET || 'mediprotect_jwt_secret_key_2026')
+  } catch { throw createError({ statusCode: 401, message: 'Token inválido' }) }
+
+  if (!['admin', 'asistente'].includes(user.tipo)) {
+    throw createError({ statusCode: 403, message: 'Acceso no autorizado' })
+  }
+
+  const query = getQuery(event)
+  const page = parseInt(query.page as string) || 1
+  const limit = parseInt(query.limit as string) || 20
+  const offset = (page - 1) * limit
+  const estado = query.estado as string || ''
+  const provedor = query.provedor as string || ''
+  const sandbox = query.sandbox as string || ''
+  const buscar = query.buscar as string || ''
 
   const pool = getPool()
-  const result = await pool.query(`
-    SELECT p.id, p.monto, p.metodo_pago, p.referencia, p.estatus, p.created_at as fecha,
-           CONCAT(pac.nombre, ' ', pac.apellido) as paciente_nombre, pac.email as paciente_email,
-           paq.nombre as plan_nombre
+
+  let where = 'WHERE 1=1'
+  const params: any[] = []
+  let paramIdx = 1
+
+  if (estado) {
+    where += ` AND p.estado = $${paramIdx++}`
+    params.push(estado)
+  }
+  if (provedor) {
+    where += ` AND p.provedor = $${paramIdx++}`
+    params.push(provedor)
+  }
+  if (sandbox !== '') {
+    where += ` AND p.sandbox = $${paramIdx++}`
+    params.push(sandbox === 'true')
+  }
+  if (buscar) {
+    where += ` AND (
+      pa.nombre ILIKE $${paramIdx} OR
+      pa.email ILIKE $${paramIdx} OR
+      pa.telefono ILIKE $${paramIdx} OR
+      pl.nombre ILIKE $${paramIdx} OR
+      p.provedor_pago_id ILIKE $${paramIdx}
+    )`
+    params.push(`%${buscar}%`)
+    paramIdx++
+  }
+
+  const countResult = await pool.query(
+    `SELECT COUNT(*) as total FROM pagos p
+     LEFT JOIN pacientes pa ON pa.id = p.id_paciente
+     LEFT JOIN planes_cobertura pl ON pl.id = p.id_plan
+     ${where}`,
+    params
+  )
+
+  const pagosResult = await pool.query(
+    `SELECT p.*,
+      pa.nombre as paciente_nombre,
+      pa.email as paciente_email,
+      pa.telefono as paciente_telefono,
+      pl.nombre as plan_nombre
     FROM pagos p
-    LEFT JOIN pacientes pac ON p.id_paciente = pac.id
-    LEFT JOIN paquetes paq ON p.id_paquete = paq.id
+    LEFT JOIN pacientes pa ON pa.id = p.id_paciente
+    LEFT JOIN planes_cobertura pl ON pl.id = p.id_plan
+    ${where}
     ORDER BY p.created_at DESC
-  `)
-  return { pagos: result.rows }
+    LIMIT $${paramIdx++} OFFSET $${paramIdx++}`,
+    [...params, limit, offset]
+  )
+
+  return {
+    pagos: pagosResult.rows,
+    total: parseInt(countResult.rows[0].total),
+    page,
+    limit,
+    pages: Math.ceil(parseInt(countResult.rows[0].total) / limit)
+  }
 })

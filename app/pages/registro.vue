@@ -106,6 +106,13 @@ async function handleSubmit() {
     tokenCookie.value = (data.value as any).token
     usuarioCookie.value = (data.value as any).usuario
 
+    // Si hay pago pendiente (plan de pago), redirigir a checkout
+    const pagoId = (data.value as any).pago_id
+    if (pagoId && tipo.value === 'paciente') {
+      router.push({ path: '/checkout', query: { pago_id: pagoId } })
+      return
+    }
+
     const doctor = route.query.doctor as string | undefined
     if (doctor && tipo.value === 'paciente') {
       router.push({ path: '/agendar-cita', query: { doctor } })
