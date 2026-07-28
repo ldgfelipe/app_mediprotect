@@ -98,6 +98,10 @@ async function doRegister() {
     useCookie('token').value = res.token
     localStorage.setItem('usuario', JSON.stringify(res.usuario))
     usuario.value = res.usuario
+    if (res.pago_id) {
+      navigateTo({ path: '/checkout', query: { pago_id: res.pago_id } })
+      return
+    }
     abrirWhatsApp()
   } catch (e) {
     regError.value = e.data?.message || 'Error al registrar'
