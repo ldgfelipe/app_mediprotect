@@ -15,10 +15,8 @@ onMounted(async () => {
 })
 
 function cerrarSesion() {
-  const t = useCookie('token')
-  const u = useCookie('usuario')
-  t.value = null
-  u.value = null
+  token.value = null
+  usuario.value = null
   navigateTo('/')
 }
 </script>

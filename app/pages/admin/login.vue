@@ -1,27 +1,29 @@
 <script setup lang="ts">
+definePageMeta({ layout: false })
+
 const email = ref('')
 const password = ref('')
 const error = ref('')
 const loading = ref(false)
 
+const tokenCookie = useCookie('admin_token')
+const usuarioCookie = useCookie('admin_usuario')
+
 async function handleSubmit() {
   error.value = ''
   loading.value = true
   try {
-    const { data, error: err } = await useFetch('/api/auth/login-admin', {
+    const res: any = await $fetch('/api/auth/login-admin', {
       method: 'POST',
       body: { email: email.value, password: password.value },
     })
-    if (err.value) throw new Error(err.value.message || 'Error al iniciar sesión')
 
-    const tokenCookie = useCookie('admin_token')
-    const usuarioCookie = useCookie('admin_usuario')
-    tokenCookie.value = (data.value as any).token
-    usuarioCookie.value = (data.value as any).usuario
+    tokenCookie.value = res.token
+    usuarioCookie.value = res.usuario
 
-    navigateTo('/admin')
+    return navigateTo('/admin')
   } catch (e: any) {
-    error.value = e.message || 'Error al iniciar sesión'
+    error.value = e?.data?.message || e?.message || 'Error al iniciar sesión'
   } finally { loading.value = false }
 }
 </script>

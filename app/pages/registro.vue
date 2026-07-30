@@ -31,6 +31,8 @@ const formMedico = ref({
 })
 
 const especialidades = ref<any[]>([])
+const tokenCookie = useCookie('token')
+const usuarioCookie = useCookie('usuario')
 
 const esPlanPago = computed(() => {
   const p = paquetes.value.find((p: any) => p.id === paqueteSeleccionado.value)
@@ -106,16 +108,13 @@ async function handleSubmit() {
   try {
     const endpoint = tipo.value === 'paciente' ? '/api/auth/registro-paciente' : '/api/auth/registro-medico'
     const body = tipo.value === 'paciente' ? { ...formPaciente.value } : { ...formMedico.value }
-    const { data, error: err } = await useFetch(endpoint, { method: 'POST', body })
-    if (err.value) throw new Error(err.value.message || 'Error al registrarse')
+    const res: any = await $fetch(endpoint, { method: 'POST', body })
 
-    const tokenCookie = useCookie('token')
-    const usuarioCookie = useCookie('usuario')
-    tokenCookie.value = (data.value as any).token
-    usuarioCookie.value = (data.value as any).usuario
+    tokenCookie.value = res.token
+    usuarioCookie.value = res.usuario
 
     // Si hay pago pendiente (plan de pago), redirigir a checkout
-    const pagoId = (data.value as any).pago_id
+    const pagoId = res.pago_id
     if (pagoId && tipo.value === 'paciente') {
       router.push({ path: '/checkout', query: { pago_id: pagoId } })
       return
@@ -128,7 +127,7 @@ async function handleSubmit() {
       router.push(tipo.value === 'medico' ? '/dashboard/medico' : '/dashboard/paciente')
     }
   } catch (e: any) {
-    error.value = e.data?.message || e.message || 'Error al registrarse'
+    error.value = e?.data?.message || e?.message || 'Error al registrarse'
   } finally {
     loading.value = false
   }

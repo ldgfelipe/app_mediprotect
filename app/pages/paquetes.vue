@@ -7,6 +7,7 @@ const procesando = ref(false)
 const mensajeExito = ref('')
 const mensajeError = ref('')
 const pagosConfigurados = ref(false)
+const pagoPendiente = ref(null)
 
 const planesDisponibles = computed(() => {
   if (pagosConfigurados.value) return paquetes.value
@@ -24,33 +25,61 @@ onMounted(async () => {
     pagosConfigurados.value = config.configurado
   } catch (e) { console.error(e) }
 
-  // Check if logged in
   try {
     const tokenCookie = useCookie('token')
     const usuarioCookie = useCookie('usuario')
     if (tokenCookie.value && usuarioCookie.value) {
       usuario.value = usuarioCookie.value
-      // Fetch current plan
-      const planData = await $fetch('/api/paquetes/mi-plan', {
-        headers: { Authorization: `Bearer ${tokenCookie.value}` }
-      })
+      const [planData, pagoData] = await Promise.all([
+        $fetch('/api/paquetes/mi-plan', {
+          headers: { Authorization: `Bearer ${tokenCookie.value}` }
+        }),
+        $fetch('/api/pagos/mi-pago-pendiente', {
+          headers: { Authorization: `Bearer ${tokenCookie.value}` }
+        }).catch(() => ({ pago: null }))
+      ])
       if (planData.plan) {
         planActualId.value = planData.plan.id
       }
+      if (pagoData.pago) {
+        pagoPendiente.value = pagoData.pago
+      }
     }
-  } catch (e) {
-    // Not logged in, that's ok
-  }
+  } catch (e) {}
 
   cargando.value = false
 })
 
 function contratar(slug) {
-  if (usuario.value) {
-    // Logged in: go to plan selection in registration (or handle change)
-    return
-  }
+  if (usuario.value) return
   navigateTo({ path: '/registro', query: { plan: slug } })
+}
+
+async function continuarPago() {
+  if (!pagoPendiente.value) return
+  navigateTo({ path: '/checkout', query: { pago_id: pagoPendiente.value.id } })
+}
+
+async function cancelarPago() {
+  if (!pagoPendiente.value) return
+  procesando.value = true
+  mensajeError.value = ''
+  try {
+    const tokenCookie = useCookie('token')
+    await $fetch('/api/pagos/cancelar-pago-pendiente', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${tokenCookie.value}` },
+      body: { pago_id: pagoPendiente.value.id }
+    })
+    pagoPendiente.value = null
+    mensajeExito.value = 'Pago pendiente cancelado'
+    setTimeout(() => { mensajeExito.value = '' }, 3000)
+  } catch (e) {
+    mensajeError.value = e.data?.message || 'Error al cancelar'
+    setTimeout(() => { mensajeError.value = '' }, 4000)
+  } finally {
+    procesando.value = false
+  }
 }
 
 async function cambiarPlan(plan) {
@@ -74,11 +103,11 @@ async function cambiarPlan(plan) {
     })
 
     if (data.requiere_pago) {
-      // Redirect to checkout
       navigateTo({ path: '/checkout', query: { pago_id: data.pago_id } })
     } else {
       mensajeExito.value = `Plan cambiado a ${data.plan_nombre} correctamente`
       planActualId.value = plan.id
+      pagoPendiente.value = null
       setTimeout(() => { mensajeExito.value = '' }, 3000)
     }
   } catch (e) {
@@ -101,18 +130,31 @@ async function cambiarPlan(plan) {
     <div v-if="mensajeExito" class="msg-success">{{ mensajeExito }}</div>
     <div v-if="mensajeError" class="msg-error">{{ mensajeError }}</div>
 
+    <div v-if="pagoPendiente" class="pago-pendiente-banner">
+      <div class="pago-pendiente-info">
+        <span class="pago-icon">⏳</span>
+        <div>
+          <strong>Pago pendiente:</strong> {{ pagoPendiente.plan_nombre || 'Plan' }} — ${{ parseFloat(pagoPendiente.monto).toLocaleString('es-MX', {minimumFractionDigits: 2}) }} MXN
+        </div>
+      </div>
+      <div class="pago-pendiente-actions">
+        <button @click="continuarPago" class="btn-continuar" :disabled="procesando">Continuar con el pago</button>
+        <button @click="cancelarPago" class="btn-cancelar-pago" :disabled="procesando">{{ procesando ? 'Cancelando...' : 'Cancelar' }}</button>
+      </div>
+    </div>
+
     <p v-if="cargando" class="loading">Cargando planes...</p>
 
     <div v-else class="planes-grid">
       <div v-for="p in planesDisponibles" :key="p.id" class="plan-card" :class="{ actual: planActualId === p.id }">
         <div v-if="planActualId === p.id" class="badge-actual">Tu Plan Actual</div>
-        <div v-else-if="p.slug === 'esencial'" class="badge-popular">Más Popular</div>
+        <div v-else-if="p.slug === 'esencial'" class="badge-popular">Mas Popular</div>
         <div v-else-if="p.slug === 'integral'" class="badge-recomendado">Recomendado</div>
 
         <h2>{{ p.nombre }}</h2>
         <div class="precio">
           <strong>{{ p.precio === 0 ? 'Gratis' : '$' + p.precio.toLocaleString() }}</strong>
-          <small v-if="p.precio > 0">/año</small>
+          <small v-if="p.precio > 0">/ano</small>
         </div>
         <p class="descripcion">{{ p.descripcion }}</p>
 
@@ -148,6 +190,16 @@ async function cambiarPlan(plan) {
 .loading { text-align: center; color: #636e72; padding: 3rem; }
 .msg-success { background: #e8f5e9; color: #2e7d32; padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; text-align: center; }
 .msg-error { background: #ffebee; color: #c62828; padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; text-align: center; }
+.pago-pendiente-banner { background: #fff8e1; border: 1px solid #ffe082; border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; }
+.pago-pendiente-info { display: flex; align-items: center; gap: 0.75rem; font-size: 0.9rem; }
+.pago-icon { font-size: 1.5rem; }
+.pago-pendiente-actions { display: flex; gap: 0.5rem; }
+.btn-continuar { padding: 0.5rem 1rem; background: #f57f17; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
+.btn-continuar:hover { background: #e65100; }
+.btn-continuar:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-cancelar-pago { padding: 0.5rem 1rem; background: white; color: #c62828; border: 1px solid #c62828; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
+.btn-cancelar-pago:hover { background: #ffebee; }
+.btn-cancelar-pago:disabled { opacity: 0.6; cursor: not-allowed; }
 .planes-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; }
 .plan-card { border: 1px solid #e0e0e0; border-radius: 12px; padding: 1.5rem; position: relative; display: flex; flex-direction: column; }
 .plan-card.actual { border-color: #00b894; box-shadow: 0 0 0 2px rgba(0,184,148,0.15); }

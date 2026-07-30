@@ -5,9 +5,15 @@ const loading = ref(true)
 const search = ref('')
 const filterEstado = ref('')
 
+const adminToken = useCookie('admin_token')
+
 onMounted(async () => {
-  const { data } = await useFetch('/api/admin/citas')
-  citas.value = (data.value as any)?.citas || []
+  try {
+    const data: any = await $fetch('/api/admin/citas', {
+      headers: { Authorization: 'Bearer ' + adminToken.value }
+    })
+    citas.value = data?.citas || []
+  } catch (e) { console.error(e) }
   loading.value = false
 })
 

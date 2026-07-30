@@ -66,18 +66,16 @@ async function iniciarSesion() {
   loginError.value = ''
   loginLoading.value = true
   try {
-    const { data, error: err } = await useFetch('/api/auth/login', {
+    const d: any = await $fetch('/api/auth/login', {
       method: 'POST',
       body: { email: loginForm.value.email, password: loginForm.value.password, tipo: 'paciente' },
     })
-    if (err.value) throw new Error(err.value.message || 'Error al iniciar sesión')
-    const d = data.value as any
     token.value = d.token
     usuario.value = d.usuario
     paso.value = 'whatsapp'
     resultado.value = null
   } catch (e: any) {
-    loginError.value = e.message || 'Error al iniciar sesión'
+    loginError.value = e?.data?.message || e?.message || 'Error al iniciar sesión'
   } finally {
     loginLoading.value = false
   }
@@ -87,7 +85,7 @@ async function registrar() {
   regError.value = ''
   regLoading.value = true
   try {
-    const { data, error: err } = await useFetch('/api/auth/pre-registro', {
+    const res: any = await $fetch('/api/auth/pre-registro', {
       method: 'POST',
       body: {
         nombre: regForm.value.nombre,
@@ -96,11 +94,10 @@ async function registrar() {
         id_medico: route.params.id,
       },
     })
-    if (err.value) throw new Error(err.value.message || 'Error al registrarse')
-    resultado.value = (data.value as any)
+    resultado.value = res
     paso.value = 'whatsapp'
   } catch (e: any) {
-    regError.value = e.message || 'Error al registrarse'
+    regError.value = e?.data?.message || e?.message || 'Error al registrarse'
   } finally {
     regLoading.value = false
   }
@@ -110,12 +107,11 @@ async function generarWhatsApp() {
   paso.value = 'whatsapp'
   resultado.value = null
   try {
-    const { data, error: err } = await useFetch('/api/auth/pre-registro', {
+    const res: any = await $fetch('/api/auth/pre-registro', {
       method: 'POST',
       body: { nombre: '', telefono: '', id_medico: route.params.id },
     })
-    if (err.value) throw new Error(err.value.message || 'Error')
-    resultado.value = (data.value as any)
+    resultado.value = res
   } catch {}
 }
 

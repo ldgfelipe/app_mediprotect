@@ -1,4 +1,4 @@
-import bcrypt from 'bcryptjs'
+﻿import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 
 export default defineEventHandler(async (event) => {
@@ -74,7 +74,7 @@ export default defineEventHandler(async (event) => {
 
   const token = jwt.sign(
     { id: paciente.id, email: paciente.email, tipo: 'paciente' },
-    process.env.JWT_SECRET || 'default_secret',
+    process.env.JWT_SECRET || 'mediprotect_jwt_secret_key_2026',
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   )
 

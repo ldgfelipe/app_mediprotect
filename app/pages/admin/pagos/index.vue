@@ -1,12 +1,15 @@
 <script setup>
 definePageMeta({ middleware: 'admin-auth' })
 
+const adminToken = useCookie('admin_token')
+
 const estadisticas = ref({})
 const pagos = ref([])
 const paginaActual = ref(1)
 const totalRegistros = ref(0)
 const totalPaginas = ref(0)
 const loading = ref(true)
+const errorMsg = ref('')
 
 const filtros = reactive({
   buscar: '',
@@ -36,33 +39,34 @@ const provedorClass = (p) => {
 
 const cargarEstadisticas = async () => {
   try {
-    const token = localStorage.getItem('admin_token')
     const data = await $fetch('/api/admin/pagos-estadisticas', {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${adminToken.value}` }
     })
     estadisticas.value = data.estadisticas
   } catch (err) {
-    console.error('Error:', err)
+    console.error('Stats error:', err)
+    errorMsg.value = 'Stats error: ' + (err.data?.message || err.message)
   }
 }
 
 const cargarPagos = async () => {
   loading.value = true
+  errorMsg.value = ''
   try {
-    const token = localStorage.getItem('admin_token')
     const params = new URLSearchParams({
       page: paginaActual.value.toString(),
       limit: '20',
       ...filtros
     })
     const data = await $fetch(`/api/admin/pagos?${params}`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${adminToken.value}` }
     })
     pagos.value = data.pagos
     totalRegistros.value = data.total
     totalPaginas.value = data.pages
   } catch (err) {
-    console.error('Error:', err)
+    console.error('Pagos error:', err)
+    errorMsg.value = 'Pagos error: ' + (err.data?.message || err.message)
   } finally {
     loading.value = false
   }
@@ -137,6 +141,8 @@ onMounted(() => {
       </div>
 
       <!-- Filtros -->
+      <div v-if="errorMsg" style="background:#ffebee;color:#c62828;padding:0.75rem 1rem;border-radius:8px;margin-bottom:1rem;font-size:0.85rem">{{ errorMsg }}</div>
+
       <div class="filters-bar">
         <input v-model="filtros.buscar" placeholder="Buscar paciente..." @keyup.enter="paginaActual=1; cargarPagos()" />
         <select v-model="filtros.estado" @change="paginaActual=1; cargarPagos()">

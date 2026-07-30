@@ -5,6 +5,7 @@ const email = ref('')
 const password = ref('')
 const error = ref('')
 const loading = ref(false)
+const tokenCookie = useCookie('token')
 
 async function doLogin() {
   error.value = ''
@@ -14,7 +15,7 @@ async function doLogin() {
       method: 'POST',
       body: { email: email.value, password: password.value }
     })
-    useCookie('token').value = res.token
+    tokenCookie.value = res.token
     localStorage.setItem('usuario', JSON.stringify({ ...res.asistente, tipo: 'asistente' }))
     navigateTo('/asistente')
   } catch (e) {

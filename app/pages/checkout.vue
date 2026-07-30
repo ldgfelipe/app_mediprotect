@@ -83,11 +83,13 @@ const cargando = ref(true)
 const error = ref('')
 const procesando = ref(false)
 const pago = ref({ monto: 0, moneda: 'MXN', plan_nombre: '', sandbox: true })
-const metodoSeleccionado = ref('mercadopago')
+
+const metodos = ref([])
+const metodoSeleccionado = ref('')
 
 const tarjeta = reactive({ numero: '', vencimiento: '', cvv: '', nombre: '' })
 
-const metodos = [
+const allMetodos = [
   { id: 'mercadopago', nombre: 'MercadoPago', icono: 'MP', descripcion: 'Tarjeta de credito o debito' },
   { id: 'stripe', nombre: 'Stripe', icono: 'ST', descripcion: 'Tarjeta de credito o debito' },
   { id: 'paypal', nombre: 'PayPal', icono: 'PP', descripcion: 'Paga con tu cuenta PayPal' }
@@ -111,9 +113,18 @@ const cargarPago = async () => {
   const pagoId = route.query.pago_id
   if (!pagoId) { error.value = 'No se especifico un ID de pago'; cargando.value = false; return }
   try {
-    const data = await $fetch(`/api/pagos/verificar?pago_id=${pagoId}`)
-    pago.value = data.pago
-    metodoSeleccionado.value = data.pago.provedor || 'mercadopago'
+    const [pagoData, configData] = await Promise.all([
+      $fetch(`/api/pagos/verificar?pago_id=${pagoId}`),
+      $fetch('/api/pagos/configuracion')
+    ])
+    pago.value = pagoData.pago
+    const proveedores = configData.proveedores || {}
+    metodos.value = allMetodos.filter(m => proveedores[m.id])
+    if (pago.value.provedor && proveedores[pago.value.provedor]) {
+      metodoSeleccionado.value = pago.value.provedor
+    } else if (metodos.value.length > 0) {
+      metodoSeleccionado.value = metodos.value[0].id
+    }
   } catch (err) {
     error.value = err.data?.message || 'Error al cargar informacion del pago'
   } finally { cargando.value = false }

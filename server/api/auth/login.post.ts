@@ -25,7 +25,7 @@ export default defineEventHandler(async (event) => {
 
     const token = jwt.sign(
       { id: usuario.id, email: usuario.email, tipo },
-      process.env.JWT_SECRET || 'default_secret',
+      process.env.JWT_SECRET || 'mediprotect_jwt_secret_key_2026',
       { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     )
 

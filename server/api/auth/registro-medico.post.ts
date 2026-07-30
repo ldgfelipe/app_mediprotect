@@ -1,4 +1,4 @@
-import bcrypt from 'bcryptjs'
+﻿import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 
 function generarSlug(nombre: string, apellido: string): string {
@@ -35,7 +35,7 @@ export default defineEventHandler(async (event) => {
   const medico = result.rows[0]
   const token = jwt.sign(
     { id: medico.id, email: medico.email, tipo: 'medico' },
-    process.env.JWT_SECRET || 'default_secret',
+    process.env.JWT_SECRET || 'mediprotect_jwt_secret_key_2026',
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   )
 

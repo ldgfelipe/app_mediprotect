@@ -10,6 +10,8 @@ const yaRedirigio = ref(false)
 const creandoCita = ref(false)
 const pagosConfigurados = ref(false)
 
+const tokenCookie = useCookie('token')
+
 const planesDisponibles = computed(() => {
   if (pagosConfigurados.value) return paquetes.value
   return paquetes.value.filter(p => parseFloat(p.precio) === 0)
@@ -28,7 +30,7 @@ const regError = ref('')
 const regLoading = ref(false)
 
 onMounted(async () => {
-  const token = useCookie('token').value
+  const token = tokenCookie.value
   const saved = localStorage.getItem('usuario')
   if (token && saved) {
     usuario.value = JSON.parse(saved)
@@ -67,7 +69,7 @@ function abrirWhatsApp() {
 async function crearCitaYWhatsApp() {
   creandoCita.value = true
   try {
-    const token = useCookie('token').value
+    const token = tokenCookie.value
     await $fetch('/api/citas/crear', {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
@@ -80,7 +82,7 @@ async function crearCitaYWhatsApp() {
   localStorage.removeItem('agendar_pendiente')
   creandoCita.value = false
   abrirWhatsApp()
-  navigateTo('/dashboard/paciente')
+  return navigateTo('/dashboard/paciente')
 }
 
 async function doLogin() {
@@ -91,7 +93,7 @@ async function doLogin() {
       method: 'POST',
       body: { email: loginForm.email, password: loginForm.password, tipo: 'paciente' }
     })
-    useCookie('token').value = res.token
+    tokenCookie.value = res.token
     localStorage.setItem('usuario', JSON.stringify(res.usuario))
     usuario.value = res.usuario
     await crearCitaYWhatsApp()
@@ -127,7 +129,7 @@ async function doRegister() {
         id_paquete: paqueteSeleccionado.value?.id || ''
       }
     })
-    useCookie('token').value = res.token
+    tokenCookie.value = res.token
     localStorage.setItem('usuario', JSON.stringify(res.usuario))
     usuario.value = res.usuario
     if (res.pago_id) {
@@ -166,16 +168,20 @@ async function doRegister() {
           <button @click="paso = 'login'" class="btn-primary">Iniciar Sesión</button>
           <button @click="paso = 'paquetes'" class="btn-secondary">Crear Cuenta</button>
         </div>
+      </div>
 
-        <div v-if="paso === 'login'" class="auth-form">
-          <h2>Iniciar Sesión</h2>
-          <div v-if="loginError" class="error">{{ loginError }}</div>
+      <!-- PASO LOGIN -->
+      <div v-if="!usuario && paso === 'login'" class="auth-section">
+        <h2>Iniciar Sesión</h2>
+        <div v-if="loginError" class="error">{{ loginError }}</div>
+        <div class="auth-form">
           <input v-model="loginForm.email" type="text" placeholder="Correo electrónico" />
           <input v-model="loginForm.password" type="password" placeholder="Contraseña" />
           <button @click="doLogin" :disabled="loginLoading" class="btn-primary">
             {{ loginLoading ? 'Entrando...' : 'Entrar' }}
           </button>
           <p class="switch-text">¿No tienes cuenta? <a @click="paso = 'paquetes'">Regístrate</a></p>
+          <p class="switch-text"><a @click="paso = 'inicio'">← Volver</a></p>
         </div>
       </div>
 

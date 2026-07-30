@@ -28,6 +28,8 @@ const pacienteSeleccionado = ref(null)
 const medicosSearch = ref([])
 const medicoSeleccionado = ref(null)
 const creandoCita = ref(false)
+
+const tokenCookie = useCookie('token')
 const errorCita = ref('')
 const parseando = ref(false)
 const pasoActual = ref(1)
@@ -79,10 +81,10 @@ async function cargarCitas() {
     const qs = new URLSearchParams()
     if (filtroEstado.value) qs.set('estado', filtroEstado.value)
     if (busqueda.value) qs.set('search', busqueda.value)
-    const { data } = await useFetch('/api/asistente/citas?' + qs.toString(), {
-      headers: { Authorization: 'Bearer ' + useCookie('token').value }
+    const data = await $fetch('/api/asistente/citas?' + qs.toString(), {
+      headers: { Authorization: 'Bearer ' + tokenCookie.value }
     })
-    citas.value = data.value?.citas || []
+    citas.value = data?.citas || []
   } catch (e) { console.error(e) }
   loading.value = false
 }
@@ -127,7 +129,7 @@ async function buscarPacientesById() {
   if (!nuevaCita.value.paciente_search.trim()) { pacientesSearch.value = []; return }
   try {
     const data = await $fetch('/api/asistente/pacientes?search=' + encodeURIComponent(nuevaCita.value.paciente_search), {
-      headers: { Authorization: 'Bearer ' + useCookie('token').value }
+      headers: { Authorization: 'Bearer ' + tokenCookie.value }
     })
     pacientesSearch.value = data.pacientes || []
     if (pacientesSearch.value.length === 1) {
@@ -140,7 +142,7 @@ async function buscarPacientes() {
   if (!nuevaCita.value.paciente_search.trim()) { pacientesSearch.value = []; return }
   try {
     const data = await $fetch('/api/asistente/pacientes?search=' + encodeURIComponent(nuevaCita.value.paciente_search), {
-      headers: { Authorization: 'Bearer ' + useCookie('token').value }
+      headers: { Authorization: 'Bearer ' + tokenCookie.value }
     })
     pacientesSearch.value = data.pacientes || []
     if (pacientesSearch.value.length === 1) {
@@ -164,7 +166,7 @@ async function buscarMedicoConDisponibilidad() {
     buscandoMedico.value = true
     try {
       const data = await $fetch('/api/medicos/buscar?q=' + encodeURIComponent(termino), {
-        headers: { Authorization: 'Bearer ' + useCookie('token').value }
+        headers: { Authorization: 'Bearer ' + tokenCookie.value }
       })
       medicosSearch.value = data.medicos || []
     } catch (e) {
@@ -182,7 +184,7 @@ async function buscarMedicoConDisponibilidadDirecto(termino) {
   buscandoMedico.value = true
   try {
     const data = await $fetch('/api/medicos/buscar?q=' + encodeURIComponent(termino), {
-      headers: { Authorization: 'Bearer ' + useCookie('token').value }
+      headers: { Authorization: 'Bearer ' + tokenCookie.value }
     })
     medicosSearch.value = data.medicos || []
     // Si solo hay un resultado, seleccionarlo automáticamente
@@ -236,7 +238,7 @@ async function buscarPerfilMedico() {
     buscandoPerfilMedico.value = true
     try {
       const data = await $fetch('/api/medicos/buscar?q=' + encodeURIComponent(termino), {
-        headers: { Authorization: 'Bearer ' + useCookie('token').value }
+        headers: { Authorization: 'Bearer ' + tokenCookie.value }
       })
       medicoResults.value = data.medicos || []
     } catch (e) {
@@ -289,7 +291,7 @@ async function crearCita() {
     }
     await $fetch('/api/asistente/citas', {
       method: 'POST',
-      headers: { Authorization: 'Bearer ' + useCookie('token').value },
+      headers: { Authorization: 'Bearer ' + tokenCookie.value },
       body
     })
     showNuevaCita.value = false
@@ -308,11 +310,11 @@ async function abrirCita(cita) {
   citaSeleccionada.value = cita
   showModal.value = true
   try {
-    const { data } = await useFetch('/api/asistente/citas/' + cita.id + '/bitacora', {
-      headers: { Authorization: 'Bearer ' + useCookie('token').value }
+    const data = await $fetch('/api/asistente/citas/' + cita.id + '/bitacora', {
+      headers: { Authorization: 'Bearer ' + tokenCookie.value }
     })
-    bitacora.value = data.value?.bitacora || []
-    mensajesWA.value = data.value?.mensajes_whatsapp || []
+    bitacora.value = data?.bitacora || []
+    mensajesWA.value = data?.mensajes_whatsapp || []
   } catch (e) { console.error(e) }
 }
 
@@ -321,7 +323,7 @@ async function cambiarEstado(estado, descripcion) {
   try {
     await $fetch('/api/asistente/citas/' + citaSeleccionada.value.id + '/estado', {
       method: 'PUT',
-      headers: { Authorization: 'Bearer ' + useCookie('token').value },
+      headers: { Authorization: 'Bearer ' + tokenCookie.value },
       body: { estado, descripcion }
     })
     await abrirCita(citaSeleccionada.value)
@@ -334,7 +336,7 @@ async function agregarNota() {
   try {
     await $fetch('/api/asistente/citas/' + citaSeleccionada.value.id + '/estado', {
       method: 'PUT',
-      headers: { Authorization: 'Bearer ' + useCookie('token').value },
+      headers: { Authorization: 'Bearer ' + tokenCookie.value },
       body: { estado: citaSeleccionada.value.estado, descripcion: notaText.value }
     })
     notaText.value = ''
@@ -347,7 +349,7 @@ async function registrarMensaje() {
   try {
     await $fetch('/api/asistente/whatsapp', {
       method: 'POST',
-      headers: { Authorization: 'Bearer ' + useCookie('token').value },
+      headers: { Authorization: 'Bearer ' + tokenCookie.value },
       body: { id_cita: citaSeleccionada.value?.id, ...newMsg.value }
     })
     newMsg.value = { remitente: '', destinatario: '', telefono: '', mensaje: '' }
@@ -361,7 +363,7 @@ function abrirWA(tel) {
 
 function cerrarSesion() {
   localStorage.removeItem('usuario')
-  useCookie('token').value = null
+  tokenCookie.value = null
   navigateTo('/login-asistente')
 }
 

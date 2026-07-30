@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
     user = jwt.verify(authHeader, process.env.JWT_SECRET || 'mediprotect_jwt_secret_key_2026')
   } catch { throw createError({ statusCode: 401, message: 'Token inválido' }) }
 
-  if (!['admin', 'asistente'].includes(user.tipo)) {
+  if (!['admin', 'asistente', 'Administrador'].includes(user.tipo)) {
     throw createError({ statusCode: 403, message: 'Acceso no autorizado' })
   }
 

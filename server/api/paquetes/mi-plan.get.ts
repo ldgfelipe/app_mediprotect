@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken'
+﻿import jwt from 'jsonwebtoken'
 
 export default defineEventHandler(async (event) => {
   const token = getCookie(event, 'token')
@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
 
   let payload: any
   try {
-    payload = jwt.verify(token, process.env.JWT_SECRET || 'default_secret')
+    payload = jwt.verify(token, process.env.JWT_SECRET || 'mediprotect_jwt_secret_key_2026')
   } catch {
     throw createError({ statusCode: 401, message: 'Token inválido' })
   }

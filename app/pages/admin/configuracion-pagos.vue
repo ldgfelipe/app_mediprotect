@@ -1,6 +1,8 @@
 <script setup>
 definePageMeta({ middleware: 'admin-auth' })
 
+const adminToken = useCookie('admin_token')
+
 const config = reactive({
   pago_proveedor_preferido: 'mercadopago',
   pago_mercadopago_key: '',
@@ -25,9 +27,8 @@ const mensajeExito = ref('')
 
 const cargarConfig = async () => {
   try {
-    const token = localStorage.getItem('admin_token')
     const data = await $fetch('/api/admin/configuracion-pagos', {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${adminToken.value}` }
     })
     for (const item of data.configuracion) {
       if (config.hasOwnProperty(item.clave)) {
@@ -43,11 +44,10 @@ const guardar = async () => {
   guardando.value = true
   mensajeExito.value = ''
   try {
-    const token = localStorage.getItem('admin_token')
     const configuraciones = Object.entries(config).map(([clave, valor]) => ({ clave, valor }))
     await $fetch('/api/admin/configuracion-pagos', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${adminToken.value}` },
       body: { configuraciones }
     })
     mensajeExito.value = 'Configuracion guardada correctamente'
