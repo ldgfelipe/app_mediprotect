@@ -7,6 +7,13 @@ const paquetes = ref([])
 const paqueteSeleccionado = ref(null)
 const showDetalles = ref(false)
 const yaRedirigio = ref(false)
+const creandoCita = ref(false)
+const pagosConfigurados = ref(false)
+
+const planesDisponibles = computed(() => {
+  if (pagosConfigurados.value) return paquetes.value
+  return paquetes.value.filter(p => parseFloat(p.precio) === 0)
+})
 
 const loginForm = reactive({ email: '', password: '' })
 const loginError = ref('')
@@ -25,12 +32,16 @@ onMounted(async () => {
   const saved = localStorage.getItem('usuario')
   if (token && saved) {
     usuario.value = JSON.parse(saved)
-    abrirWhatsApp()
+    await crearCitaYWhatsApp()
     return
   }
   try {
     const data = await $fetch('/api/paquetes')
     paquetes.value = data.paquetes || []
+  } catch (e) { console.error(e) }
+  try {
+    const config = await $fetch('/api/pagos/configuracion')
+    pagosConfigurados.value = config.configurado
   } catch (e) { console.error(e) }
 })
 
@@ -51,6 +62,24 @@ function abrirWhatsApp() {
   const msg = `Hola, quiero una cita con el médico ${doctorName.value}.\n\nMi nombre es: ${nombre}\nMi ID de usuario es: ${userId}`
   const whatsappNum = '522228021933'
   window.open(`https://wa.me/${whatsappNum}?text=${encodeURIComponent(msg)}`, '_blank')
+}
+
+async function crearCitaYWhatsApp() {
+  creandoCita.value = true
+  try {
+    const token = useCookie('token').value
+    await $fetch('/api/citas/crear', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: { medico_nombre: doctorName.value }
+    })
+  } catch (e) {
+    console.error('Error creando cita:', e)
+  }
+  localStorage.removeItem('agendar_doctor')
+  localStorage.removeItem('agendar_pendiente')
+  creandoCita.value = false
+  abrirWhatsApp()
   navigateTo('/dashboard/paciente')
 }
 
@@ -65,7 +94,7 @@ async function doLogin() {
     useCookie('token').value = res.token
     localStorage.setItem('usuario', JSON.stringify(res.usuario))
     usuario.value = res.usuario
-    abrirWhatsApp()
+    await crearCitaYWhatsApp()
   } catch (e) {
     loginError.value = e.data?.message || 'Credenciales incorrectas'
   }
@@ -84,6 +113,9 @@ async function doRegister() {
   }
   regLoading.value = true
   try {
+    if (doctorName.value) {
+      localStorage.setItem('agendar_doctor', doctorName.value)
+    }
     const res = await $fetch('/api/auth/registro-paciente', {
       method: 'POST',
       body: {
@@ -99,10 +131,11 @@ async function doRegister() {
     localStorage.setItem('usuario', JSON.stringify(res.usuario))
     usuario.value = res.usuario
     if (res.pago_id) {
+      localStorage.setItem('agendar_pendiente', '1')
       navigateTo({ path: '/checkout', query: { pago_id: res.pago_id } })
       return
     }
-    abrirWhatsApp()
+    await crearCitaYWhatsApp()
   } catch (e) {
     regError.value = e.data?.message || 'Error al registrar'
   }
@@ -123,7 +156,7 @@ async function doRegister() {
       <!-- Ya logueado -->
       <div v-if="usuario && !yaRedirigio" class="redirect-section">
         <div class="spinner"></div>
-        <p>Abriendo WhatsApp...</p>
+        <p>{{ creandoCita ? 'Creando tu cita...' : 'Abriendo WhatsApp...' }}</p>
       </div>
 
       <!-- PASO INICIO: Login o crear cuenta -->
@@ -152,7 +185,7 @@ async function doRegister() {
         <p class="subtitle">Selecciona el plan que mejor se adapte a tus necesidades</p>
 
         <div class="planes-grid">
-          <div v-for="p in paquetes" :key="p.id" class="plan-card" :class="{ selected: paqueteSeleccionado?.id === p.id }" @click="seleccionarPlan(p)">
+          <div v-for="p in planesDisponibles" :key="p.id" class="plan-card" :class="{ selected: paqueteSeleccionado?.id === p.id }" @click="seleccionarPlan(p)">
             <div class="plan-header">
               <span class="plan-nombre">{{ p.nombre }}</span>
               <span class="plan-precio">{{ p.precio > 0 ? '$' + p.precio.toLocaleString() + '/año' : 'Gratis' }}</span>

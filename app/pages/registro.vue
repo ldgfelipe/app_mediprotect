@@ -7,6 +7,12 @@ const tipo = ref<'paciente' | 'medico'>('paciente')
 const paquetes = ref<any[]>([])
 const paqueteSeleccionado = ref('')
 const paso = ref<'datos' | 'plan'>('datos')
+const pagosConfigurados = ref(false)
+
+const planesDisponibles = computed(() => {
+  if (pagosConfigurados.value) return paquetes.value
+  return paquetes.value.filter(p => parseFloat(p.precio) === 0)
+})
 
 const formPaciente = ref({
   nombre: '', apellido: '', email: '', password: '', telefono: '',
@@ -33,12 +39,14 @@ const esPlanPago = computed(() => {
 
 async function cargarDatos() {
   try {
-    const [esp, paq] = await Promise.all([
+    const [esp, paq, config] = await Promise.all([
       $fetch('/api/especialidades'),
-      $fetch('/api/paquetes')
+      $fetch('/api/paquetes'),
+      $fetch('/api/pagos/configuracion')
     ])
     especialidades.value = esp.especialidades || []
     paquetes.value = paq.paquetes || []
+    pagosConfigurados.value = config.configurado
 
     // Si viene plan desde URL, pre-seleccionar e ir al paso 2
     const planSlug = route.query.plan as string
@@ -205,7 +213,7 @@ async function handleSubmit() {
         <h2 class="form-section-title">Elige tu Plan</h2>
 
         <div class="planes-grid">
-          <div v-for="p in paquetes" :key="p.id" class="plan-card" :class="{ selected: paqueteSeleccionado === p.id }" @click="seleccionarPaquete(p.id)">
+          <div v-for="p in planesDisponibles" :key="p.id" class="plan-card" :class="{ selected: paqueteSeleccionado === p.id }" @click="seleccionarPaquete(p.id)">
             <div class="plan-header">
               <span class="plan-nombre">{{ p.nombre }}</span>
               <span class="plan-precio">{{ p.precio > 0 ? '$' + p.precio.toLocaleString() + '/mes' : 'Gratis' }}</span>

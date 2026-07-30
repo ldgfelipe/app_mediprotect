@@ -106,8 +106,9 @@ function cerrarSesion() {
         <div v-for="cita in citas" :key="cita.id" class="cita-card">
           <div class="cita-header">
             <div class="cita-medico">
-              <strong>{{ cita.medico_nombre }} {{ cita.medico_apellido }}</strong>
-              <span class="especialidad">{{ cita.especialidad }}</span>
+              <strong v-if="cita.medico_nombre">{{ cita.medico_nombre }} {{ cita.medico_apellido }}</strong>
+              <strong v-else class="medico-pendiente">Médico por confirmar</strong>
+              <span class="especialidad" v-if="cita.especialidad">{{ cita.especialidad }}</span>
             </div>
             <span class="cita-estado" :style="{ background: colores[cita.estado] || '#636e72' }">
               {{ estados[cita.estado] || cita.estado }}
@@ -141,6 +142,7 @@ function cerrarSesion() {
 .cita-card { background: #fff; border: 1px solid #eaeaea; border-radius: 12px; padding: 1.2rem 1.5rem; }
 .cita-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; }
 .cita-medico strong { display: block; font-size: 1.05rem; }
+.medico-pendiente { color: #f39c12; font-style: italic; }
 .especialidad { font-size: 0.85rem; color: #636e72; }
 .cita-estado { color: white; padding: 0.25rem 0.7rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; white-space: nowrap; }
 .cita-body { margin: 0.5rem 0; }

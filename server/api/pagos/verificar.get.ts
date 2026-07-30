@@ -9,9 +9,9 @@ export default defineEventHandler(async (event) => {
   const pool = getPool()
 
   const result = await pool.query(
-    `SELECT p.*, pl.nombre as plan_nombre, pa.nombre as paciente_nombre, pa.email as paciente_email
+    `SELECT p.*, paq.nombre as plan_nombre, pa.nombre as paciente_nombre, pa.email as paciente_email
      FROM pagos p
-     LEFT JOIN planes_cobertura pl ON pl.id = p.id_plan
+     LEFT JOIN paquetes paq ON paq.id = p.id_plan
      LEFT JOIN pacientes pa ON pa.id = p.id_paciente
      WHERE p.id = $1`,
     [pagoId]

@@ -45,7 +45,7 @@ export default defineEventHandler(async (event) => {
       pa.nombre ILIKE $${paramIdx} OR
       pa.email ILIKE $${paramIdx} OR
       pa.telefono ILIKE $${paramIdx} OR
-      pl.nombre ILIKE $${paramIdx} OR
+      paq.nombre ILIKE $${paramIdx} OR
       p.provedor_pago_id ILIKE $${paramIdx}
     )`
     params.push(`%${buscar}%`)
@@ -55,7 +55,7 @@ export default defineEventHandler(async (event) => {
   const countResult = await pool.query(
     `SELECT COUNT(*) as total FROM pagos p
      LEFT JOIN pacientes pa ON pa.id = p.id_paciente
-     LEFT JOIN planes_cobertura pl ON pl.id = p.id_plan
+     LEFT JOIN paquetes paq ON paq.id = p.id_plan
      ${where}`,
     params
   )
@@ -65,10 +65,10 @@ export default defineEventHandler(async (event) => {
       pa.nombre as paciente_nombre,
       pa.email as paciente_email,
       pa.telefono as paciente_telefono,
-      pl.nombre as plan_nombre
+      paq.nombre as plan_nombre
     FROM pagos p
     LEFT JOIN pacientes pa ON pa.id = p.id_paciente
-    LEFT JOIN planes_cobertura pl ON pl.id = p.id_plan
+    LEFT JOIN paquetes paq ON paq.id = p.id_plan
     ${where}
     ORDER BY p.created_at DESC
     LIMIT $${paramIdx++} OFFSET $${paramIdx++}`,

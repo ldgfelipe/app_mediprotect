@@ -6,11 +6,22 @@ const planActualId = ref(null)
 const procesando = ref(false)
 const mensajeExito = ref('')
 const mensajeError = ref('')
+const pagosConfigurados = ref(false)
+
+const planesDisponibles = computed(() => {
+  if (pagosConfigurados.value) return paquetes.value
+  return paquetes.value.filter(p => parseFloat(p.precio) === 0)
+})
 
 onMounted(async () => {
   try {
     const r1 = await $fetch('/api/paquetes')
     paquetes.value = r1.paquetes || []
+  } catch (e) { console.error(e) }
+
+  try {
+    const config = await $fetch('/api/pagos/configuracion')
+    pagosConfigurados.value = config.configurado
   } catch (e) { console.error(e) }
 
   // Check if logged in
@@ -93,7 +104,7 @@ async function cambiarPlan(plan) {
     <p v-if="cargando" class="loading">Cargando planes...</p>
 
     <div v-else class="planes-grid">
-      <div v-for="p in paquetes" :key="p.id" class="plan-card" :class="{ actual: planActualId === p.id }">
+      <div v-for="p in planesDisponibles" :key="p.id" class="plan-card" :class="{ actual: planActualId === p.id }">
         <div v-if="planActualId === p.id" class="badge-actual">Tu Plan Actual</div>
         <div v-else-if="p.slug === 'esencial'" class="badge-popular">Más Popular</div>
         <div v-else-if="p.slug === 'integral'" class="badge-recomendado">Recomendado</div>

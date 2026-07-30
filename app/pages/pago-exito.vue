@@ -12,7 +12,12 @@
           <div class="info-row"><span>Plan:</span><strong>{{ pago.plan_nombre || 'N/A' }}</strong></div>
           <div class="info-row"><span>Referencia:</span><span class="mono">{{ pago.provedor_pago_id }}</span></div>
         </div>
-        <button @click="irAlDashboard" class="btn-primary">Ir a mi Dashboard</button>
+        <div v-if="doctorPendiente" class="doctor-info">
+          <p>Tu plan ya está activo. Puedes agendar tu cita ahora.</p>
+        </div>
+        <button @click="irAlDashboard" class="btn-primary">
+          {{ doctorPendiente ? 'Agendar mi Cita' : 'Ir a mi Dashboard' }}
+        </button>
         <button @click="router.push('/')" class="btn-ghost">Volver al inicio</button>
       </div>
     </div>
@@ -23,16 +28,20 @@
 const router = useRouter()
 const route = useRoute()
 const pago = ref(null)
+const doctorPendiente = ref('')
 
 const formatMoney = (val) => parseFloat(val || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })
 
 const irAlDashboard = () => {
-  const usuarioCookie = useCookie('usuario')
-  if (usuarioCookie.value?.tipo === 'medico') router.push('/medico')
-  else router.push('/dashboard')
+  if (doctorPendiente.value) {
+    router.push(`/agendar-cita?doctor=${encodeURIComponent(doctorPendiente.value)}`)
+  } else {
+    router.push('/dashboard/paciente')
+  }
 }
 
 onMounted(async () => {
+  doctorPendiente.value = localStorage.getItem('agendar_doctor') || ''
   const pagoId = route.query.pago_id
   if (pagoId) {
     try {
@@ -40,6 +49,7 @@ onMounted(async () => {
       pago.value = data.pago
     } catch (err) { console.error('Error:', err) }
   }
+  localStorage.removeItem('agendar_pendiente')
 })
 </script>
 
@@ -61,4 +71,6 @@ onMounted(async () => {
 .btn-primary:hover { background: #00a381; }
 .btn-ghost { width: 100%; padding: 0.75rem; background: #f5f6fa; color: #636e72; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 0.9rem; cursor: pointer; }
 .btn-ghost:hover { background: #e0e0e0; }
+.doctor-info { background: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1.5rem; }
+.doctor-info p { margin: 0; font-size: 0.9rem; color: #2d3436; }
 </style>
