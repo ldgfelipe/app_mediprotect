@@ -1,8 +1,10 @@
 <script setup lang="ts">
 definePageMeta({ middleware: 'admin-auth' })
 const token = useCookie('admin_token')
+const adminUsuario = useCookie('admin_usuario')
 const medicos = ref<any[]>([])
 const loading = ref(true)
+const errorCargando = ref('')
 const search = ref('')
 const uploadingId = ref<string | null>(null)
 
@@ -15,7 +17,8 @@ const newMedico = ref({
   nombre: '', apellido: '', email: '', telefono: '',
   cedula_profesional: '', titulo: '', especialidad: '',
   ciudad: '', hospital: '', bio: '', servicios: '',
-  universidad: '', horario_atencion: '', idiomas: 'Espanol'
+  universidad: '', horario_atencion: '', idiomas: 'Espanol',
+  precio_regular: '', precio_miembro: '', usuario: '', password: ''
 })
 
 const searchingAI = ref(false)
@@ -37,12 +40,16 @@ onMounted(async () => {
 
 async function loadMedicos() {
   loading.value = true
+  errorCargando.value = ''
   try {
-    const { data } = await useFetch('/api/admin/medicos', {
+    const data: any = await $fetch('/api/admin/medicos', {
       headers: { Authorization: `Bearer ${token.value}` },
     })
-    medicos.value = (data.value as any)?.medicos || []
-  } catch (e) { console.error(e) }
+    medicos.value = data?.medicos || []
+  } catch (e: any) {
+    errorCargando.value = e?.data?.message || e?.message || 'Error al cargar médicos'
+    console.error(e)
+  }
   finally { loading.value = false }
 }
 
@@ -93,21 +100,20 @@ async function deletePhoto(medicoId: string) {
 }
 
 function cerrarSesion() {
-  const t = useCookie('admin_token')
-  const u = useCookie('admin_usuario')
-  t.value = null; u.value = null
-  navigateTo('/admin/login')
+  token.value = null
+  adminUsuario.value = null
+  return navigateTo('/admin/login')
 }
 
 async function loadEspecialidades() {
   try {
-    const { data } = await useFetch('/api/especialidades')
-    especialidades.value = (data.value as any)?.especialidades || []
+    const data: any = await $fetch('/api/especialidades')
+    especialidades.value = data?.especialidades || []
   } catch (e) { console.error(e) }
 }
 
 function openNewModal() {
-  newMedico.value = { nombre: '', apellido: '', email: '', telefono: '', cedula_profesional: '', titulo: '', especialidad: '', ciudad: '', hospital: '', bio: '', servicios: '', universidad: '', horario_atencion: '', idiomas: 'Espanol' }
+  newMedico.value = { nombre: '', apellido: '', email: '', telefono: '', cedula_profesional: '', titulo: '', especialidad: '', ciudad: '', hospital: '', bio: '', servicios: '', universidad: '', horario_atencion: '', idiomas: 'Espanol', precio_regular: '', precio_miembro: '', usuario: '', password: '' }
   formText.value = ''; perfilUrl.value = ''; importMode.value = 'url'
   aiResult.value = null; aiError.value = ''; showAiPreview.value = false
   showModal.value = true
@@ -170,7 +176,8 @@ function abrirEditar(m: any) {
     telefono: m.telefono || '', cedula_profesional: m.cedula_profesional || '',
     titulo: m.titulo || '', especialidad: m.especialidad_nombre || '',
     consultorio_ciudad: m.consultorio_ciudad || '', bio: m.bio || '',
-    activo: m.activo, password: ''
+    activo: m.activo, password: '', usuario: m.usuario || '',
+    precio_regular: m.precio_regular || '', precio_miembro: m.precio_miembro || ''
   }
   editError.value = ''; editOk.value = ''
   editando.value = true
@@ -186,21 +193,46 @@ async function guardarEdicion() {
     const body: any = { ...editForm.value }
     if (!body.password) delete body.password
     delete body.id
-    await $fetch(`/api/admin/medicos/${editForm.value.id}`, {
+    const data: any = await $fetch(`/api/admin/medicos/${editForm.value.id}`, {
       method: 'PUT', headers: { Authorization: `Bearer ${token.value}` }, body
     })
     const idx = medicos.value.findIndex(m => m.id === editForm.value.id)
     if (idx !== -1) {
-      medicos.value[idx].nombre = editForm.value.nombre
-      medicos.value[idx].apellido = editForm.value.apellido
-      medicos.value[idx].email = editForm.value.email
-      medicos.value[idx].telefono = editForm.value.telefono
-      medicos.value[idx].activo = editForm.value.activo
+      medicos.value[idx] = data.medico
     }
     editOk.value = 'Medico actualizado'
     setTimeout(() => { editOk.value = ''; editando.value = false }, 1500)
   } catch (e: any) { editError.value = e.data?.message || 'Error al guardar' }
   finally { editSaving.value = false }
+}
+
+const viewMedico = ref<any>(null)
+const showViewModal = ref(false)
+
+async function abrirVer(medico: any) {
+  try {
+    const data: any = await $fetch(`/api/admin/medicos/${medico.id}`, {
+      headers: { Authorization: `Bearer ${token.value}` }
+    })
+    viewMedico.value = data.medico
+    showViewModal.value = true
+  } catch (e) { console.error(e) }
+}
+
+function cerrarVer() {
+  showViewModal.value = false
+  viewMedico.value = null
+}
+
+async function confirmarEliminar(medico: any) {
+  if (!confirm(`¿Eliminar a ${medico.nombre} ${medico.apellido}? Esta acción no se puede deshacer.`)) return
+  try {
+    await $fetch(`/api/admin/medicos/${medico.id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token.value}` }
+    })
+    medicos.value = medicos.value.filter(m => m.id !== medico.id)
+  } catch (e: any) { alert(e.data?.message || 'Error al eliminar') }
 }
 </script>
 
@@ -215,7 +247,9 @@ async function guardarEdicion() {
         <NuxtLink to="/admin/empresas">Empresas</NuxtLink>
         <NuxtLink to="/admin/pagos">Pagos</NuxtLink>
         <NuxtLink to="/admin/citas">Citas</NuxtLink>
+        <NuxtLink to="/admin/asistentes">Asistentes</NuxtLink>
         <NuxtLink to="/admin/planes">Planes</NuxtLink>
+        <NuxtLink to="/admin/facturacion">Facturacion</NuxtLink>
         <NuxtLink to="/admin/configuracion">Configuracion</NuxtLink>
       </nav>
       <button @click="cerrarSesion" class="btn-logout">Cerrar Sesion</button>
@@ -230,6 +264,7 @@ async function guardarEdicion() {
         <span class="count">{{ filteredMedicos.length }} medicos</span>
       </div>
       <p v-if="loading" class="loading">Cargando medicos...</p>
+      <p v-else-if="errorCargando" class="error-msg">{{ errorCargando }}</p>
       <div v-else class="medicos-grid">
         <div v-for="medico in filteredMedicos" :key="medico.id" class="medico-card">
           <div class="medico-photo">
@@ -245,15 +280,20 @@ async function guardarEdicion() {
               </button>
             </div>
           </div>
-          <div class="medico-info">
-            <h3>{{ medico.titulo }} {{ medico.nombre }} {{ medico.apellido }}</h3>
-            <p class="especialidad">{{ medico.especialidad_nombre || 'Sin especialidad' }}</p>
-            <p class="cedula">Cedula: {{ medico.cedula_profesional || 'N/A' }}</p>
-            <p class="ciudad">{{ medico.consultorio_ciudad || 'Sin ubicacion' }}</p>
-            <div class="card-actions">
-              <button class="btn-edit" @click="abrirEditar(medico)">Editar</button>
+            <div class="medico-info">
+              <h3>{{ medico.titulo }} {{ medico.nombre }} {{ medico.apellido }}</h3>
+              <p class="especialidad">{{ medico.especialidad_nombre || 'Sin especialidad' }}</p>
+              <p class="cedula">Cedula: {{ medico.cedula_profesional || 'N/A' }}</p>
+              <p class="ciudad">{{ medico.consultorio_ciudad || 'Sin ubicacion' }}</p>
+              <div class="precio" v-if="medico.precio_regular || medico.precio_miembro">
+                <strong>Precio:</strong> ${{ medico.precio_regular || 0 }} / ${{ medico.precio_miembro || 0 }} (miembro)
+              </div>
+              <div class="card-actions">
+                <button class="btn-view" @click="abrirVer(medico)" title="Ver perfil completo">👁️ Ver</button>
+                <button class="btn-edit" @click="abrirEditar(medico)">Editar</button>
+                <button class="btn-delete" @click="confirmarEliminar(medico)" title="Eliminar medico">🗑️ Eliminar</button>
+              </div>
             </div>
-          </div>
         </div>
       </div>
 
@@ -324,6 +364,14 @@ async function guardarEdicion() {
                 </div>
                 <div class="form-group"><label>Ciudad</label><input v-model="newMedico.ciudad" /></div>
               </div>
+              <div class="form-row">
+                <div class="form-group"><label>Precio Regular ($)</label><input v-model="newMedico.precio_regular" type="number" step="0.01" min="0" placeholder="Ej: 500" /></div>
+                <div class="form-group"><label>Precio Miembro ($)</label><input v-model="newMedico.precio_miembro" type="number" step="0.01" min="0" placeholder="Ej: 400" /></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Usuario (para login como medico)</label><input v-model="newMedico.usuario" placeholder="Ej: dr.lopez" /></div>
+                <div class="form-group"><label>Contrasena</label><input v-model="newMedico.password" type="password" placeholder="******" /></div>
+              </div>
               <div class="form-group"><label>Biografia</label><textarea v-model="newMedico.bio" rows="3"></textarea></div>
               <div class="form-actions">
                 <button type="button" class="btn-cancel-sm" @click="showModal = false">Cancelar</button>
@@ -365,6 +413,10 @@ async function guardarEdicion() {
               </div>
               <div class="form-group"><label>Ciudad</label><input v-model="editForm.consultorio_ciudad" /></div>
             </div>
+            <div class="form-row">
+              <div class="form-group"><label>Precio Regular ($)</label><input v-model="editForm.precio_regular" type="number" step="0.01" min="0" /></div>
+              <div class="form-group"><label>Precio Miembro ($)</label><input v-model="editForm.precio_miembro" type="number" step="0.01" min="0" /></div>
+            </div>
             <div class="form-group"><label>Biografia</label><textarea v-model="editForm.bio" rows="3"></textarea></div>
             <div class="form-group">
               <label>Activo</label>
@@ -373,10 +425,66 @@ async function guardarEdicion() {
                 <option :value="false">No</option>
               </select>
             </div>
-            <div class="form-group"><label>Nueva contrasena (dejar vacio para no cambiar)</label><input v-model="editForm.password" type="password" placeholder="******" /></div>
+            <div class="form-row">
+              <div class="form-group"><label>Usuario (para login como medico)</label><input v-model="editForm.usuario" placeholder="Ej: dra.lopez" /></div>
+              <div class="form-group"><label>Nueva contrasena (dejar vacio para no cambiar)</label><input v-model="editForm.password" type="password" placeholder="******" /></div>
+            </div>
             <div class="form-actions">
               <button class="btn-cancel-sm" @click="cerrarEditar">Cancelar</button>
               <button class="btn-primary" @click="guardarEdicion" :disabled="editSaving">{{ editSaving ? 'Guardando...' : 'Guardar' }}</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Ver Perfil -->
+      <div class="modal-overlay" v-if="showViewModal" @click.self="cerrarVer">
+        <div class="modal modal-lg">
+          <div class="modal-header">
+            <h2>Perfil Médico</h2>
+            <button class="modal-close" @click="cerrarVer">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div v-if="viewMedico" class="perfil-view">
+              <div class="perfil-header">
+                <div class="perfil-foto">
+                  <img v-if="viewMedico.foto_url" :src="viewMedico.foto_url" :alt="`${viewMedico.nombre} ${viewMedico.apellido}`" />
+                  <div v-else class="foto-placeholder">👤</div>
+                </div>
+                <div>
+                  <h3>{{ viewMedico.titulo }} {{ viewMedico.nombre }} {{ viewMedico.apellido }}</h3>
+                  <p class="especialidad">{{ viewMedico.especialidad_nombre || 'Sin especialidad' }}</p>
+                  <p class="estado" :class="{ activo: viewMedico.activo, inactivo: !viewMedico.activo }">
+                    {{ viewMedico.activo ? 'Activo' : 'Inactivo' }}
+                  </p>
+                </div>
+              </div>
+
+              <div class="perfil-grid">
+                <div class="perfil-field"><label>Cédula Profesional</label><span>{{ viewMedico.cedula_profesional || 'N/A' }}</span></div>
+                <div class="perfil-field"><label>Email</label><span>{{ viewMedico.email || 'N/A' }}</span></div>
+                <div class="perfil-field"><label>Teléfono</label><span>{{ viewMedico.telefono || 'N/A' }}</span></div>
+                <div class="perfil-field"><label>Ciudad</label><span>{{ viewMedico.consultorio_ciudad || 'N/A' }}</span></div>
+                <div class="perfil-field"><label>Precio Regular ($)</label><span>{{ viewMedico.precio_regular || 'No configurado' }}</span></div>
+                <div class="perfil-field"><label>Precio Miembro ($)</label><span>{{ viewMedico.precio_miembro || 'No configurado' }}</span></div>
+                <div class="perfil-field"><label>Citas Confirmadas</label><span>{{ viewMedico.citas_confirmadas || 0 }}</span></div>
+                <div class="perfil-field"><label>Fecha Registro</label><span>{{ viewMedico.created_at ? new Date(viewMedico.created_at).toLocaleDateString('es-MX') : 'N/A' }}</span></div>
+              </div>
+
+              <div v-if="viewMedico.bio" class="perfil-bio">
+                <label>Biografía</label>
+                <p>{{ viewMedico.bio }}</p>
+              </div>
+
+              <div v-if="viewMedico.horario_atencion" class="perfil-bio">
+                <label>Horario</label>
+                <p>{{ viewMedico.horario_atencion }}</p>
+              </div>
+
+              <div class="modal-actions">
+                <button class="btn-cancel-sm" @click="cerrarVer">Cerrar</button>
+                <button class="btn-primary" @click="cerrarVer; abrirEditar(viewMedico)">Editar</button>
+              </div>
             </div>
           </div>
         </div>
@@ -400,6 +508,7 @@ async function guardarEdicion() {
 .content-header h1 { margin: 0; color: #2d3436; font-size: 1.5rem; }
 .content-header p { color: #636e72; font-size: 0.85rem; margin: 0.25rem 0 0; }
 .loading { text-align: center; color: #636e72; padding: 3rem; }
+      .error-msg { background: #ffebee; color: #c62828; padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem; text-align: center; }
 .search-bar { margin-bottom: 1.5rem; display: flex; gap: 1rem; align-items: center; }
 .search-bar input { flex: 1; max-width: 400px; padding: 0.75rem 1rem; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 0.9rem; }
 .count { font-size: 0.85rem; color: #636e72; white-space: nowrap; }
@@ -420,9 +529,25 @@ async function guardarEdicion() {
 .medico-info .especialidad { margin: 0; font-size: 0.85rem; color: #0984e3; font-weight: 500; }
 .medico-info .cedula { margin: 0.25rem 0 0; font-size: 0.8rem; color: #636e72; }
 .medico-info .ciudad { margin: 0.15rem 0 0; font-size: 0.8rem; color: #636e72; }
-.card-actions { margin-top: 0.75rem; }
-.btn-edit { background: none; border: 1px solid #0984e3; color: #0984e3; padding: 0.35rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
-.btn-edit:hover { background: #0984e3; color: white; }
+.precio {
+                margin: 0.3rem 0;
+                font-size: 0.85rem;
+                color: #636e72;
+              }
+              .precio strong {
+                color: #2d3436;
+              }
+              .card-actions {
+                display: flex;
+                gap: 0.5rem;
+                margin-top: 0.75rem;
+              }
+              .btn-view { background: #0984e3; color: white; border: none; padding: 0.35rem 0.75rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; text-decoration: none; display: inline-block; }
+              .btn-view:hover { background: #0770c2; }
+              .btn-edit { background: #00b894; color: white; border: none; padding: 0.35rem 0.75rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 500; }
+              .btn-edit:hover { background: #00a884; }
+              .btn-delete { background: #d63031; color: white; border: none; padding: 0.35rem 0.75rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
+              .btn-delete:hover { background: #b31d1d; }
 .btn-primary { background: #00b894; color: white; border: none; padding: 0.6rem 1.25rem; border-radius: 6px; font-size: 0.9rem; cursor: pointer; font-weight: 500; }
 .btn-primary:hover:not(:disabled) { background: #00a884; }
 .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
@@ -473,4 +598,19 @@ async function guardarEdicion() {
 .form-divider { text-align: center; margin: 1rem 0; position: relative; }
 .form-divider::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: #e0e0e0; }
 .form-divider span { background: white; padding: 0 1rem; position: relative; color: #636e72; font-size: 0.8rem; }
+
+.perfil-view { padding: 0.5rem; }
+.perfil-header { display: flex; gap: 1.5rem; align-items: center; margin-bottom: 1.5rem; }
+.perfil-foto { width: 100px; height: 100px; border-radius: 50%; overflow: hidden; background: #f5f6fa; display: flex; align-items: center; justify-content: center; }
+.perfil-foto img { width: 100%; height: 100%; object-fit: cover; }
+.foto-placeholder { font-size: 3rem; }
+.perfil-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem; }
+.perfil-field { display: flex; flex-direction: column; }
+.perfil-field label { font-size: 0.75rem; color: #636e72; margin-bottom: 0.25rem; }
+.perfil-field span { font-size: 0.9rem; color: #2d3436; }
+.perfil-bio label { display: block; font-size: 0.75rem; color: #636e72; margin-bottom: 0.25rem; }
+.perfil-bio p { font-size: 0.9rem; color: #2d3436; line-height: 1.4; }
+.estado { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.8rem; font-weight: 600; }
+.estado.activo { background: #e8f5e9; color: #2e7d32; }
+.estado.inactivo { background: #ffebee; color: #c62828; }
 </style>

@@ -2,9 +2,9 @@ import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
 
 export default defineEventHandler(async (event) => {
-  const token = getCookie(event, 'admin_token')
+  const token = getHeader(event, 'authorization')?.replace('Bearer ', '') || getCookie(event, 'admin_token')
   if (!token) throw createError({ statusCode: 401, message: 'No autorizado' })
-  try { jwt.verify(token, process.env.JWT_SECRET || 'default_secret') }
+  try { jwt.verify(token, process.env.JWT_SECRET || 'mediprotect_jwt_secret_key_2026') }
   catch { throw createError({ statusCode: 401, message: 'Token inválido' }) }
 
   const id = getRouterParam(event, 'id')
@@ -12,7 +12,8 @@ export default defineEventHandler(async (event) => {
   const {
     nombre, apellido, email, telefono, cedula_profesional,
     titulo, especialidad, consultorio_ciudad, consultorio_estado,
-    consultorio_direccion, bio, activo, password
+    consultorio_direccion, bio, activo, password,
+    precio_regular, precio_miembro, usuario
   } = body
 
   const pool = getPool()
@@ -26,6 +27,13 @@ export default defineEventHandler(async (event) => {
     const dup = await pool.query('SELECT id FROM medicos WHERE email = $1 AND id != $2', [email, id])
     if (dup.rowCount > 0) {
       throw createError({ statusCode: 400, message: 'Ya existe otro médico con ese email' })
+    }
+  }
+
+  if (usuario) {
+    const dupUser = await pool.query('SELECT id FROM medicos WHERE usuario = $1 AND id != $2', [usuario, id])
+    if (dupUser.rowCount > 0) {
+      throw createError({ statusCode: 400, message: 'Ya existe otro médico con ese usuario' })
     }
   }
 
@@ -70,6 +78,9 @@ export default defineEventHandler(async (event) => {
   if (consultorio_direccion !== undefined) { sets.push(`consultorio_direccion = $${idx++}`); params.push(consultorio_direccion || null) }
   if (bio !== undefined) { sets.push(`bio = $${idx++}`); params.push(bio || null) }
   if (activo !== undefined) { sets.push(`activo = $${idx++}`); params.push(activo) }
+  if (precio_regular !== undefined) { sets.push(`precio_regular = $${idx++}`); params.push(precio_regular || null) }
+  if (precio_miembro !== undefined) { sets.push(`precio_miembro = $${idx++}`); params.push(precio_miembro || null) }
+  if (usuario !== undefined) { sets.push(`usuario = $${idx++}`); params.push(usuario || null) }
   if (passwordHash) { sets.push(`password_hash = $${idx++}`); params.push(passwordHash) }
 
   if (sets.length === 0) {
@@ -79,7 +90,7 @@ export default defineEventHandler(async (event) => {
   params.push(id)
   const result = await pool.query(
     `UPDATE medicos SET ${sets.join(', ')} WHERE id = $${idx}
-     RETURNING id, nombre, apellido, email, telefono, cedula_profesional, titulo, activo, created_at`,
+     RETURNING id, nombre, apellido, email, telefono, cedula_profesional, titulo, activo, precio_regular, precio_miembro, created_at`,
     params
   )
 

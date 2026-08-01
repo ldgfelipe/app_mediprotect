@@ -82,15 +82,17 @@ async function guardar() {
   <div class="admin-layout">
     <aside class="sidebar">
       <div class="sidebar-brand"><h2>MediProtect</h2><span class="rol">Admin</span></div>
-      <nav>
+<nav>
         <NuxtLink to="/admin">Dashboard</NuxtLink>
         <NuxtLink to="/admin/pacientes" class="active">Pacientes</NuxtLink>
-        <NuxtLink to="/admin/medicos">Medicos</NuxtLink>
+        <NuxtLink to="/admin/medicos">Médicos</NuxtLink>
         <NuxtLink to="/admin/empresas">Empresas</NuxtLink>
         <NuxtLink to="/admin/pagos">Pagos</NuxtLink>
         <NuxtLink to="/admin/citas">Citas</NuxtLink>
+        <NuxtLink to="/admin/asistentes">Asistentes</NuxtLink>
         <NuxtLink to="/admin/planes">Planes</NuxtLink>
-        <NuxtLink to="/admin/configuracion">Configuracion</NuxtLink>
+        <NuxtLink to="/admin/facturacion">Facturación</NuxtLink>
+        <NuxtLink to="/admin/configuracion">Configuración</NuxtLink>
       </nav>
       <NuxtLink to="/admin/login" class="btn-logout">Cerrar Sesion</NuxtLink>
     </aside>

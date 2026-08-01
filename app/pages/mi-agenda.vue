@@ -138,6 +138,8 @@ function cerrarSesion() {
         <nav>
           <NuxtLink to="/dashboard/medico">Inicio</NuxtLink>
           <NuxtLink to="/mi-agenda" class="router-link-active">Mi Agenda</NuxtLink>
+          <NuxtLink to="/mis-pacientes">Mis Pacientes</NuxtLink>
+          <NuxtLink to="/mis-comisiones">Comisiones</NuxtLink>
         </nav>
         <div class="user-info">
           <span>Dr. {{ usuario?.nombre }} {{ usuario?.apellido }}</span>

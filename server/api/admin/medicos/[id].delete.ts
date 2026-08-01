@@ -1,4 +1,4 @@
-﻿import jwt from 'jsonwebtoken'
+import jwt from 'jsonwebtoken'
 
 export default defineEventHandler(async (event) => {
   const token = getHeader(event, 'authorization')?.replace('Bearer ', '') || getCookie(event, 'admin_token')
@@ -7,12 +7,14 @@ export default defineEventHandler(async (event) => {
   catch { throw createError({ statusCode: 401, message: 'Token inválido' }) }
 
   const pool = getPool()
-  const result = await pool.query(`
-    SELECT paq.*, COALESCE(json_agg(json_build_object('id', pb.id, 'beneficio', pb.beneficio)) FILTER (WHERE pb.id IS NOT NULL), '[]') as beneficios
-    FROM paquetes paq
-    LEFT JOIN paquete_beneficios pb ON paq.id = pb.id_paquete
-    GROUP BY paq.id
-    ORDER BY paq.precio ASC
-  `)
-  return { planes: result.rows }
+  const id = getRouterParam(event, 'id')
+
+  const existing = await pool.query('SELECT id FROM medicos WHERE id = $1', [id])
+  if (existing.rowCount === 0) {
+    throw createError({ statusCode: 404, message: 'Médico no encontrado' })
+  }
+
+  await pool.query('UPDATE medicos SET activo = false WHERE id = $1', [id])
+
+  return { success: true, message: 'Médico desactivado exitosamente' }
 })

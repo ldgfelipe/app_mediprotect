@@ -10,13 +10,15 @@ const loading = ref(false)
 const tokenCookie = useCookie('token')
 const usuarioCookie = useCookie('usuario')
 
+const esMedico = computed(() => tipo.value === 'medico')
+
 async function handleSubmit() {
   error.value = ''
   loading.value = true
   try {
     const res: any = await $fetch('/api/auth/login', {
       method: 'POST',
-      body: { email: email.value, password: password.value, tipo: tipo.value },
+      body: { email: email.value, usuario: esMedico.value ? email.value : undefined, password: password.value, tipo: tipo.value },
     })
 
     tokenCookie.value = res.token
@@ -46,8 +48,8 @@ async function handleSubmit() {
           <button type="button" :class="['tipo-btn', { active: tipo === 'medico' }]" @click="tipo = 'medico'">Médico</button>
         </div>
         <div class="form-group">
-          <label>Correo electrónico</label>
-          <input v-model="email" type="email" placeholder="correo@ejemplo.com" required />
+          <label>{{ esMedico ? 'Usuario o correo' : 'Correo electrónico' }}</label>
+          <input v-model="email" :type="esMedico ? 'text' : 'email'" :placeholder="esMedico ? 'usuario o correo@ejemplo.com' : 'correo@ejemplo.com'" required />
         </div>
         <div class="form-group">
           <label>Contraseña</label>

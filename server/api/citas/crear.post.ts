@@ -23,9 +23,19 @@ export default defineEventHandler(async (event) => {
   const pool = getPool()
 
   let medicoData = null
+  let costoConsulta = null
   if (id_medico) {
-    const medico = await pool.query('SELECT id, nombre, apellido FROM medicos WHERE id = $1 AND activo = true', [id_medico])
-    if (medico.rows.length > 0) medicoData = medico.rows[0]
+    const medico = await pool.query('SELECT id, nombre, apellido, precio_regular FROM medicos WHERE id = $1 AND activo = true', [id_medico])
+    if (medico.rows.length > 0) {
+      medicoData = medico.rows[0]
+      if (medicoData.precio_regular) costoConsulta = medicoData.precio_regular
+    }
+  }
+
+  // Si no hay precio_regular, usar costo_minimo_cita de configuración
+  if (!costoConsulta) {
+    const config = await pool.query("SELECT valor::numeric FROM configuracion_sistema WHERE clave = 'costo_minimo_cita'")
+    costoConsulta = config.rows[0]?.valor || 500
   }
 
   const notasConMedico = medico_nombre
@@ -33,10 +43,10 @@ export default defineEventHandler(async (event) => {
     : notas_paciente || null
 
   const result = await pool.query(
-    `INSERT INTO citas (id_paciente, id_medico, fecha_hora, notas_paciente, estado)
-     VALUES ($1, $2, $3, $4, 'pendiente')
+    `INSERT INTO citas (id_paciente, id_medico, fecha_hora, notas_paciente, costo_consulta, estado)
+     VALUES ($1, $2, $3, $4, $5, 'pendiente')
      RETURNING *`,
-    [user.id, id_medico || null, fecha_hora || null, notasConMedico]
+    [user.id, id_medico || null, fecha_hora || null, notasConMedico, costoConsulta]
   )
 
   const cita = result.rows[0]
@@ -46,7 +56,7 @@ export default defineEventHandler(async (event) => {
   await pool.query(
     `INSERT INTO citas_bitacora (id_cita, id_usuario, tipo_usuario, accion, estado_nuevo, descripcion, created_at)
      VALUES ($1, $2, 'paciente', 'creacion', 'pendiente', $3, NOW())`,
-    [cita.id, user.id, `Cita creada por paciente. Médico: ${medico_nombre || 'No especificado'}`]
+    [cita.id, user.id, `Cita creada por paciente. Médico: ${medico_nombre || 'No especificado'}. Costo: $${costoConsulta}`]
   )
 
   return { cita }

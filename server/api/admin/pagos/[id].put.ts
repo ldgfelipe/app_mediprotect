@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken'
 
 export default defineEventHandler(async (event) => {
-  const token = getCookie(event, 'admin_token')
+  const token = getHeader(event, 'authorization')?.replace('Bearer ', '') || getCookie(event, 'admin_token')
   if (!token) throw createError({ statusCode: 401, message: 'No autorizado' })
   try { jwt.verify(token, process.env.JWT_SECRET || 'default_secret') }
   catch { throw createError({ statusCode: 401, message: 'Token inválido' }) }

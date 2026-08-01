@@ -12,33 +12,50 @@ export default defineEventHandler(async (event) => {
   const [year, month] = periodo.split('-').map(Number)
   const fechaInicio = new Date(year, month - 1, 1)
   const fechaFin = new Date(year, month, 0, 23, 59, 59)
+  const search = query.search || ''
+  const page = Math.max(1, parseInt(query.page) || 1)
+  const limit = Math.min(50, parseInt(query.limit) || 20)
+  const offset = (page - 1) * limit
+
+  let where = `WHERE c.fecha_hora >= $1 AND c.fecha_hora <= $2`
+  const params = [fechaInicio, fechaFin]
+  let paramIdx = 3
+
+  if (search) {
+    where += ` AND (m.nombre ILIKE $${paramIdx} OR m.apellido ILIKE $${paramIdx} OR e.nombre ILIKE $${paramIdx})`
+    params.push(`%${search}%`)
+    paramIdx++
+  }
+
+  const totalResult = await pool.query(`
+    SELECT COUNT(DISTINCT m.id)
+    FROM medicos m
+    LEFT JOIN citas c ON c.id_medico = m.id ${where.replace('c.fecha_hora', 'c.fecha_hora')}
+    GROUP BY m.id
+    HAVING COUNT(c.id) > 0
+  `, params)
+  const total = parseInt(totalResult.rows[0]?.count || '0')
 
   const result = await pool.query(`
     SELECT 
-      m.id,
-      m.nombre,
-      m.apellido,
-      m.precio_regular,
-      m.especialidad,
-      COALESCE(citas_stats.total_citas, 0) as total_citas,
-      COALESCE(citas_stats.citas_confirmadas, 0) as citas_confirmadas,
-      COALESCE(citas_stats.ingresos, 0) as ingresos,
-      COALESCE(citas_stats.comision, 0) as comision
+      m.id, m.nombre, m.apellido, m.precio_regular, m.precio_miembro,
+      e.nombre as especialidad_nombre,
+      COUNT(c.id) as total_citas,
+      COUNT(c.id) FILTER (WHERE c.estado IN ('confirmada', 'asistida')) as citas_confirmadas,
+      COALESCE(SUM(c.costo_consulta) FILTER (WHERE c.estado IN ('confirmada', 'asistida')), 0) as ingresos,
+      COALESCE(SUM(c.costo_consulta * 0.15) FILTER (WHERE c.estado IN ('confirmada', 'asistida')), 0) as comision
     FROM medicos m
-    LEFT JOIN (
-      SELECT 
-        c.id_medico,
-        COUNT(*) as total_citas,
-        COUNT(*) FILTER (WHERE c.estado IN ('confirmada', 'asistida')) as citas_confirmadas,
-        COALESCE(SUM(c.costo_consulta) FILTER (WHERE c.estado IN ('confirmada', 'asistida')), 0) as ingresos,
-        COALESCE(SUM(c.costo_consulta * 0.15) FILTER (WHERE c.estado IN ('confirmada', 'asistida')), 0) as comision
-      FROM citas c
-      WHERE c.fecha_hora >= $1 AND c.fecha_hora <= $2
-      GROUP BY c.id_medico
-    ) citas_stats ON citas_stats.id_medico = m.id
-    WHERE m.activo = true
-    ORDER BY citas_stats.ingresos DESC NULLS LAST
-  `, [fechaInicio, fechaFin])
+    LEFT JOIN especialidades e ON e.id = m.id_especialidad
+    LEFT JOIN citas c ON c.id_medico = m.id ${where}
+    GROUP BY m.id, m.nombre, m.apellido, m.precio_regular, m.precio_miembro, e.nombre
+    HAVING COUNT(c.id) > 0
+    ORDER BY ingresos DESC
+    LIMIT $${paramIdx} OFFSET $${paramIdx + 1}
+  `, [...params, limit, offset])
 
-  return { medicos: result.rows, periodo }
+  return {
+    medicos: result.rows,
+    pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+    periodo
+  }
 })
