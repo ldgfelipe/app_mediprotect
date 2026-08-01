@@ -15,6 +15,7 @@
         <NuxtLink to="/admin/empresas" class="nav-link">Empresas</NuxtLink>
         <NuxtLink to="/admin/asistentes" class="nav-link">Asistentes</NuxtLink>
         <NuxtLink to="/admin/configuracion" class="nav-link active">Configuración</NuxtLink>
+        <NuxtLink to="/admin/configuracion/datos" class="nav-link">Gestión de Datos</NuxtLink>
       </nav>
       <button class="btn-logout" @click="logout">Cerrar Sesión</button>
     </aside>
