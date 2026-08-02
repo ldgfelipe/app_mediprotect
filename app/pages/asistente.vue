@@ -38,6 +38,19 @@ const buscandoMedico = ref(false)
 // Pestañas
 const activeTab = ref('citas')
 
+// Vista: calendario (default) o lista
+const vistaCitas = ref('calendar')
+if (process.client) {
+  const savedView = localStorage.getItem('vistaCitas')
+  vistaCitas.value = savedView || 'calendar'
+}
+
+watchEffect(() => {
+  if (process.client) {
+    localStorage.setItem('vistaCitas', vistaCitas.value)
+  }
+})
+
 // Buscador de médicos (pestaña Médicos)
 const medicoBusqueda = ref('')
 const medicoResults = ref([])
@@ -394,14 +407,66 @@ function estadoColor(estado) {
       <div v-if="activeTab === 'citas'">
         <div class="content-header">
           <h1>Gestión de Citas</h1>
-          <button @click="abrirNuevaCita" class="btn-primary">+ Nueva Cita</button>
+          <div class="header-actions">
+            <div class="view-toggle">
+              <button :class="{ active: vistaCitas === 'calendar' }" @click="vistaCitas = 'calendar'" title="Vista calendario">📅</button>
+              <button :class="{ active: vistaCitas === 'list' }" @click="vistaCitas = 'list'" title="Vista lista">📋</button>
+            </div>
+            <button @click="abrirNuevaCita" class="btn-primary">+ Nueva Cita</button>
+          </div>
         </div>
 
-        <!-- Calendario de citas -->
+        <!-- Vista Calendario -->
         <CalendarioCitas
+          v-if="vistaCitas === 'calendar'"
           :citas="citas"
           @seleccionar-cita="abrirCita"
         />
+
+        <!-- Vista Lista -->
+        <div v-if="vistaCitas === 'list'" class="citas-lista">
+          <div class="filters">
+            <input v-model="busqueda" placeholder="Buscar por paciente o médico..." @input="cargarCitas" />
+            <select v-model="filtroEstado" @change="cargarCitas">
+              <option value="">Todos</option>
+              <option value="pendiente">Pendientes</option>
+              <option value="confirmada">Confirmadas</option>
+              <option value="asistida">Asistidas</option>
+              <option value="cancelada">Canceladas</option>
+              <option value="no_asistida">No Asistidas</option>
+            </select>
+          </div>
+
+          <div v-if="loading" class="loading">Cargando citas...</div>
+
+          <div v-else-if="citas.length === 0" class="empty">
+            <p>No hay citas para mostrar</p>
+          </div>
+
+          <div v-else class="citas-cards">
+            <div
+              v-for="cita in citas"
+              :key="cita.id"
+              class="cita-card"
+              :style="{ borderLeftColor: estadoColor(cita.estado) }"
+              @click="abrirCita(cita)"
+            >
+              <div class="cita-header">
+                <span class="estado-badge" :style="{ background: estadoColor(cita.estado) }">{{ cita.estado }}</span>
+                <span class="fecha">{{ formatearFecha(cita.fecha_hora) }}</span>
+              </div>
+              <div class="cita-body">
+                <div class="cita-col">
+                  <strong>Paciente:</strong> {{ cita.paciente_nombre }} {{ cita.paciente_apellido }}
+                  <span v-if="cita.paciente_telefono" class="phone" @click.stop="abrirWA(cita.paciente_telefono)">📱 WhatsApp</span>
+                </div>
+                <div class="cita-col">
+                  <strong>Médico:</strong> {{ cita.medico_nombre }} {{ cita.medico_apellido }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- PESTAÑA: MÉDICOS -->
@@ -857,7 +922,20 @@ nav button.active { background: #0984e3; color: white; }
 
 .content { max-width: 1200px; margin: 1.5rem auto; padding: 0 1rem; }
 .content-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+.header-actions { display: flex; align-items: center; gap: 0.75rem; }
+.view-toggle { display: flex; background: #dfe6e9; border-radius: 8px; overflow: hidden; }
+.view-toggle button { background: none; border: none; padding: 0.45rem 0.75rem; cursor: pointer; font-size: 1rem; transition: all 0.15s; }
+.view-toggle button.active { background: #0984e3; color: white; }
 h1 { font-size: 1.5rem; color: #2d3436; }
+
+.citas-lista { background: white; border-radius: 12px; padding: 1.5rem; border: 1px solid #dfe6e9; }
+.citas-cards { display: flex; flex-direction: column; gap: 0.6rem; }
+.cita-card { background: white; padding: 1rem 1.2rem; border-radius: 10px; cursor: pointer; border-left: 4px solid #dfe6e9; transition: all 0.15s; }
+.cita-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.cita-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+.cita-body { display: flex; gap: 2rem; }
+.cita-col { font-size: 0.9rem; }
+.phone { font-size: 0.8rem; color: #25d366; margin-left: 0.5rem; cursor: pointer; }
 
 .filters { display: flex; gap: 0.8rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
 .filters input { flex: 1; min-width: 200px; padding: 0.6rem 1rem; border: 1px solid #dfe6e9; border-radius: 8px; }
