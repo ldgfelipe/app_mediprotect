@@ -384,6 +384,211 @@ function estadoColor(estado) {
   const colors = { pendiente: '#fdcb6e', confirmada: '#0984e3', paciente_llego: '#00b894', en_atencion: '#6c5ce7', asistida: '#00b894', no_asistida: '#d63031', cancelada: '#b2bec3', reagendada: '#e17055' }
   return colors[estado] || '#dfe6e9'
 }
+
+// ========== SECCION: MEDICOS (crear/buscar) ==========
+const searchMedico = ref('')
+const resultadosMedicos = ref([])
+const loadingSearchMedico = ref(false)
+const showNuevoMedico = ref(false)
+const especialidades = ref([])
+const formMedico = ref({ nombre: '', apellido: '', email: '', telefono: '', cedula_profesional: '', titulo: 'Dr.', especialidad: '', usuario: '', password: '' })
+const savingMedico = ref(false)
+const errorMsgMedico = ref('')
+const okMsgMedico = ref('')
+
+let medicoSearchTimeout = null
+function buscarMedicos() {
+  if (medicoSearchTimeout) clearTimeout(medicoSearchTimeout)
+  medicoSearchTimeout = setTimeout(async () => {
+    const q = searchMedico.value.trim()
+    if (!q || q.length < 2) { resultadosMedicos.value = []; return }
+    loadingSearchMedico.value = true
+    try {
+      const data = await $fetch('/api/admin/medicos', { headers: { Authorization: 'Bearer ' + tokenCookie.value } })
+      const all = data?.medicos || []
+      const s = q.toLowerCase()
+      resultadosMedicos.value = all.filter(m =>
+        `${m.nombre} ${m.apellido}`.toLowerCase().includes(s) ||
+        m.email?.toLowerCase().includes(s) || m.cedula_profesional?.toLowerCase().includes(s) || m.especialidad_nombre?.toLowerCase().includes(s)
+      )
+    } catch (e) { console.error(e) }
+    loadingSearchMedico.value = false
+  }, 300)
+}
+
+async function guardarMedico() {
+  errorMsgMedico.value = ''; okMsgMedico.value = ''
+  if (!formMedico.value.nombre || !formMedico.value.apellido) { errorMsgMedico.value = 'Nombre y apellido son requeridos'; return }
+  savingMedico.value = true
+  try {
+    await $fetch('/api/admin/medicos', { method: 'POST', headers: { Authorization: 'Bearer ' + tokenCookie.value }, body: formMedico.value })
+    okMsgMedico.value = 'Medico registrado correctamente'
+    showNuevoMedico.value = false
+    formMedico.value = { nombre: '', apellido: '', email: '', telefono: '', cedula_profesional: '', titulo: 'Dr.', especialidad: '', usuario: '', password: '' }
+    setTimeout(() => { okMsgMedico.value = '' }, 3000)
+  } catch (e) { errorMsgMedico.value = e.data?.message || 'Error al guardar' }
+  finally { savingMedico.value = false }
+}
+
+// ========== SECCION: PACIENTES (crear/buscar) ==========
+const searchPacienteAdmin = ref('')
+const resultadosPacientes = ref([])
+const loadingSearchPaciente = ref(false)
+const showNuevoPaciente = ref(false)
+const formPaciente = ref({ nombre: '', apellido: '', email: '', telefono: '', fecha_nacimiento: '', genero: '', ciudad: '', curp: '', password: '' })
+const savingPaciente = ref(false)
+const errorMsgPaciente = ref('')
+const okMsgPaciente = ref('')
+
+let pacienteSearchTimeout = null
+function buscarPacientesAdmin() {
+  if (pacienteSearchTimeout) clearTimeout(pacienteSearchTimeout)
+  pacienteSearchTimeout = setTimeout(async () => {
+    const q = searchPacienteAdmin.value.trim()
+    if (!q || q.length < 2) { resultadosPacientes.value = []; return }
+    loadingSearchPaciente.value = true
+    try {
+      const data = await $fetch('/api/admin/pacientes', { headers: { Authorization: 'Bearer ' + tokenCookie.value } })
+      const all = data?.pacientes || []
+      const s = q.toLowerCase()
+      resultadosPacientes.value = all.filter(p =>
+        `${p.nombre} ${p.apellido}`.toLowerCase().includes(s) ||
+        p.email?.toLowerCase().includes(s) || p.telefono?.includes(s)
+      )
+    } catch (e) { console.error(e) }
+    loadingSearchPaciente.value = false
+  }, 300)
+}
+
+async function guardarPaciente() {
+  errorMsgPaciente.value = ''; okMsgPaciente.value = ''
+  if (!formPaciente.value.nombre || !formPaciente.value.email) { errorMsgPaciente.value = 'Nombre y email son requeridos'; return }
+  savingPaciente.value = true
+  try {
+    await $fetch('/api/admin/pacientes', { method: 'POST', headers: { Authorization: 'Bearer ' + tokenCookie.value }, body: formPaciente.value })
+    okMsgPaciente.value = 'Paciente registrado correctamente'
+    showNuevoPaciente.value = false
+    formPaciente.value = { nombre: '', apellido: '', email: '', telefono: '', fecha_nacimiento: '', genero: '', ciudad: '', curp: '', password: '' }
+    setTimeout(() => { okMsgPaciente.value = '' }, 3000)
+  } catch (e) { errorMsgPaciente.value = e.data?.message || 'Error al guardar' }
+  finally { savingPaciente.value = false }
+}
+
+// ========== SECCION: EMPRESAS (crear/buscar/asociar) ==========
+const searchEmpresaAdmin = ref('')
+const resultadosEmpresas = ref([])
+const loadingSearchEmpresa = ref(false)
+const showNuevaEmpresa = ref(false)
+const formEmpresa = ref({ nombre: '', rfc: '', email: '', telefono: '', contacto_nombre: '', direccion: '', ciudad: '', estado: '' })
+const savingEmpresa = ref(false)
+const errorMsgEmpresa = ref('')
+const okMsgEmpresa = ref('')
+
+const showEmpresaPacientes = ref(false)
+const empresaSeleccionada = ref(null)
+const pacientesEmpresa = ref([])
+const allPacientesList = ref([])
+const searchPacienteEmpresa = ref('')
+const loadingPacientesEmpresa = ref(false)
+const savingAsociar = ref(false)
+
+let empresaSearchTimeout = null
+function buscarEmpresasAdmin() {
+  if (empresaSearchTimeout) clearTimeout(empresaSearchTimeout)
+  empresaSearchTimeout = setTimeout(async () => {
+    const q = searchEmpresaAdmin.value.trim()
+    if (!q || q.length < 2) { resultadosEmpresas.value = []; return }
+    loadingSearchEmpresa.value = true
+    try {
+      const data = await $fetch('/api/admin/empresas', { headers: { Authorization: 'Bearer ' + tokenCookie.value } })
+      const all = data?.empresas || []
+      const s = q.toLowerCase()
+      resultadosEmpresas.value = all.filter(e =>
+        e.nombre?.toLowerCase().includes(s) || e.rfc?.toLowerCase().includes(s) ||
+        e.email?.toLowerCase().includes(s) || e.contacto_nombre?.toLowerCase().includes(s)
+      )
+    } catch (e) { console.error(e) }
+    loadingSearchEmpresa.value = false
+  }, 300)
+}
+
+async function guardarEmpresa() {
+  errorMsgEmpresa.value = ''; okMsgEmpresa.value = ''
+  if (!formEmpresa.value.nombre || !formEmpresa.value.email) { errorMsgEmpresa.value = 'Nombre y email son requeridos'; return }
+  savingEmpresa.value = true
+  try {
+    await $fetch('/api/admin/empresas', { method: 'POST', headers: { Authorization: 'Bearer ' + tokenCookie.value }, body: formEmpresa.value })
+    okMsgEmpresa.value = 'Empresa registrada correctamente'
+    showNuevaEmpresa.value = false
+    formEmpresa.value = { nombre: '', rfc: '', email: '', telefono: '', contacto_nombre: '', direccion: '', ciudad: '', estado: '' }
+    setTimeout(() => { okMsgEmpresa.value = '' }, 3000)
+  } catch (e) { errorMsgEmpresa.value = e.data?.message || 'Error al guardar' }
+  finally { savingEmpresa.value = false }
+}
+
+async function abrirEmpresaPacientes(empresa) {
+  empresaSeleccionada.value = empresa
+  loadingPacientesEmpresa.value = true
+  showEmpresaPacientes.value = true
+  try {
+    const [ep, ap] = await Promise.all([
+      $fetch(`/api/admin/empresas/${empresa.id}/pacientes`, { headers: { Authorization: 'Bearer ' + tokenCookie.value } }),
+      $fetch('/api/admin/pacientes', { headers: { Authorization: 'Bearer ' + tokenCookie.value } })
+    ])
+    pacientesEmpresa.value = ep?.pacientes || []
+    allPacientesList.value = ap?.pacientes || []
+  } catch (e) { console.error(e) }
+  loadingPacientesEmpresa.value = false
+}
+
+const pacientesFiltradosEmpresa = computed(() => {
+  if (!searchPacienteEmpresa.value) return allPacientesList.value
+  const s = searchPacienteEmpresa.value.toLowerCase()
+  return allPacientesList.value.filter(p =>
+    `${p.nombre} ${p.apellido}`.toLowerCase().includes(s) || p.email?.toLowerCase().includes(s)
+  )
+})
+
+const idsAsociados = computed(() => new Set(pacientesEmpresa.value.map(p => p.id_paciente)))
+
+async function asociarPacienteAEmpresa(pacienteId) {
+  savingAsociar.value = true
+  try {
+    await $fetch(`/api/admin/empresas/${empresaSeleccionada.value.id}/pacientes`, {
+      method: 'POST', headers: { Authorization: 'Bearer ' + tokenCookie.value }, body: { id_paciente: pacienteId }
+    })
+    await abrirEmpresaPacientes(empresaSeleccionada.value)
+  } catch (e) { alert(e.data?.message || 'Error') }
+  savingAsociar.value = false
+}
+
+async function desasociarPacienteEmpresa(pacienteId) {
+  if (!confirm('¿Remover paciente de esta empresa?')) return
+  try {
+    await $fetch(`/api/admin/empresas/${empresaSeleccionada.value.id}/pacientes/${pacienteId}`, {
+      method: 'DELETE', headers: { Authorization: 'Bearer ' + tokenCookie.value }
+    })
+    await abrirEmpresaPacientes(empresaSeleccionada.value)
+  } catch (e) { alert(e.data?.message || 'Error') }
+}
+
+async function crearPacienteParaEmpresa() {
+  errorMsgPaciente.value = ''; okMsgPaciente.value = ''
+  if (!formPaciente.value.nombre || !formPaciente.value.email) { errorMsgPaciente.value = 'Nombre y email son requeridos'; return }
+  savingPaciente.value = true
+  try {
+    const data = await $fetch('/api/admin/pacientes', {
+      method: 'POST', headers: { Authorization: 'Bearer ' + tokenCookie.value },
+      body: { ...formPaciente.value, id_empresa: empresaSeleccionada.value.id }
+    })
+    okMsgPaciente.value = 'Paciente creado y asociado a la empresa'
+    formPaciente.value = { nombre: '', apellido: '', email: '', telefono: '', fecha_nacimiento: '', genero: '', ciudad: '', curp: '', password: '' }
+    showNuevoPaciente.value = false
+    await abrirEmpresaPacientes(empresaSeleccionada.value)
+    setTimeout(() => { okMsgPaciente.value = '' }, 3000)
+  } catch (e) { errorMsgPaciente.value = e.data?.message || 'Error al guardar' }
+  finally { savingPaciente.value = false }
+}
 </script>
 
 <template>
@@ -392,8 +597,10 @@ function estadoColor(estado) {
       <div class="header-inner">
         <img src="https://imagedelivery.net/xaKlCos5cTg_1RWzIu_h-A/0a041066-aa69-4fe5-07ed-50ee74875100/public" alt="MediProtect" class="logo" />
         <nav>
-          <button :class="{ active: activeTab === 'citas' }" @click="activeTab = 'citas'">📋 Citas</button>
-          <button :class="{ active: activeTab === 'medicos' }" @click="activeTab = 'medicos'">👨‍⚕️ Médicos</button>
+          <button :class="{ active: activeTab === 'citas' }" @click="activeTab = 'citas'">Citas</button>
+          <button :class="{ active: activeTab === 'medicos' }" @click="activeTab = 'medicos'">Medicos</button>
+          <button :class="{ active: activeTab === 'pacientes' }" @click="activeTab = 'pacientes'">Pacientes</button>
+          <button :class="{ active: activeTab === 'empresas' }" @click="activeTab = 'empresas'">Empresas</button>
         </nav>
         <div class="user-info">
           <span>{{ usuario.nombre }} {{ usuario.apellido }}</span>
@@ -619,8 +826,54 @@ function estadoColor(estado) {
         </div>
 
         <div v-if="!medicoSeleccionadoPerfil && medicoBusqueda.length < 2" class="empty-state">
-          <p>🔍 Escribe al menos 2 caracteres para buscar un médico</p>
+          <p>Escribe al menos 2 caracteres para buscar un medico</p>
         </div>
+      </div>
+
+      <!-- PESTAÑA: PACIENTES -->
+      <div v-if="activeTab === 'pacientes'">
+        <div class="content-header">
+          <h1>Directorio de Pacientes</h1>
+          <button @click="showNuevoPaciente = true" class="btn-primary">+ Nuevo Paciente</button>
+        </div>
+        <div v-if="okMsgPaciente" class="success-msg">{{ okMsgPaciente }}</div>
+        <div v-if="errorMsgPaciente" class="error-msg">{{ errorMsgPaciente }}</div>
+
+        <div class="search-box"><input v-model="searchPacienteAdmin" @input="buscarPacientesAdmin" placeholder="Buscar por nombre, email o telefono..." /></div>
+        <p v-if="loadingSearchPaciente" class="loading">Buscando...</p>
+
+        <div v-if="resultadosPacientes.length > 0" class="results-list">
+          <div v-for="p in resultadosPacientes" :key="p.id" class="result-card">
+            <div class="result-avatar green"><span>{{ p.nombre?.charAt(0) }}{{ p.apellido?.charAt(0) }}</span></div>
+            <div class="result-info"><strong>{{ p.nombre }} {{ p.apellido }}</strong><span>{{ p.email }}</span><span>{{ p.telefono || '' }}</span></div>
+            <span class="result-date">{{ p.created_at ? new Date(p.created_at).toLocaleDateString('es-MX') : '' }}</span>
+          </div>
+        </div>
+        <div v-else-if="searchPacienteAdmin.length >= 2 && !loadingSearchPaciente" class="empty-state">No se encontraron pacientes</div>
+        <div v-else class="empty-state">Escribe al menos 2 caracteres para buscar</div>
+      </div>
+
+      <!-- PESTAÑA: EMPRESAS -->
+      <div v-if="activeTab === 'empresas'">
+        <div class="content-header">
+          <h1>Directorio de Empresas</h1>
+          <button @click="showNuevaEmpresa = true" class="btn-primary">+ Nueva Empresa</button>
+        </div>
+        <div v-if="okMsgEmpresa" class="success-msg">{{ okMsgEmpresa }}</div>
+        <div v-if="errorMsgEmpresa" class="error-msg">{{ errorMsgEmpresa }}</div>
+
+        <div class="search-box"><input v-model="searchEmpresaAdmin" @input="buscarEmpresasAdmin" placeholder="Buscar por nombre, RFC, email o contacto..." /></div>
+        <p v-if="loadingSearchEmpresa" class="loading">Buscando...</p>
+
+        <div v-if="resultadosEmpresas.length > 0" class="results-list">
+          <div v-for="e in resultadosEmpresas" :key="e.id" class="result-card">
+            <div class="result-avatar orange"><span>{{ e.nombre?.charAt(0) }}</span></div>
+            <div class="result-info"><strong>{{ e.nombre }}</strong><span>{{ e.rfc || '' }} {{ e.contacto_nombre ? '· Contacto: ' + e.contacto_nombre : '' }}</span><span>{{ e.email || '' }}</span></div>
+            <button class="btn-sm blue" @click="abrirEmpresaPacientes(e)">Pacientes</button>
+          </div>
+        </div>
+        <div v-else-if="searchEmpresaAdmin.length >= 2 && !loadingSearchEmpresa" class="empty-state">No se encontraron empresas</div>
+        <div v-else class="empty-state">Escribe al menos 2 caracteres para buscar</div>
       </div>
     </main>
 
@@ -905,6 +1158,88 @@ function estadoColor(estado) {
         </div>
       </div>
     </div>
+
+    <!-- Modal NUEVO MEDICO -->
+    <div v-if="showNuevoMedico" class="modal-overlay" @click.self="showNuevoMedico = false">
+      <div class="modal">
+        <div class="modal-header"><h2>Nuevo Medico</h2><button @click="showNuevoMedico = false" class="close">&times;</button></div>
+        <div class="modal-body">
+          <div v-if="errorMsgMedico" class="error">{{ errorMsgMedico }}</div>
+          <div v-if="okMsgMedico" class="success-msg">{{ okMsgMedico }}</div>
+          <div class="field-row"><div class="field"><label>Nombre *</label><input v-model="formMedico.nombre" /></div><div class="field"><label>Apellido *</label><input v-model="formMedico.apellido" /></div></div>
+          <div class="field-row"><div class="field"><label>Email</label><input v-model="formMedico.email" type="email" /></div><div class="field"><label>Telefono</label><input v-model="formMedico.telefono" /></div></div>
+          <div class="field-row"><div class="field"><label>Cedula Profesional</label><input v-model="formMedico.cedula_profesional" /></div><div class="field"><label>Titulo</label><input v-model="formMedico.titulo" placeholder="Dr." /></div></div>
+          <div class="field"><label>Especialidad</label><input v-model="formMedico.especialidad" placeholder="Nombre de la especialidad" /></div>
+          <div class="field-row"><div class="field"><label>Usuario (login)</label><input v-model="formMedico.usuario" placeholder="dr.lopez" /></div><div class="field"><label>Contrasena</label><input v-model="formMedico.password" type="password" placeholder="******" /></div></div>
+          <div class="btn-row"><button @click="showNuevoMedico = false" class="btn-secondary">Cancelar</button><button @click="guardarMedico" :disabled="savingMedico" class="btn-primary">{{ savingMedico ? 'Guardando...' : 'Guardar' }}</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal NUEVO PACIENTE -->
+    <div v-if="showNuevoPaciente" class="modal-overlay" @click.self="showNuevoPaciente = false">
+      <div class="modal">
+        <div class="modal-header"><h2>Nuevo Paciente</h2><button @click="showNuevoPaciente = false" class="close">&times;</button></div>
+        <div class="modal-body">
+          <div v-if="errorMsgPaciente" class="error">{{ errorMsgPaciente }}</div>
+          <div class="field-row"><div class="field"><label>Nombre *</label><input v-model="formPaciente.nombre" /></div><div class="field"><label>Apellido</label><input v-model="formPaciente.apellido" /></div></div>
+          <div class="field-row"><div class="field"><label>Email *</label><input v-model="formPaciente.email" type="email" /></div><div class="field"><label>Telefono</label><input v-model="formPaciente.telefono" /></div></div>
+          <div class="field-row"><div class="field"><label>Fecha nacimiento</label><input v-model="formPaciente.fecha_nacimiento" type="date" /></div><div class="field"><label>Genero</label><select v-model="formPaciente.genero"><option value="">---</option><option value="masculino">Masculino</option><option value="femenino">Femenino</option></select></div></div>
+          <div class="field-row"><div class="field"><label>Ciudad</label><input v-model="formPaciente.ciudad" /></div><div class="field"><label>CURP</label><input v-model="formPaciente.curp" maxlength="18" /></div></div>
+          <div class="field"><label>Contrasena (default: mediprotect123)</label><input v-model="formPaciente.password" type="password" placeholder="******" /></div>
+          <div class="btn-row"><button @click="showNuevoPaciente = false" class="btn-secondary">Cancelar</button><button @click="guardarPaciente" :disabled="savingPaciente" class="btn-primary">{{ savingPaciente ? 'Guardando...' : 'Guardar' }}</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal NUEVA EMPRESA -->
+    <div v-if="showNuevaEmpresa" class="modal-overlay" @click.self="showNuevaEmpresa = false">
+      <div class="modal">
+        <div class="modal-header"><h2>Nueva Empresa</h2><button @click="showNuevaEmpresa = false" class="close">&times;</button></div>
+        <div class="modal-body">
+          <div v-if="errorMsgEmpresa" class="error">{{ errorMsgEmpresa }}</div>
+          <div class="field-row"><div class="field"><label>Nombre *</label><input v-model="formEmpresa.nombre" /></div><div class="field"><label>RFC</label><input v-model="formEmpresa.rfc" /></div></div>
+          <div class="field-row"><div class="field"><label>Email *</label><input v-model="formEmpresa.email" type="email" /></div><div class="field"><label>Telefono</label><input v-model="formEmpresa.telefono" /></div></div>
+          <div class="field"><label>Contacto</label><input v-model="formEmpresa.contacto_nombre" /></div>
+          <div class="field"><label>Direccion</label><input v-model="formEmpresa.direccion" /></div>
+          <div class="field-row"><div class="field"><label>Ciudad</label><input v-model="formEmpresa.ciudad" /></div><div class="field"><label>Estado</label><input v-model="formEmpresa.estado" /></div></div>
+          <div class="btn-row"><button @click="showNuevaEmpresa = false" class="btn-secondary">Cancelar</button><button @click="guardarEmpresa" :disabled="savingEmpresa" class="btn-primary">{{ savingEmpresa ? 'Guardando...' : 'Guardar' }}</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal PACIENTES DE EMPRESA -->
+    <div v-if="showEmpresaPacientes" class="modal-overlay" @click.self="showEmpresaPacientes = false">
+      <div class="modal" style="max-width: 700px">
+        <div class="modal-header"><h2>Pacientes — {{ empresaSeleccionada?.nombre }}</h2><button @click="showEmpresaPacientes = false" class="close">&times;</button></div>
+        <div class="modal-body">
+          <p v-if="loadingPacientesEmpresa" class="loading">Cargando...</p>
+          <template v-else>
+            <div class="section-label">Pacientes asignados ({{ pacientesEmpresa.length }})</div>
+            <div v-if="pacientesEmpresa.length" class="pacientes-list">
+              <div v-for="p in pacientesEmpresa" :key="p.id" class="paciente-row">
+                <div class="paciente-info"><strong>{{ p.nombre }} {{ p.apellido }}</strong><span>{{ p.email }}</span></div>
+                <button class="btn-sm red" @click="desasociarPacienteEmpresa(p.id_paciente)">Remover</button>
+              </div>
+            </div>
+            <div v-else class="empty-state">No hay pacientes asignados</div>
+
+            <div class="section-label" style="margin-top: 1.5rem">Agregar paciente existente</div>
+            <input v-model="searchPacienteEmpresa" class="search-input" placeholder="Buscar paciente por nombre o email..." />
+            <div class="pacientes-list">
+              <div v-for="p in pacientesFiltradosEmpresa.filter(p => !idsAsociados.has(p.id))" :key="p.id" class="paciente-row">
+                <div class="paciente-info"><strong>{{ p.nombre }} {{ p.apellido }}</strong><span>{{ p.email }}</span></div>
+                <button class="btn-sm green" @click="asociarPacienteAEmpresa(p.id)" :disabled="savingAsociar">Asociar</button>
+              </div>
+            </div>
+
+            <div style="margin-top: 1rem; text-align: center">
+              <button class="btn-primary" @click="showNuevoPaciente = true; showEmpresaPacientes = false">+ Crear paciente nuevo para esta empresa</button>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -1152,4 +1487,33 @@ h1 { font-size: 1.5rem; color: #2d3436; }
 .timeline-notas { font-size: 0.8rem; color: #636e72; margin-top: 0.3rem; font-style: italic; }
 .citas-empty { text-align: center; padding: 2rem; color: #636e72; background: #f8f9fa; border-radius: 8px; }
 .empty-state { text-align: center; padding: 3rem; color: #636e72; }
+
+/* New sections styles */
+.search-box { margin-bottom: 1rem; }
+.search-box input { width: 100%; padding: 0.7rem 1rem; border: 1px solid #dfe6e9; border-radius: 8px; font-size: 0.9rem; box-sizing: border-box; }
+.results-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.result-card { display: flex; align-items: center; gap: 1rem; padding: 0.8rem 1rem; border: 1px solid #dfe6e9; border-radius: 10px; transition: all 0.15s; }
+.result-card:hover { border-color: #00b894; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.result-avatar { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 0.85rem; flex-shrink: 0; }
+.result-avatar.green { background: #00b894; }
+.result-avatar.blue { background: #0984e3; }
+.result-avatar.orange { background: #e17055; }
+.result-info { flex: 1; display: flex; flex-direction: column; }
+.result-info strong { font-size: 0.95rem; color: #2d3436; }
+.result-info span { font-size: 0.8rem; color: #636e72; }
+.result-date { font-size: 0.8rem; color: #b2bec3; white-space: nowrap; }
+.btn-sm { padding: 0.3rem 0.6rem; border: 1px solid #dfe6e9; background: white; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+.btn-sm.blue { border-color: #0984e3; color: #0984e3; }
+.btn-sm.green { border-color: #00b894; color: #00b894; }
+.btn-sm.red { border-color: #d63031; color: #d63031; }
+.btn-sm:hover { opacity: 0.8; }
+.success-msg { color: #00b894; background: #e6fcf5; padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 0.75rem; }
+.error-msg { color: #c62828; background: #ffebee; padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 0.75rem; }
+.section-label { font-size: 0.85rem; font-weight: 600; color: #636e72; margin-bottom: 0.5rem; }
+.search-input { width: 100%; padding: 0.55rem 0.75rem; border: 1px solid #dfe6e9; border-radius: 6px; font-size: 0.85rem; margin-bottom: 0.75rem; box-sizing: border-box; }
+.pacientes-list { display: flex; flex-direction: column; gap: 0.4rem; max-height: 200px; overflow-y: auto; }
+.paciente-row { display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 0.75rem; border: 1px solid #f0f2f5; border-radius: 6px; }
+.paciente-info { display: flex; flex-direction: column; gap: 0.1rem; }
+.paciente-info strong { font-size: 0.9rem; }
+.paciente-info span { font-size: 0.8rem; color: #636e72; }
 </style>
