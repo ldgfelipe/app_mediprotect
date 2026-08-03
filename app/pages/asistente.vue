@@ -754,36 +754,49 @@ async function crearPacienteParaEmpresa() {
         <!-- Buscador -->
         <div class="medico-search-box">
           <div class="search-input-wrapper">
+            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
             <input
               v-model="searchMedico"
-              placeholder="Buscar medico por nombre, email, cedula o especialidad..."
+              placeholder="Buscar por nombre, email, cedula o especialidad..."
               @input="buscarMedicos"
             />
-            <span v-if="loadingSearchMedico" class="search-spinner">...</span>
+            <span v-if="loadingSearchMedico" class="search-spinner"></span>
+            <span v-else-if="searchMedico" class="search-clear" @click="searchMedico = ''; resultadosMedicos = []">&times;</span>
           </div>
         </div>
 
         <!-- Resultados de busqueda -->
         <div v-if="resultadosMedicos.length > 0 && !medicoSeleccionadoPerfil" class="medico-search-results">
-          <div
-            v-for="medico in resultadosMedicos"
-            :key="medico.id"
-            class="medico-result-item"
-          >
-            <div class="result-avatar" :style="{ background: medico.especialidad_color ? '#' + medico.especialidad_color : '#0984e3' }">
+          <div class="results-count">{{ resultadosMedicos.length }} medicos encontrados</div>
+          <div v-for="medico in resultadosMedicos" :key="medico.id" class="medico-result-card">
+            <div class="medico-card-avatar" :style="{ background: medico.especialidad_color ? '#' + medico.especialidad_color : '#0984e3' }">
               <img v-if="medico.foto_url" :src="medico.foto_url" :alt="medico.nombre" />
-              <span v-else>{{ medico.nombre?.charAt(0) }}{{ medico.apellido?.charAt(0) }}</span>
+              <span v-else class="avatar-initials">{{ medico.nombre?.charAt(0) }}{{ medico.apellido?.charAt(0) }}</span>
             </div>
-            <div class="result-info" @click="seleccionarPerfilMedico(medico)">
-              <strong>{{ medico.titulo || 'Dr.' }} {{ medico.nombre }} {{ medico.apellido }}</strong>
-              <span>{{ medico.especialidad_nombre || 'Sin especialidad' }}</span>
-              <span v-if="medico.cedula_profesional" style="font-size:0.75rem;color:#636e72">Cedula: {{ medico.cedula_profesional }}</span>
+            <div class="medico-card-body" @click="seleccionarPerfilMedico(medico)">
+              <div class="medico-card-name">{{ medico.titulo || 'Dr.' }} {{ medico.nombre }} {{ medico.apellido }}</div>
+              <div class="medico-card-specialty">{{ medico.especialidad_nombre || 'Sin especialidad' }}</div>
+              <div class="medico-card-meta">
+                <span v-if="medico.cedula_profesional" class="meta-item">Ced. {{ medico.cedula_profesional }}</span>
+                <span v-if="medico.email" class="meta-item">{{ medico.email }}</span>
+                <span v-if="medico.telefono" class="meta-item">{{ medico.telefono }}</span>
+              </div>
             </div>
-            <div class="result-actions">
-              <span class="result-stats">{{ medico.citas?.length || 0 }} citas</span>
-              <button class="btn-edit" @click.stop="abrirEditarMedico(medico)">Editar</button>
+            <div class="medico-card-actions">
+              <div class="medico-card-stat"><span class="stat-num">{{ medico.citas?.length || 0 }}</span><span class="stat-text">citas</span></div>
+              <button class="btn-card-edit" @click.stop="abrirEditarMedico(medico)" title="Editar">Editar</button>
+              <button class="btn-card-view" @click.stop="seleccionarPerfilMedico(medico)" title="Ver perfil">Ver</button>
             </div>
           </div>
+        </div>
+
+        <div v-if="searchMedico.length >= 2 && resultadosMedicos.length === 0 && !loadingSearchMedico && !medicoSeleccionadoPerfil" class="empty-results">
+          <p>No se encontraron medicos con "{{ searchMedico }}"</p>
+          <span>Intenta con otro nombre, email o especialidad</span>
+        </div>
+
+        <div v-if="searchMedico.length < 2 && !medicoSeleccionadoPerfil" class="empty-results">
+          <p>Busca un medico por nombre, email, cedula o especialidad</p>
         </div>
 
         <!-- Perfil del médico seleccionado -->
@@ -1507,22 +1520,73 @@ h1 { font-size: 1.5rem; color: #2d3436; }
 
 /* Pestaña de Médicos */
 .medico-search-box { margin-bottom: 1.5rem; }
-.medico-search-results { max-height: 300px; overflow-y: auto; margin-bottom: 1.5rem; }
-.medico-result-item {
-  display: flex; align-items: center; gap: 1rem; padding: 0.8rem 1rem;
-  background: white; border: 1px solid #dfe6e9; border-radius: 10px;
-  margin-bottom: 0.5rem; cursor: pointer; transition: all 0.15s;
+.medico-search-box .search-input-wrapper {
+  position: relative; display: flex; align-items: center;
+  background: white; border: 2px solid #e0e0e0; border-radius: 12px;
+  padding: 0; transition: border-color 0.2s, box-shadow 0.2s;
 }
-.medico-result-item:hover { border-color: #0984e3; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-.result-avatar {
-  width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  color: white; font-weight: bold; font-size: 0.9rem; flex-shrink: 0; overflow: hidden;
+.medico-search-box .search-input-wrapper:focus-within {
+  border-color: #0984e3; box-shadow: 0 0 0 3px rgba(9,132,227,0.1);
 }
-.result-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.result-info { flex: 1; display: flex; flex-direction: column; }
-.result-info strong { font-size: 0.95rem; color: #2d3436; }
-.result-info span { font-size: 0.8rem; color: #0984e3; }
-.result-stats { font-size: 0.8rem; color: #636e72; }
+.search-icon { position: absolute; left: 14px; width: 20px; height: 20px; color: #b2bec3; pointer-events: none; }
+.medico-search-box input {
+  width: 100%; padding: 0.9rem 2.5rem 0.9rem 2.8rem; border: none; border-radius: 12px;
+  font-size: 1rem; outline: none; background: transparent;
+}
+.search-spinner {
+  position: absolute; right: 14px; width: 20px; height: 20px;
+  border: 2px solid #e0e0e0; border-top-color: #0984e3; border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.search-clear {
+  position: absolute; right: 14px; width: 22px; height: 22px; display: flex;
+  align-items: center; justify-content: center; background: #e0e0e0; color: #636e72;
+  border-radius: 50%; cursor: pointer; font-size: 1rem; line-height: 1;
+}
+.search-clear:hover { background: #d63031; color: white; }
+
+.results-count { font-size: 0.8rem; color: #636e72; margin-bottom: 0.75rem; font-weight: 500; }
+
+.medico-search-results { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 1.5rem; }
+.medico-result-card {
+  display: flex; align-items: center; gap: 1rem; padding: 1rem 1.2rem;
+  background: white; border: 1px solid #e8ecef; border-radius: 14px;
+  transition: all 0.2s; cursor: default;
+}
+.medico-result-card:hover { border-color: #0984e3; box-shadow: 0 4px 16px rgba(9,132,227,0.1); transform: translateY(-1px); }
+.medico-card-avatar {
+  width: 52px; height: 52px; border-radius: 14px; display: flex;
+  align-items: center; justify-content: center; color: white;
+  font-weight: 700; font-size: 1rem; flex-shrink: 0; overflow: hidden;
+}
+.medico-card-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.avatar-initials { line-height: 1; }
+.medico-card-body { flex: 1; min-width: 0; cursor: pointer; }
+.medico-card-name { font-size: 1rem; font-weight: 600; color: #2d3436; margin-bottom: 2px; }
+.medico-card-specialty { font-size: 0.85rem; color: #0984e3; font-weight: 500; margin-bottom: 4px; }
+.medico-card-meta { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+.meta-item { font-size: 0.78rem; color: #636e72; display: flex; align-items: center; gap: 4px; }
+.meta-item svg { flex-shrink: 0; }
+.medico-card-actions {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 0.4rem; flex-shrink: 0;
+}
+.medico-card-stat { text-align: center; }
+.stat-num { display: block; font-size: 1.1rem; font-weight: 700; color: #2d3436; line-height: 1.2; }
+.stat-text { font-size: 0.7rem; color: #636e72; }
+.btn-card-edit, .btn-card-view {
+  padding: 0.3rem 0.7rem; border-radius: 6px; font-size: 0.78rem;
+  cursor: pointer; font-weight: 500; border: none; transition: all 0.15s;
+}
+.btn-card-edit { background: #f0f7ff; color: #0984e3; }
+.btn-card-edit:hover { background: #0984e3; color: white; }
+.btn-card-view { background: #f0fff4; color: #00b894; }
+.btn-card-view:hover { background: #00b894; color: white; }
+
+.empty-results { text-align: center; padding: 3rem 1rem; color: #636e72; }
+.empty-results svg { color: #dfe6e9; margin-bottom: 1rem; }
+.empty-results p { font-size: 1rem; color: #2d3436; margin: 0 0 0.3rem; }
+.empty-results span { font-size: 0.85rem; color: #b2bec3; }
 
 /* Perfil del médico */
 .medico-perfil { background: white; border-radius: 12px; padding: 1.5rem; border: 1px solid #dfe6e9; }
@@ -1579,7 +1643,7 @@ h1 { font-size: 1.5rem; color: #2d3436; }
 .result-info span { font-size: 0.8rem; color: #636e72; }
 .result-date { font-size: 0.8rem; color: #b2bec3; white-space: nowrap; }
 .result-actions { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
-.btn-edit { padding: 0.3rem 0.6rem; border: 1px solid #0984e3; background: white; color: #0984e3; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+.btn-edit { padding: 0.3rem 0.7rem; border: 1px solid #0984e3; background: white; color: #0984e3; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 500; transition: all 0.15s; }
 .btn-edit:hover { background: #0984e3; color: white; }
 .btn-sm { padding: 0.3rem 0.6rem; border: 1px solid #dfe6e9; background: white; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
 .btn-sm.blue { border-color: #0984e3; color: #0984e3; }
