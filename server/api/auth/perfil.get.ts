@@ -16,7 +16,10 @@ export default defineEventHandler(async (event) => {
   }
 
   const result = await pool.query(
-    'SELECT id, nombre, apellido, email, telefono, fecha_nacimiento, genero, direccion, created_at FROM pacientes WHERE id = $1', [id]
+    `SELECT id, nombre, apellido, email, telefono, fecha_nacimiento, genero, direccion, ciudad,
+     beneficiario_nombre, beneficiario_parentesco, beneficiario_telefono,
+     COALESCE(estudios, '[]'::jsonb) as estudios, created_at
+     FROM pacientes WHERE id = $1`, [id]
   )
   if (result.rows.length === 0) throw createError({ statusCode: 404, message: 'No encontrado' })
   return { usuario: result.rows[0] }

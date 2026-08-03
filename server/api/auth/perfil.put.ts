@@ -22,14 +22,31 @@ export default defineEventHandler(async (event) => {
     return { usuario: result.rows[0] }
   }
 
-  const { nombre, apellido, telefono, fecha_nacimiento, genero, direccion } = body
+  const { nombre, apellido, telefono, fecha_nacimiento, genero, direccion, ciudad, beneficiario_nombre, beneficiario_parentesco, beneficiario_telefono, estudios } = body
   const result = await pool.query(
     `UPDATE pacientes SET nombre = COALESCE($1, nombre), apellido = COALESCE($2, apellido),
      telefono = COALESCE($3, telefono), fecha_nacimiento = COALESCE($4, fecha_nacimiento),
-     genero = COALESCE($5, genero), direccion = COALESCE($6, direccion), updated_at = NOW()
-     WHERE id = $7 RETURNING id, nombre, apellido, email, telefono, fecha_nacimiento, genero, direccion, created_at`,
-    [nombre, apellido, telefono, fecha_nacimiento, genero, direccion, decoded.id]
+     genero = COALESCE($5, genero), direccion = COALESCE($6, direccion),
+     ciudad = COALESCE($7, ciudad),
+     beneficiario_nombre = COALESCE($8, beneficiario_nombre),
+     beneficiario_parentesco = COALESCE($9, beneficiario_parentesco),
+     beneficiario_telefono = COALESCE($10, beneficiario_telefono),
+     updated_at = NOW()
+     WHERE id = $11 RETURNING id, nombre, apellido, email, telefono, fecha_nacimiento, genero, direccion, ciudad,
+     beneficiario_nombre, beneficiario_parentesco, beneficiario_telefono, created_at`,
+    [nombre, apellido, telefono, fecha_nacimiento, genero, direccion, ciudad, beneficiario_nombre, beneficiario_parentesco, beneficiario_telefono, decoded.id]
   )
   if (result.rows.length === 0) throw createError({ statusCode: 404, message: 'No encontrado' })
-  return { usuario: result.rows[0] }
+
+  if (estudios !== undefined) {
+    await pool.query(
+      `UPDATE pacientes SET estudios = $1 WHERE id = $2`,
+      [JSON.stringify(estudios), decoded.id]
+    )
+  }
+
+  const usuario = result.rows[0]
+  if (estudios !== undefined) usuario.estudios = estudios
+
+  return { usuario }
 })
