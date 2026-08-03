@@ -172,7 +172,7 @@ async function guardarEmpresa() {
         </div>
       </header>
       <p v-if="loading" class="loading">Cargando...</p>
-      <template v-else>
+      <div v-else>
         <div class="stats-grid">
           <div class="stat-card clickable" @click="activeSection = 'medicos'"><span class="num">{{ stats?.total_medicos || 0 }}</span><span class="label">Medicos</span></div>
           <div class="stat-card clickable" @click="activeSection = 'pacientes'"><span class="num">{{ stats?.total_pacientes || 0 }}</span><span class="label">Pacientes</span></div>
@@ -189,7 +189,6 @@ async function guardarEmpresa() {
           <button :class="['nav-btn', { active: activeSection === 'empresas' }]" @click="activeSection = 'empresas'">Empresas</button>
         </div>
 
-        <!-- RESUMEN -->
         <div v-if="activeSection === 'resumen'" class="panel">
           <div class="summary-cards">
             <NuxtLink to="/admin/pacientes" class="summary-card"><h3>Pacientes</h3><p>{{ stats?.total_pacientes || 0 }} registrados</p><span class="action">Gestionar</span></NuxtLink>
@@ -199,7 +198,6 @@ async function guardarEmpresa() {
           </div>
         </div>
 
-        <!-- MEDICOS -->
         <div v-if="activeSection === 'medicos'" class="panel">
           <div class="panel-header"><h2>Directorio de Medicos</h2><button class="btn-primary" @click="showNuevoMedico = true">+ Nuevo Medico</button></div>
           <div class="search-box"><input v-model="searchMedicos" @input="buscarMedicos" placeholder="Buscar por nombre, email, cedula o especialidad..." /><span v-if="loadingSearch" class="spinner">...</span></div>
@@ -214,7 +212,6 @@ async function guardarEmpresa() {
           <div v-else class="empty-results">Escribe al menos 2 caracteres para buscar un medico</div>
         </div>
 
-        <!-- PACIENTES -->
         <div v-if="activeSection === 'pacientes'" class="panel">
           <div class="panel-header"><h2>Directorio de Pacientes</h2><button class="btn-primary" @click="showNuevoPaciente = true">+ Nuevo Paciente</button></div>
           <div class="search-box"><input v-model="searchPacientes" @input="buscarPacientes" placeholder="Buscar por nombre, email o telefono..." /><span v-if="loadingSearch" class="spinner">...</span></div>
@@ -229,7 +226,6 @@ async function guardarEmpresa() {
           <div v-else class="empty-results">Escribe al menos 2 caracteres para buscar un paciente</div>
         </div>
 
-        <!-- EMPRESAS -->
         <div v-if="activeSection === 'empresas'" class="panel">
           <div class="panel-header"><h2>Directorio de Empresas</h2><button class="btn-primary" @click="showNuevaEmpresa = true">+ Nueva Empresa</button></div>
           <div class="search-box"><input v-model="searchEmpresas" @input="buscarEmpresas" placeholder="Buscar por nombre, RFC, email o contacto..." /><span v-if="loadingSearch" class="spinner">...</span></div>
@@ -243,7 +239,48 @@ async function guardarEmpresa() {
           <div v-else-if="searchEmpresas.length >= 2" class="empty-results">No se encontraron empresas con "{{ searchEmpresas }}"</div>
           <div v-else class="empty-results">Escribe al menos 2 caracteres para buscar una empresa</div>
         </div>
+      </div>
+    </main>
 
+    <div v-if="showNuevoMedico" class="modal-overlay" @click.self="showNuevoMedico = false">
+      <div class="modal"><div class="modal-header"><h2>Nuevo Medico</h2><button class="modal-close" @click="showNuevoMedico = false">&times;</button></div>
+        <div class="modal-body">
+          <div class="form-row"><div class="form-group"><label>Nombre *</label><input v-model="formMedico.nombre" /></div><div class="form-group"><label>Apellido *</label><input v-model="formMedico.apellido" /></div></div>
+          <div class="form-row"><div class="form-group"><label>Email</label><input v-model="formMedico.email" type="email" /></div><div class="form-group"><label>Telefono</label><input v-model="formMedico.telefono" /></div></div>
+          <div class="form-row"><div class="form-group"><label>Cedula Profesional</label><input v-model="formMedico.cedula_profesional" /></div><div class="form-group"><label>Titulo</label><input v-model="formMedico.titulo" placeholder="Dr." /></div></div>
+          <div class="form-group"><label>Especialidad</label><select v-model="formMedico.especialidad"><option value="">Seleccionar...</option><option v-for="e in especialidades" :key="e.id" :value="e.nombre">{{ e.nombre }}</option></select></div>
+          <div class="form-row"><div class="form-group"><label>Usuario (login)</label><input v-model="formMedico.usuario" placeholder="dr.lopez" /></div><div class="form-group"><label>Contrasena</label><input v-model="formMedico.password" type="password" placeholder="******" /></div></div>
+          <div class="form-actions"><button class="btn-cancel" @click="showNuevoMedico = false">Cancelar</button><button class="btn-primary" @click="guardarMedico" :disabled="saving">{{ saving ? 'Guardando...' : 'Guardar' }}</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showNuevoPaciente" class="modal-overlay" @click.self="showNuevoPaciente = false">
+      <div class="modal"><div class="modal-header"><h2>Nuevo Paciente</h2><button class="modal-close" @click="showNuevoPaciente = false">&times;</button></div>
+        <div class="modal-body">
+          <div class="form-row"><div class="form-group"><label>Nombre *</label><input v-model="formPaciente.nombre" /></div><div class="form-group"><label>Apellido</label><input v-model="formPaciente.apellido" /></div></div>
+          <div class="form-row"><div class="form-group"><label>Email *</label><input v-model="formPaciente.email" type="email" /></div><div class="form-group"><label>Telefono</label><input v-model="formPaciente.telefono" /></div></div>
+          <div class="form-row"><div class="form-group"><label>Fecha nacimiento</label><input v-model="formPaciente.fecha_nacimiento" type="date" /></div><div class="form-group"><label>Genero</label><select v-model="formPaciente.genero"><option value="">---</option><option value="masculino">Masculino</option><option value="femenino">Femenino</option></select></div></div>
+          <div class="form-row"><div class="form-group"><label>Ciudad</label><input v-model="formPaciente.ciudad" /></div><div class="form-group"><label>CURP</label><input v-model="formPaciente.curp" maxlength="18" placeholder="18 caracteres" /></div></div>
+          <div class="form-group"><label>Contrasena (default: mediprotect123)</label><input v-model="formPaciente.password" type="password" placeholder="******" /></div>
+          <div class="form-actions"><button class="btn-cancel" @click="showNuevoPaciente = false">Cancelar</button><button class="btn-primary" @click="guardarPaciente" :disabled="saving">{{ saving ? 'Guardando...' : 'Guardar' }}</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showNuevaEmpresa" class="modal-overlay" @click.self="showNuevaEmpresa = false">
+      <div class="modal"><div class="modal-header"><h2>Nueva Empresa</h2><button class="modal-close" @click="showNuevaEmpresa = false">&times;</button></div>
+        <div class="modal-body">
+          <div class="form-row"><div class="form-group"><label>Nombre *</label><input v-model="formEmpresa.nombre" /></div><div class="form-group"><label>RFC</label><input v-model="formEmpresa.rfc" /></div></div>
+          <div class="form-row"><div class="form-group"><label>Email *</label><input v-model="formEmpresa.email" type="email" /></div><div class="form-group"><label>Telefono</label><input v-model="formEmpresa.telefono" /></div></div>
+          <div class="form-group"><label>Contacto</label><input v-model="formEmpresa.contacto_nombre" /></div>
+          <div class="form-group"><label>Direccion</label><input v-model="formEmpresa.direccion" /></div>
+          <div class="form-row"><div class="form-group"><label>Ciudad</label><input v-model="formEmpresa.ciudad" /></div><div class="form-group"><label>Estado</label><input v-model="formEmpresa.estado" /></div></div>
+          <div class="form-actions"><button class="btn-cancel" @click="showNuevaEmpresa = false">Cancelar</button><button class="btn-primary" @click="guardarEmpresa" :disabled="saving">{{ saving ? 'Guardando...' : 'Guardar' }}</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <style scoped>
@@ -322,48 +359,3 @@ async function guardarEmpresa() {
 .form-group input:focus, .form-group select:focus { outline: none; border-color: #00b894; }
 .form-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #f0f0f0; }
 </style>
-    </main>
-
-    <!-- MODAL NUEVO MEDICO -->
-    <div v-if="showNuevoMedico" class="modal-overlay" @click.self="showNuevoMedico = false">
-      <div class="modal"><div class="modal-header"><h2>Nuevo Medico</h2><button class="modal-close" @click="showNuevoMedico = false">&times;</button></div>
-        <div class="modal-body">
-          <div class="form-row"><div class="form-group"><label>Nombre *</label><input v-model="formMedico.nombre" /></div><div class="form-group"><label>Apellido *</label><input v-model="formMedico.apellido" /></div></div>
-          <div class="form-row"><div class="form-group"><label>Email</label><input v-model="formMedico.email" type="email" /></div><div class="form-group"><label>Telefono</label><input v-model="formMedico.telefono" /></div></div>
-          <div class="form-row"><div class="form-group"><label>Cedula Profesional</label><input v-model="formMedico.cedula_profesional" /></div><div class="form-group"><label>Titulo</label><input v-model="formMedico.titulo" placeholder="Dr." /></div></div>
-          <div class="form-group"><label>Especialidad</label><select v-model="formMedico.especialidad"><option value="">Seleccionar...</option><option v-for="e in especialidades" :key="e.id" :value="e.nombre">{{ e.nombre }}</option></select></div>
-          <div class="form-row"><div class="form-group"><label>Usuario (login)</label><input v-model="formMedico.usuario" placeholder="dr.lopez" /></div><div class="form-group"><label>Contrasena</label><input v-model="formMedico.password" type="password" placeholder="******" /></div></div>
-          <div class="form-actions"><button class="btn-cancel" @click="showNuevoMedico = false">Cancelar</button><button class="btn-primary" @click="guardarMedico" :disabled="saving">{{ saving ? 'Guardando...' : 'Guardar' }}</button></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- MODAL NUEVO PACIENTE -->
-    <div v-if="showNuevoPaciente" class="modal-overlay" @click.self="showNuevoPaciente = false">
-      <div class="modal"><div class="modal-header"><h2>Nuevo Paciente</h2><button class="modal-close" @click="showNuevoPaciente = false">&times;</button></div>
-        <div class="modal-body">
-          <div class="form-row"><div class="form-group"><label>Nombre *</label><input v-model="formPaciente.nombre" /></div><div class="form-group"><label>Apellido</label><input v-model="formPaciente.apellido" /></div></div>
-          <div class="form-row"><div class="form-group"><label>Email *</label><input v-model="formPaciente.email" type="email" /></div><div class="form-group"><label>Telefono</label><input v-model="formPaciente.telefono" /></div></div>
-          <div class="form-row"><div class="form-group"><label>Fecha nacimiento</label><input v-model="formPaciente.fecha_nacimiento" type="date" /></div><div class="form-group"><label>Genero</label><select v-model="formPaciente.genero"><option value="">---</option><option value="masculino">Masculino</option><option value="femenino">Femenino</option></select></div></div>
-          <div class="form-row"><div class="form-group"><label>Ciudad</label><input v-model="formPaciente.ciudad" /></div><div class="form-group"><label>CURP</label><input v-model="formPaciente.curp" maxlength="18" placeholder="18 caracteres" /></div></div>
-          <div class="form-group"><label>Contrasena (default: mediprotect123)</label><input v-model="formPaciente.password" type="password" placeholder="******" /></div>
-          <div class="form-actions"><button class="btn-cancel" @click="showNuevoPaciente = false">Cancelar</button><button class="btn-primary" @click="guardarPaciente" :disabled="saving">{{ saving ? 'Guardando...' : 'Guardar' }}</button></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- MODAL NUEVA EMPRESA -->
-    <div v-if="showNuevaEmpresa" class="modal-overlay" @click.self="showNuevaEmpresa = false">
-      <div class="modal"><div class="modal-header"><h2>Nueva Empresa</h2><button class="modal-close" @click="showNuevaEmpresa = false">&times;</button></div>
-        <div class="modal-body">
-          <div class="form-row"><div class="form-group"><label>Nombre *</label><input v-model="formEmpresa.nombre" /></div><div class="form-group"><label>RFC</label><input v-model="formEmpresa.rfc" /></div></div>
-          <div class="form-row"><div class="form-group"><label>Email *</label><input v-model="formEmpresa.email" type="email" /></div><div class="form-group"><label>Telefono</label><input v-model="formEmpresa.telefono" /></div></div>
-          <div class="form-group"><label>Contacto</label><input v-model="formEmpresa.contacto_nombre" /></div>
-          <div class="form-group"><label>Direccion</label><input v-model="formEmpresa.direccion" /></div>
-          <div class="form-row"><div class="form-group"><label>Ciudad</label><input v-model="formEmpresa.ciudad" /></div><div class="form-group"><label>Estado</label><input v-model="formEmpresa.estado" /></div></div>
-          <div class="form-actions"><button class="btn-cancel" @click="showNuevaEmpresa = false">Cancelar</button><button class="btn-primary" @click="guardarEmpresa" :disabled="saving">{{ saving ? 'Guardando...' : 'Guardar' }}</button></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
