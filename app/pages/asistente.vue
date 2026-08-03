@@ -385,16 +385,33 @@ function estadoColor(estado) {
   return colors[estado] || '#dfe6e9'
 }
 
-// ========== SECCION: MEDICOS (crear/buscar) ==========
+// ========== SECCION: MEDICOS (crear/buscar/editar) ==========
 const searchMedico = ref('')
 const resultadosMedicos = ref([])
 const loadingSearchMedico = ref(false)
 const showNuevoMedico = ref(false)
+const editandoMedico = ref(false)
+const medicoEditId = ref(null)
 const especialidades = ref([])
 const formMedico = ref({ nombre: '', apellido: '', email: '', telefono: '', cedula_profesional: '', titulo: 'Dr.', especialidad: '', usuario: '', password: '' })
 const savingMedico = ref(false)
 const errorMsgMedico = ref('')
 const okMsgMedico = ref('')
+
+function abrirEditarMedico(m) {
+  formMedico.value = { nombre: m.nombre, apellido: m.apellido, email: m.email || '', telefono: m.telefono || '', cedula_profesional: m.cedula_profesional || '', titulo: m.titulo || 'Dr.', especialidad: m.especialidad_nombre || '', usuario: '', password: '' }
+  medicoEditId.value = m.id
+  editandoMedico.value = true
+  showNuevoMedico.value = true
+}
+
+function cerrarFormMedico() {
+  showNuevoMedico.value = false
+  editandoMedico.value = false
+  medicoEditId.value = null
+  formMedico.value = { nombre: '', apellido: '', email: '', telefono: '', cedula_profesional: '', titulo: 'Dr.', especialidad: '', usuario: '', password: '' }
+  errorMsgMedico.value = ''
+}
 
 let medicoSearchTimeout = null
 function buscarMedicos() {
@@ -421,20 +438,27 @@ async function guardarMedico() {
   if (!formMedico.value.nombre || !formMedico.value.apellido) { errorMsgMedico.value = 'Nombre y apellido son requeridos'; return }
   savingMedico.value = true
   try {
-    await $fetch('/api/admin/medicos', { method: 'POST', headers: { Authorization: 'Bearer ' + tokenCookie.value }, body: formMedico.value })
-    okMsgMedico.value = 'Medico registrado correctamente'
-    showNuevoMedico.value = false
-    formMedico.value = { nombre: '', apellido: '', email: '', telefono: '', cedula_profesional: '', titulo: 'Dr.', especialidad: '', usuario: '', password: '' }
+    if (editandoMedico.value && medicoEditId.value) {
+      await $fetch(`/api/admin/medicos/${medicoEditId.value}`, { method: 'PUT', headers: { Authorization: 'Bearer ' + tokenCookie.value }, body: formMedico.value })
+      okMsgMedico.value = 'Medico actualizado correctamente'
+    } else {
+      await $fetch('/api/admin/medicos', { method: 'POST', headers: { Authorization: 'Bearer ' + tokenCookie.value }, body: formMedico.value })
+      okMsgMedico.value = 'Medico registrado correctamente'
+    }
+    cerrarFormMedico()
+    await buscarMedicos()
     setTimeout(() => { okMsgMedico.value = '' }, 3000)
   } catch (e) { errorMsgMedico.value = e.data?.message || 'Error al guardar' }
   finally { savingMedico.value = false }
 }
 
-// ========== SECCION: PACIENTES (crear/buscar) ==========
+// ========== SECCION: PACIENTES (crear/buscar/editar) ==========
 const searchPacienteAdmin = ref('')
 const resultadosPacientes = ref([])
 const loadingSearchPaciente = ref(false)
 const showNuevoPaciente = ref(false)
+const editandoPaciente = ref(false)
+const pacienteEditId = ref(null)
 const formPaciente = ref({ nombre: '', apellido: '', email: '', telefono: '', fecha_nacimiento: '', genero: '', ciudad: '', curp: '', password: '' })
 const savingPaciente = ref(false)
 const errorMsgPaciente = ref('')
@@ -465,20 +489,42 @@ async function guardarPaciente() {
   if (!formPaciente.value.nombre || !formPaciente.value.email) { errorMsgPaciente.value = 'Nombre y email son requeridos'; return }
   savingPaciente.value = true
   try {
-    await $fetch('/api/admin/pacientes', { method: 'POST', headers: { Authorization: 'Bearer ' + tokenCookie.value }, body: formPaciente.value })
-    okMsgPaciente.value = 'Paciente registrado correctamente'
-    showNuevoPaciente.value = false
-    formPaciente.value = { nombre: '', apellido: '', email: '', telefono: '', fecha_nacimiento: '', genero: '', ciudad: '', curp: '', password: '' }
+    if (editandoPaciente.value && pacienteEditId.value) {
+      await $fetch(`/api/admin/pacientes/${pacienteEditId.value}`, { method: 'PUT', headers: { Authorization: 'Bearer ' + tokenCookie.value }, body: formPaciente.value })
+      okMsgPaciente.value = 'Paciente actualizado correctamente'
+    } else {
+      await $fetch('/api/admin/pacientes', { method: 'POST', headers: { Authorization: 'Bearer ' + tokenCookie.value }, body: formPaciente.value })
+      okMsgPaciente.value = 'Paciente registrado correctamente'
+    }
+    cerrarFormPaciente()
+    await buscarPacientesAdmin()
     setTimeout(() => { okMsgPaciente.value = '' }, 3000)
   } catch (e) { errorMsgPaciente.value = e.data?.message || 'Error al guardar' }
   finally { savingPaciente.value = false }
 }
 
-// ========== SECCION: EMPRESAS (crear/buscar/asociar) ==========
+function abrirEditarPaciente(p) {
+  formPaciente.value = { nombre: p.nombre, apellido: p.apellido || '', email: p.email || '', telefono: p.telefono || '', fecha_nacimiento: p.fecha_nacimiento ? p.fecha_nacimiento.slice(0,10) : '', genero: p.genero || '', ciudad: p.ciudad || '', curp: p.curp || '', password: '' }
+  pacienteEditId.value = p.id
+  editandoPaciente.value = true
+  showNuevoPaciente.value = true
+}
+
+function cerrarFormPaciente() {
+  showNuevoPaciente.value = false
+  editandoPaciente.value = false
+  pacienteEditId.value = null
+  formPaciente.value = { nombre: '', apellido: '', email: '', telefono: '', fecha_nacimiento: '', genero: '', ciudad: '', curp: '', password: '' }
+  errorMsgPaciente.value = ''
+}
+
+// ========== SECCION: EMPRESAS (crear/buscar/editar/asociar) ==========
 const searchEmpresaAdmin = ref('')
 const resultadosEmpresas = ref([])
 const loadingSearchEmpresa = ref(false)
 const showNuevaEmpresa = ref(false)
+const editandoEmpresa = ref(false)
+const empresaEditId = ref(null)
 const formEmpresa = ref({ nombre: '', rfc: '', email: '', telefono: '', contacto_nombre: '', direccion: '', ciudad: '', estado: '' })
 const savingEmpresa = ref(false)
 const errorMsgEmpresa = ref('')
@@ -517,13 +563,33 @@ async function guardarEmpresa() {
   if (!formEmpresa.value.nombre || !formEmpresa.value.email) { errorMsgEmpresa.value = 'Nombre y email son requeridos'; return }
   savingEmpresa.value = true
   try {
-    await $fetch('/api/admin/empresas', { method: 'POST', headers: { Authorization: 'Bearer ' + tokenCookie.value }, body: formEmpresa.value })
-    okMsgEmpresa.value = 'Empresa registrada correctamente'
-    showNuevaEmpresa.value = false
-    formEmpresa.value = { nombre: '', rfc: '', email: '', telefono: '', contacto_nombre: '', direccion: '', ciudad: '', estado: '' }
+    if (editandoEmpresa.value && empresaEditId.value) {
+      await $fetch(`/api/admin/empresas/${empresaEditId.value}`, { method: 'PUT', headers: { Authorization: 'Bearer ' + tokenCookie.value }, body: formEmpresa.value })
+      okMsgEmpresa.value = 'Empresa actualizada correctamente'
+    } else {
+      await $fetch('/api/admin/empresas', { method: 'POST', headers: { Authorization: 'Bearer ' + tokenCookie.value }, body: formEmpresa.value })
+      okMsgEmpresa.value = 'Empresa registrada correctamente'
+    }
+    cerrarFormEmpresa()
+    await buscarEmpresasAdmin()
     setTimeout(() => { okMsgEmpresa.value = '' }, 3000)
   } catch (e) { errorMsgEmpresa.value = e.data?.message || 'Error al guardar' }
   finally { savingEmpresa.value = false }
+}
+
+function abrirEditarEmpresa(e) {
+  formEmpresa.value = { nombre: e.nombre, rfc: e.rfc || '', email: e.email || '', telefono: e.telefono || '', contacto_nombre: e.contacto_nombre || '', direccion: e.direccion || '', ciudad: e.ciudad || '', estado: e.estado || '' }
+  empresaEditId.value = e.id
+  editandoEmpresa.value = true
+  showNuevaEmpresa.value = true
+}
+
+function cerrarFormEmpresa() {
+  showNuevaEmpresa.value = false
+  editandoEmpresa.value = false
+  empresaEditId.value = null
+  formEmpresa.value = { nombre: '', rfc: '', email: '', telefono: '', contacto_nombre: '', direccion: '', ciudad: '', estado: '' }
+  errorMsgEmpresa.value = ''
 }
 
 async function abrirEmpresaPacientes(empresa) {
@@ -703,19 +769,19 @@ async function crearPacienteParaEmpresa() {
             v-for="medico in resultadosMedicos"
             :key="medico.id"
             class="medico-result-item"
-            @click="seleccionarPerfilMedico(medico)"
           >
             <div class="result-avatar" :style="{ background: medico.especialidad_color ? '#' + medico.especialidad_color : '#0984e3' }">
               <img v-if="medico.foto_url" :src="medico.foto_url" :alt="medico.nombre" />
               <span v-else>{{ medico.nombre?.charAt(0) }}{{ medico.apellido?.charAt(0) }}</span>
             </div>
-            <div class="result-info">
+            <div class="result-info" @click="seleccionarPerfilMedico(medico)">
               <strong>{{ medico.titulo || 'Dr.' }} {{ medico.nombre }} {{ medico.apellido }}</strong>
               <span>{{ medico.especialidad_nombre || 'Sin especialidad' }}</span>
               <span v-if="medico.cedula_profesional" style="font-size:0.75rem;color:#636e72">Cedula: {{ medico.cedula_profesional }}</span>
             </div>
-            <div class="result-stats">
-              <span>{{ medico.citas?.length || 0 }} citas</span>
+            <div class="result-actions">
+              <span class="result-stats">{{ medico.citas?.length || 0 }} citas</span>
+              <button class="btn-edit" @click.stop="abrirEditarMedico(medico)">Editar</button>
             </div>
           </div>
         </div>
@@ -850,7 +916,10 @@ async function crearPacienteParaEmpresa() {
           <div v-for="p in resultadosPacientes" :key="p.id" class="result-card">
             <div class="result-avatar green"><span>{{ p.nombre?.charAt(0) }}{{ p.apellido?.charAt(0) }}</span></div>
             <div class="result-info"><strong>{{ p.nombre }} {{ p.apellido }}</strong><span>{{ p.email }}</span><span>{{ p.telefono || '' }}</span></div>
-            <span class="result-date">{{ p.created_at ? new Date(p.created_at).toLocaleDateString('es-MX') : '' }}</span>
+            <div class="result-actions">
+              <span class="result-date">{{ p.created_at ? new Date(p.created_at).toLocaleDateString('es-MX') : '' }}</span>
+              <button class="btn-edit" @click.stop="abrirEditarPaciente(p)">Editar</button>
+            </div>
           </div>
         </div>
         <div v-else-if="searchPacienteAdmin.length >= 2 && !loadingSearchPaciente" class="empty-state">No se encontraron pacientes</div>
@@ -870,10 +939,13 @@ async function crearPacienteParaEmpresa() {
         <p v-if="loadingSearchEmpresa" class="loading">Buscando...</p>
 
         <div v-if="resultadosEmpresas.length > 0" class="results-list">
-          <div v-for="e in resultadosEmpresas" :key="e.id" class="result-card">
+          <div v-for="e in resultadosEmpresas" :key="e.id" class="result-card" @click="abrirEmpresaPacientes(e)">
             <div class="result-avatar orange"><span>{{ e.nombre?.charAt(0) }}</span></div>
             <div class="result-info"><strong>{{ e.nombre }}</strong><span>{{ e.rfc || '' }} {{ e.contacto_nombre ? '· Contacto: ' + e.contacto_nombre : '' }}</span><span>{{ e.email || '' }}</span></div>
-            <button class="btn-sm blue" @click="abrirEmpresaPacientes(e)">Pacientes</button>
+            <div class="result-actions">
+              <button class="btn-sm blue" @click.stop="abrirEmpresaPacientes(e)">Pacientes</button>
+              <button class="btn-edit" @click.stop="abrirEditarEmpresa(e)">Editar</button>
+            </div>
           </div>
         </div>
         <div v-else-if="searchEmpresaAdmin.length >= 2 && !loadingSearchEmpresa" class="empty-state">No se encontraron empresas</div>
@@ -1163,10 +1235,10 @@ async function crearPacienteParaEmpresa() {
       </div>
     </div>
 
-    <!-- Modal NUEVO MEDICO -->
-    <div v-if="showNuevoMedico" class="modal-overlay" @click.self="showNuevoMedico = false">
+    <!-- Modal NUEVO/EDITAR MEDICO -->
+    <div v-if="showNuevoMedico" class="modal-overlay" @click.self="cerrarFormMedico">
       <div class="modal">
-        <div class="modal-header"><h2>Nuevo Medico</h2><button @click="showNuevoMedico = false" class="close">&times;</button></div>
+        <div class="modal-header"><h2>{{ editandoMedico ? 'Editar' : 'Nuevo' }} Medico</h2><button @click="cerrarFormMedico" class="close">&times;</button></div>
         <div class="modal-body">
           <div v-if="errorMsgMedico" class="error">{{ errorMsgMedico }}</div>
           <div v-if="okMsgMedico" class="success-msg">{{ okMsgMedico }}</div>
@@ -1175,15 +1247,15 @@ async function crearPacienteParaEmpresa() {
           <div class="field-row"><div class="field"><label>Cedula Profesional</label><input v-model="formMedico.cedula_profesional" /></div><div class="field"><label>Titulo</label><input v-model="formMedico.titulo" placeholder="Dr." /></div></div>
           <div class="field"><label>Especialidad</label><input v-model="formMedico.especialidad" placeholder="Nombre de la especialidad" /></div>
           <div class="field-row"><div class="field"><label>Usuario (login)</label><input v-model="formMedico.usuario" placeholder="dr.lopez" /></div><div class="field"><label>Contrasena</label><input v-model="formMedico.password" type="password" placeholder="******" /></div></div>
-          <div class="btn-row"><button @click="showNuevoMedico = false" class="btn-secondary">Cancelar</button><button @click="guardarMedico" :disabled="savingMedico" class="btn-primary">{{ savingMedico ? 'Guardando...' : 'Guardar' }}</button></div>
+          <div class="btn-row"><button @click="cerrarFormMedico" class="btn-secondary">Cancelar</button><button @click="guardarMedico" :disabled="savingMedico" class="btn-primary">{{ savingMedico ? 'Guardando...' : (editandoMedico ? 'Actualizar' : 'Guardar') }}</button></div>
         </div>
       </div>
     </div>
 
-    <!-- Modal NUEVO PACIENTE -->
-    <div v-if="showNuevoPaciente" class="modal-overlay" @click.self="showNuevoPaciente = false">
+    <!-- Modal NUEVO/EDITAR PACIENTE -->
+    <div v-if="showNuevoPaciente" class="modal-overlay" @click.self="cerrarFormPaciente">
       <div class="modal">
-        <div class="modal-header"><h2>Nuevo Paciente</h2><button @click="showNuevoPaciente = false" class="close">&times;</button></div>
+        <div class="modal-header"><h2>{{ editandoPaciente ? 'Editar' : 'Nuevo' }} Paciente</h2><button @click="cerrarFormPaciente" class="close">&times;</button></div>
         <div class="modal-body">
           <div v-if="errorMsgPaciente" class="error">{{ errorMsgPaciente }}</div>
           <div class="field-row"><div class="field"><label>Nombre *</label><input v-model="formPaciente.nombre" /></div><div class="field"><label>Apellido</label><input v-model="formPaciente.apellido" /></div></div>
@@ -1191,15 +1263,15 @@ async function crearPacienteParaEmpresa() {
           <div class="field-row"><div class="field"><label>Fecha nacimiento</label><input v-model="formPaciente.fecha_nacimiento" type="date" /></div><div class="field"><label>Genero</label><select v-model="formPaciente.genero"><option value="">---</option><option value="masculino">Masculino</option><option value="femenino">Femenino</option></select></div></div>
           <div class="field-row"><div class="field"><label>Ciudad</label><input v-model="formPaciente.ciudad" /></div><div class="field"><label>CURP</label><input v-model="formPaciente.curp" maxlength="18" /></div></div>
           <div class="field"><label>Contrasena (default: mediprotect123)</label><input v-model="formPaciente.password" type="password" placeholder="******" /></div>
-          <div class="btn-row"><button @click="showNuevoPaciente = false" class="btn-secondary">Cancelar</button><button @click="guardarPaciente" :disabled="savingPaciente" class="btn-primary">{{ savingPaciente ? 'Guardando...' : 'Guardar' }}</button></div>
+          <div class="btn-row"><button @click="cerrarFormPaciente" class="btn-secondary">Cancelar</button><button @click="guardarPaciente" :disabled="savingPaciente" class="btn-primary">{{ savingPaciente ? 'Guardando...' : (editandoPaciente ? 'Actualizar' : 'Guardar') }}</button></div>
         </div>
       </div>
     </div>
 
-    <!-- Modal NUEVA EMPRESA -->
-    <div v-if="showNuevaEmpresa" class="modal-overlay" @click.self="showNuevaEmpresa = false">
+    <!-- Modal NUEVA/EDITAR EMPRESA -->
+    <div v-if="showNuevaEmpresa" class="modal-overlay" @click.self="cerrarFormEmpresa">
       <div class="modal">
-        <div class="modal-header"><h2>Nueva Empresa</h2><button @click="showNuevaEmpresa = false" class="close">&times;</button></div>
+        <div class="modal-header"><h2>{{ editandoEmpresa ? 'Editar' : 'Nueva' }} Empresa</h2><button @click="cerrarFormEmpresa" class="close">&times;</button></div>
         <div class="modal-body">
           <div v-if="errorMsgEmpresa" class="error">{{ errorMsgEmpresa }}</div>
           <div class="field-row"><div class="field"><label>Nombre *</label><input v-model="formEmpresa.nombre" /></div><div class="field"><label>RFC</label><input v-model="formEmpresa.rfc" /></div></div>
@@ -1207,7 +1279,7 @@ async function crearPacienteParaEmpresa() {
           <div class="field"><label>Contacto</label><input v-model="formEmpresa.contacto_nombre" /></div>
           <div class="field"><label>Direccion</label><input v-model="formEmpresa.direccion" /></div>
           <div class="field-row"><div class="field"><label>Ciudad</label><input v-model="formEmpresa.ciudad" /></div><div class="field"><label>Estado</label><input v-model="formEmpresa.estado" /></div></div>
-          <div class="btn-row"><button @click="showNuevaEmpresa = false" class="btn-secondary">Cancelar</button><button @click="guardarEmpresa" :disabled="savingEmpresa" class="btn-primary">{{ savingEmpresa ? 'Guardando...' : 'Guardar' }}</button></div>
+          <div class="btn-row"><button @click="cerrarFormEmpresa" class="btn-secondary">Cancelar</button><button @click="guardarEmpresa" :disabled="savingEmpresa" class="btn-primary">{{ savingEmpresa ? 'Guardando...' : (editandoEmpresa ? 'Actualizar' : 'Guardar') }}</button></div>
         </div>
       </div>
     </div>
@@ -1506,6 +1578,9 @@ h1 { font-size: 1.5rem; color: #2d3436; }
 .result-info strong { font-size: 0.95rem; color: #2d3436; }
 .result-info span { font-size: 0.8rem; color: #636e72; }
 .result-date { font-size: 0.8rem; color: #b2bec3; white-space: nowrap; }
+.result-actions { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+.btn-edit { padding: 0.3rem 0.6rem; border: 1px solid #0984e3; background: white; color: #0984e3; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+.btn-edit:hover { background: #0984e3; color: white; }
 .btn-sm { padding: 0.3rem 0.6rem; border: 1px solid #dfe6e9; background: white; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
 .btn-sm.blue { border-color: #0984e3; color: #0984e3; }
 .btn-sm.green { border-color: #00b894; color: #00b894; }
