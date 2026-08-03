@@ -679,25 +679,28 @@ async function crearPacienteParaEmpresa() {
       <!-- PESTAÑA: MÉDICOS -->
       <div v-if="activeTab === 'medicos'">
         <div class="content-header">
-          <h1>Directorio de Médicos</h1>
+          <h1>Directorio de Medicos</h1>
+          <button @click="showNuevoMedico = true" class="btn-primary">+ Nuevo Medico</button>
         </div>
+        <div v-if="okMsgMedico" class="success-msg">{{ okMsgMedico }}</div>
+        <div v-if="errorMsgMedico" class="error-msg">{{ errorMsgMedico }}</div>
 
         <!-- Buscador -->
         <div class="medico-search-box">
           <div class="search-input-wrapper">
             <input
-              v-model="medicoBusqueda"
-              placeholder="Buscar médico por nombre..."
-              @input="buscarPerfilMedico"
+              v-model="searchMedico"
+              placeholder="Buscar medico por nombre, email, cedula o especialidad..."
+              @input="buscarMedicos"
             />
-            <span v-if="buscandoPerfilMedico" class="search-spinner">⏳</span>
+            <span v-if="loadingSearchMedico" class="search-spinner">...</span>
           </div>
         </div>
 
-        <!-- Resultados de búsqueda -->
-        <div v-if="medicoResults.length > 0 && !medicoSeleccionadoPerfil" class="medico-search-results">
+        <!-- Resultados de busqueda -->
+        <div v-if="resultadosMedicos.length > 0 && !medicoSeleccionadoPerfil" class="medico-search-results">
           <div
-            v-for="medico in medicoResults"
+            v-for="medico in resultadosMedicos"
             :key="medico.id"
             class="medico-result-item"
             @click="seleccionarPerfilMedico(medico)"
@@ -709,6 +712,7 @@ async function crearPacienteParaEmpresa() {
             <div class="result-info">
               <strong>{{ medico.titulo || 'Dr.' }} {{ medico.nombre }} {{ medico.apellido }}</strong>
               <span>{{ medico.especialidad_nombre || 'Sin especialidad' }}</span>
+              <span v-if="medico.cedula_profesional" style="font-size:0.75rem;color:#636e72">Cedula: {{ medico.cedula_profesional }}</span>
             </div>
             <div class="result-stats">
               <span>{{ medico.citas?.length || 0 }} citas</span>
@@ -820,12 +824,12 @@ async function crearPacienteParaEmpresa() {
           </div>
         </div>
 
-        <!-- Estado vacío -->
-        <div v-if="!medicoSeleccionadoPerfil && medicoResults.length === 0 && !buscandoPerfilMedico && medicoBusqueda.length >= 2" class="empty-state">
-          <p>No se encontraron médicos con "{{ medicoBusqueda }}"</p>
+        <!-- Estado vacio -->
+        <div v-if="!medicoSeleccionadoPerfil && resultadosMedicos.length === 0 && !loadingSearchMedico && searchMedico.length >= 2" class="empty-state">
+          <p>No se encontraron medicos con "{{ searchMedico }}"</p>
         </div>
 
-        <div v-if="!medicoSeleccionadoPerfil && medicoBusqueda.length < 2" class="empty-state">
+        <div v-if="!medicoSeleccionadoPerfil && searchMedico.length < 2" class="empty-state">
           <p>Escribe al menos 2 caracteres para buscar un medico</p>
         </div>
       </div>
