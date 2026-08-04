@@ -30,6 +30,8 @@ const medicoSeleccionado = ref(null)
 const creandoCita = ref(false)
 
 const tokenCookie = useCookie('token')
+const adminTokenCookie = useCookie('admin_token')
+const authToken = computed(() => tokenCookie.value || adminTokenCookie.value)
 const errorCita = ref('')
 const parseando = ref(false)
 const pasoActual = ref(1)
@@ -95,7 +97,7 @@ async function cargarCitas() {
     if (filtroEstado.value) qs.set('estado', filtroEstado.value)
     if (busqueda.value) qs.set('search', busqueda.value)
     const data = await $fetch('/api/asistente/citas?' + qs.toString(), {
-      headers: { Authorization: 'Bearer ' + tokenCookie.value }
+      headers: { Authorization: 'Bearer ' + authToken.value }
     })
     citas.value = data?.citas || []
   } catch (e) { console.error(e) }
@@ -109,14 +111,15 @@ async function parsearMensaje() {
   parseando.value = true
   errorCita.value = ''
 
-  // Extract doctor name
-  const medicoMatch = text.match(/médico\s+([^\n.]+)/i) || text.match(/doctor\s+([^\n.]+)/i) || text.match(/con\s+(?:el\s+)?(?:médico|doctor)\s+([^\n.]+)/i)
+  // Extract doctor name — match多种 patterns: "médico X", "doctor X", "Dr. X", "Dra. X", "con Dr X", "con el médico X"
+  const medicoMatch = text.match(/(?:con\s+(?:el\s+)?|atención\s+(?:con\s+)?)?(?:médico|doctor|dra?\.?)\s+([^\n.,;]+)/i)
   if (medicoMatch) {
     const nombreMedico = medicoMatch[1].trim()
     // Limpiar "Dr." o "Dra." del inicio si está presente
-    nuevaCita.value.medico_search = nombreMedico.replace(/^(dra?\.?\s*)/i, '').trim()
+    const nombreLimpio = nombreMedico.replace(/^(dra?\.?\s*)/i, '').trim()
+    nuevaCita.value.medico_search = nombreLimpio
     // Buscar médico con disponibilidad
-    await buscarMedicoConDisponibilidadDirecto(nuevaCita.value.medico_search)
+    await buscarMedicoConDisponibilidadDirecto(nombreLimpio)
   }
 
   // Extract patient ID
@@ -142,7 +145,7 @@ async function buscarPacientesById() {
   if (!nuevaCita.value.paciente_search.trim()) { pacientesSearch.value = []; return }
   try {
     const data = await $fetch('/api/asistente/pacientes?search=' + encodeURIComponent(nuevaCita.value.paciente_search), {
-      headers: { Authorization: 'Bearer ' + tokenCookie.value }
+      headers: { Authorization: 'Bearer ' + authToken.value }
     })
     pacientesSearch.value = data.pacientes || []
     if (pacientesSearch.value.length === 1) {
@@ -151,17 +154,22 @@ async function buscarPacientesById() {
   } catch (e) { pacientesSearch.value = [] }
 }
 
+let pacienteSearchTimeout = null
 async function buscarPacientes() {
-  if (!nuevaCita.value.paciente_search.trim()) { pacientesSearch.value = []; return }
-  try {
-    const data = await $fetch('/api/asistente/pacientes?search=' + encodeURIComponent(nuevaCita.value.paciente_search), {
-      headers: { Authorization: 'Bearer ' + tokenCookie.value }
-    })
-    pacientesSearch.value = data.pacientes || []
-    if (pacientesSearch.value.length === 1) {
-      seleccionarPaciente(pacientesSearch.value[0])
-    }
-  } catch (e) { pacientesSearch.value = [] }
+  const termino = nuevaCita.value.paciente_search.trim()
+  if (!termino || termino.length < 2) { pacientesSearch.value = []; return }
+  if (pacienteSearchTimeout) clearTimeout(pacienteSearchTimeout)
+  pacienteSearchTimeout = setTimeout(async () => {
+    try {
+      const data = await $fetch('/api/asistente/pacientes?search=' + encodeURIComponent(termino), {
+        headers: { Authorization: 'Bearer ' + authToken.value }
+      })
+      pacientesSearch.value = data.pacientes || []
+      if (pacientesSearch.value.length === 1) {
+        seleccionarPaciente(pacientesSearch.value[0])
+      }
+    } catch (e) { pacientesSearch.value = [] }
+  }, 350)
 }
 
 let searchTimeout = null
@@ -173,16 +181,16 @@ async function buscarMedicoConDisponibilidad() {
     return
   }
 
-  // Debounce: esperar 400ms después de dejar de escribir
   if (searchTimeout) clearTimeout(searchTimeout)
+  buscandoMedico.value = true
   searchTimeout = setTimeout(async () => {
-    buscandoMedico.value = true
     try {
       const data = await $fetch('/api/medicos/buscar?q=' + encodeURIComponent(termino), {
-        headers: { Authorization: 'Bearer ' + tokenCookie.value }
+        headers: { Authorization: 'Bearer ' + authToken.value }
       })
       medicosSearch.value = data.medicos || []
     } catch (e) {
+      console.error('Error buscando médico:', e)
       medicosSearch.value = []
     }
     buscandoMedico.value = false
@@ -197,7 +205,7 @@ async function buscarMedicoConDisponibilidadDirecto(termino) {
   buscandoMedico.value = true
   try {
     const data = await $fetch('/api/medicos/buscar?q=' + encodeURIComponent(termino), {
-      headers: { Authorization: 'Bearer ' + tokenCookie.value }
+      headers: { Authorization: 'Bearer ' + authToken.value }
     })
     medicosSearch.value = data.medicos || []
     // Si solo hay un resultado, seleccionarlo automáticamente
@@ -251,7 +259,7 @@ async function buscarPerfilMedico() {
     buscandoPerfilMedico.value = true
     try {
       const data = await $fetch('/api/medicos/buscar?q=' + encodeURIComponent(termino), {
-        headers: { Authorization: 'Bearer ' + tokenCookie.value }
+        headers: { Authorization: 'Bearer ' + authToken.value }
       })
       medicoResults.value = data.medicos || []
     } catch (e) {
@@ -304,7 +312,7 @@ async function crearCita() {
     }
     await $fetch('/api/asistente/citas', {
       method: 'POST',
-      headers: { Authorization: 'Bearer ' + tokenCookie.value },
+      headers: { Authorization: 'Bearer ' + authToken.value },
       body
     })
     showNuevaCita.value = false
@@ -324,7 +332,7 @@ async function abrirCita(cita) {
   showModal.value = true
   try {
     const data = await $fetch('/api/asistente/citas/' + cita.id + '/bitacora', {
-      headers: { Authorization: 'Bearer ' + tokenCookie.value }
+      headers: { Authorization: 'Bearer ' + authToken.value }
     })
     bitacora.value = data?.bitacora || []
     mensajesWA.value = data?.mensajes_whatsapp || []
@@ -336,7 +344,7 @@ async function cambiarEstado(estado, descripcion) {
   try {
     await $fetch('/api/asistente/citas/' + citaSeleccionada.value.id + '/estado', {
       method: 'PUT',
-      headers: { Authorization: 'Bearer ' + tokenCookie.value },
+      headers: { Authorization: 'Bearer ' + authToken.value },
       body: { estado, descripcion }
     })
     await abrirCita(citaSeleccionada.value)
@@ -349,7 +357,7 @@ async function agregarNota() {
   try {
     await $fetch('/api/asistente/citas/' + citaSeleccionada.value.id + '/estado', {
       method: 'PUT',
-      headers: { Authorization: 'Bearer ' + tokenCookie.value },
+      headers: { Authorization: 'Bearer ' + authToken.value },
       body: { estado: citaSeleccionada.value.estado, descripcion: notaText.value }
     })
     notaText.value = ''
@@ -362,7 +370,7 @@ async function registrarMensaje() {
   try {
     await $fetch('/api/asistente/whatsapp', {
       method: 'POST',
-      headers: { Authorization: 'Bearer ' + tokenCookie.value },
+      headers: { Authorization: 'Bearer ' + authToken.value },
       body: { id_cita: citaSeleccionada.value?.id, ...newMsg.value }
     })
     newMsg.value = { remitente: '', destinatario: '', telefono: '', mensaje: '' }
@@ -376,7 +384,7 @@ function abrirWA(tel) {
 
 function cerrarSesion() {
   localStorage.removeItem('usuario')
-  tokenCookie.value = null
+  authToken.value = null
   navigateTo('/login-asistente')
 }
 
@@ -421,7 +429,7 @@ function buscarMedicos() {
     if (!q || q.length < 2) { resultadosMedicos.value = []; return }
     loadingSearchMedico.value = true
     try {
-      const data = await $fetch('/api/admin/medicos', { headers: { Authorization: 'Bearer ' + tokenCookie.value } })
+      const data = await $fetch('/api/admin/medicos', { headers: { Authorization: 'Bearer ' + authToken.value } })
       const all = data?.medicos || []
       const s = q.toLowerCase()
       resultadosMedicos.value = all.filter(m =>
@@ -439,10 +447,10 @@ async function guardarMedico() {
   savingMedico.value = true
   try {
     if (editandoMedico.value && medicoEditId.value) {
-      await $fetch(`/api/admin/medicos/${medicoEditId.value}`, { method: 'PUT', headers: { Authorization: 'Bearer ' + tokenCookie.value }, body: formMedico.value })
+      await $fetch(`/api/admin/medicos/${medicoEditId.value}`, { method: 'PUT', headers: { Authorization: 'Bearer ' + authToken.value }, body: formMedico.value })
       okMsgMedico.value = 'Medico actualizado correctamente'
     } else {
-      await $fetch('/api/admin/medicos', { method: 'POST', headers: { Authorization: 'Bearer ' + tokenCookie.value }, body: formMedico.value })
+      await $fetch('/api/admin/medicos', { method: 'POST', headers: { Authorization: 'Bearer ' + authToken.value }, body: formMedico.value })
       okMsgMedico.value = 'Medico registrado correctamente'
     }
     cerrarFormMedico()
@@ -464,15 +472,15 @@ const savingPaciente = ref(false)
 const errorMsgPaciente = ref('')
 const okMsgPaciente = ref('')
 
-let pacienteSearchTimeout = null
+let adminPacienteSearchTimeout = null
 function buscarPacientesAdmin() {
-  if (pacienteSearchTimeout) clearTimeout(pacienteSearchTimeout)
-  pacienteSearchTimeout = setTimeout(async () => {
+  if (adminPacienteSearchTimeout) clearTimeout(adminPacienteSearchTimeout)
+  adminPacienteSearchTimeout = setTimeout(async () => {
     const q = searchPacienteAdmin.value.trim()
     if (!q || q.length < 2) { resultadosPacientes.value = []; return }
     loadingSearchPaciente.value = true
     try {
-      const data = await $fetch('/api/admin/pacientes', { headers: { Authorization: 'Bearer ' + tokenCookie.value } })
+      const data = await $fetch('/api/admin/pacientes', { headers: { Authorization: 'Bearer ' + authToken.value } })
       const all = data?.pacientes || []
       const s = q.toLowerCase()
       resultadosPacientes.value = all.filter(p =>
@@ -490,10 +498,10 @@ async function guardarPaciente() {
   savingPaciente.value = true
   try {
     if (editandoPaciente.value && pacienteEditId.value) {
-      await $fetch(`/api/admin/pacientes/${pacienteEditId.value}`, { method: 'PUT', headers: { Authorization: 'Bearer ' + tokenCookie.value }, body: formPaciente.value })
+      await $fetch(`/api/admin/pacientes/${pacienteEditId.value}`, { method: 'PUT', headers: { Authorization: 'Bearer ' + authToken.value }, body: formPaciente.value })
       okMsgPaciente.value = 'Paciente actualizado correctamente'
     } else {
-      await $fetch('/api/admin/pacientes', { method: 'POST', headers: { Authorization: 'Bearer ' + tokenCookie.value }, body: formPaciente.value })
+      await $fetch('/api/admin/pacientes', { method: 'POST', headers: { Authorization: 'Bearer ' + authToken.value }, body: formPaciente.value })
       okMsgPaciente.value = 'Paciente registrado correctamente'
     }
     cerrarFormPaciente()
@@ -546,7 +554,7 @@ function buscarEmpresasAdmin() {
     if (!q || q.length < 2) { resultadosEmpresas.value = []; return }
     loadingSearchEmpresa.value = true
     try {
-      const data = await $fetch('/api/admin/empresas', { headers: { Authorization: 'Bearer ' + tokenCookie.value } })
+      const data = await $fetch('/api/admin/empresas', { headers: { Authorization: 'Bearer ' + authToken.value } })
       const all = data?.empresas || []
       const s = q.toLowerCase()
       resultadosEmpresas.value = all.filter(e =>
@@ -564,10 +572,10 @@ async function guardarEmpresa() {
   savingEmpresa.value = true
   try {
     if (editandoEmpresa.value && empresaEditId.value) {
-      await $fetch(`/api/admin/empresas/${empresaEditId.value}`, { method: 'PUT', headers: { Authorization: 'Bearer ' + tokenCookie.value }, body: formEmpresa.value })
+      await $fetch(`/api/admin/empresas/${empresaEditId.value}`, { method: 'PUT', headers: { Authorization: 'Bearer ' + authToken.value }, body: formEmpresa.value })
       okMsgEmpresa.value = 'Empresa actualizada correctamente'
     } else {
-      await $fetch('/api/admin/empresas', { method: 'POST', headers: { Authorization: 'Bearer ' + tokenCookie.value }, body: formEmpresa.value })
+      await $fetch('/api/admin/empresas', { method: 'POST', headers: { Authorization: 'Bearer ' + authToken.value }, body: formEmpresa.value })
       okMsgEmpresa.value = 'Empresa registrada correctamente'
     }
     cerrarFormEmpresa()
@@ -598,8 +606,8 @@ async function abrirEmpresaPacientes(empresa) {
   showEmpresaPacientes.value = true
   try {
     const [ep, ap] = await Promise.all([
-      $fetch(`/api/admin/empresas/${empresa.id}/pacientes`, { headers: { Authorization: 'Bearer ' + tokenCookie.value } }),
-      $fetch('/api/admin/pacientes', { headers: { Authorization: 'Bearer ' + tokenCookie.value } })
+      $fetch(`/api/admin/empresas/${empresa.id}/pacientes`, { headers: { Authorization: 'Bearer ' + authToken.value } }),
+      $fetch('/api/admin/pacientes', { headers: { Authorization: 'Bearer ' + authToken.value } })
     ])
     pacientesEmpresa.value = ep?.pacientes || []
     allPacientesList.value = ap?.pacientes || []
@@ -621,7 +629,7 @@ async function asociarPacienteAEmpresa(pacienteId) {
   savingAsociar.value = true
   try {
     await $fetch(`/api/admin/empresas/${empresaSeleccionada.value.id}/pacientes`, {
-      method: 'POST', headers: { Authorization: 'Bearer ' + tokenCookie.value }, body: { id_paciente: pacienteId }
+      method: 'POST', headers: { Authorization: 'Bearer ' + authToken.value }, body: { id_paciente: pacienteId }
     })
     await abrirEmpresaPacientes(empresaSeleccionada.value)
   } catch (e) { alert(e.data?.message || 'Error') }
@@ -632,7 +640,7 @@ async function desasociarPacienteEmpresa(pacienteId) {
   if (!confirm('¿Remover paciente de esta empresa?')) return
   try {
     await $fetch(`/api/admin/empresas/${empresaSeleccionada.value.id}/pacientes/${pacienteId}`, {
-      method: 'DELETE', headers: { Authorization: 'Bearer ' + tokenCookie.value }
+      method: 'DELETE', headers: { Authorization: 'Bearer ' + authToken.value }
     })
     await abrirEmpresaPacientes(empresaSeleccionada.value)
   } catch (e) { alert(e.data?.message || 'Error') }
@@ -644,7 +652,7 @@ async function crearPacienteParaEmpresa() {
   savingPaciente.value = true
   try {
     const data = await $fetch('/api/admin/pacientes', {
-      method: 'POST', headers: { Authorization: 'Bearer ' + tokenCookie.value },
+      method: 'POST', headers: { Authorization: 'Bearer ' + authToken.value },
       body: { ...formPaciente.value, id_empresa: empresaSeleccionada.value.id }
     })
     okMsgPaciente.value = 'Paciente creado y asociado a la empresa'
@@ -1003,12 +1011,32 @@ async function crearPacienteParaEmpresa() {
 
             <div class="field">
               <label>Buscar paciente manualmente</label>
-              <input v-model="nuevaCita.paciente_search" placeholder="Nombre, apellido o UUID del paciente..." @input="buscarPacientes" />
-              <div v-if="pacientesSearch.length > 0 && !pacienteSeleccionado" class="search-results">
-                <div v-for="p in pacientesSearch" :key="p.id" class="search-item" @click="seleccionarPaciente(p)">
-                  <strong>{{ p.nombre }} {{ p.apellido }}</strong>
-                  <span>{{ p.telefono || p.email }}</span>
+              <div class="autocomplete-wrapper">
+                <svg class="autocomplete-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input
+                  v-model="nuevaCita.paciente_search"
+                  placeholder="Escribe nombre, email o telefono..."
+                  @input="buscarPacientes"
+                  class="autocomplete-input"
+                />
+                <span v-if="buscandoMedico" class="autocomplete-spinner"></span>
+              </div>
+              <div v-if="pacientesSearch.length > 0 && !pacienteSeleccionado" class="autocomplete-dropdown">
+                <div class="autocomplete-count">{{ pacientesSearch.length }} pacientes encontrados</div>
+                <div v-for="p in pacientesSearch" :key="p.id" class="autocomplete-item" @click="seleccionarPaciente(p)">
+                  <div class="autocomplete-avatar green">{{ p.nombre?.charAt(0) }}{{ p.apellido?.charAt(0) }}</div>
+                  <div class="autocomplete-info">
+                    <div class="autocomplete-name">{{ p.nombre }} {{ p.apellido }}</div>
+                    <div class="autocomplete-meta">
+                      <span v-if="p.email">{{ p.email }}</span>
+                      <span v-if="p.telefono">{{ p.telefono }}</span>
+                    </div>
+                  </div>
+                  <svg class="autocomplete-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg>
                 </div>
+              </div>
+              <div v-if="nuevaCita.paciente_search.length >= 2 && pacientesSearch.length === 0 && !pacienteSeleccionado && !buscandoMedico" class="autocomplete-empty">
+                No se encontraron pacientes con "{{ nuevaCita.paciente_search }}"
               </div>
             </div>
 
@@ -1035,16 +1063,19 @@ async function crearPacienteParaEmpresa() {
           <div v-if="pasoActual === 2">
             <div class="field">
               <label>Nombre del médico</label>
-              <div class="search-input-wrapper">
+              <div class="autocomplete-wrapper">
+                <svg class="autocomplete-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
                 <input
                   v-model="nuevaCita.medico_search"
-                  placeholder="Ej. Carlos Ramirez"
+                  placeholder="Escribe nombre del médico..."
                   @input="buscarMedicoConDisponibilidad"
+                  class="autocomplete-input"
                 />
-                <span v-if="buscandoMedico" class="search-spinner">⏳</span>
+                <span v-if="buscandoMedico" class="autocomplete-spinner"></span>
               </div>
-              <p class="field-hint">Escribe el nombre. Si lo encuentras, selecciónalo para ver disponibilidad. Si no, continua igual.</p>
             </div>
+
+            <p class="field-hint">Escribe el nombre. Si lo encuentras, selecciónalo para ver disponibilidad. Si no, continua igual.</p>
 
             <!-- Aviso cuando médico no encontrado -->
             <div v-if="medicosSearch.length === 0 && !medicoSeleccionado && nuevaCita.medico_search.trim().length >= 2 && !buscandoMedico" class="medico-not-found">
@@ -1053,53 +1084,32 @@ async function crearPacienteParaEmpresa() {
             </div>
 
             <!-- Resultados de búsqueda de médico -->
-            <div v-if="medicosSearch.length > 0 && !medicoSeleccionado" class="medicos-results">
+            <div v-if="medicosSearch.length > 0 && !medicoSeleccionado" class="autocomplete-dropdown">
+              <div class="autocomplete-count">{{ medicosSearch.length }} médicos encontrados</div>
               <div
                 v-for="medico in medicosSearch"
                 :key="medico.id"
-                class="medico-result-card"
+                class="autocomplete-item medico-item"
                 @click="seleccionarMedico(medico)"
               >
-                <div class="medico-result-header">
-                  <div class="medico-avatar" :style="{ background: medico.especialidad_color ? '#' + medico.especialidad_color : '#0984e3' }">
-                    <img v-if="medico.foto_url" :src="medico.foto_url" :alt="medico.nombre" />
-                    <span v-else>{{ medico.nombre?.charAt(0) }}{{ medico.apellido?.charAt(0) }}</span>
-                  </div>
-                  <div class="medico-result-info">
-                    <strong>{{ medico.titulo || 'Dr.' }} {{ medico.nombre }} {{ medico.apellido }}</strong>
-                    <span class="medico-especialidad">{{ medico.especialidad_nombre || 'Sin especialidad' }}</span>
-                    <span v-if="medico.cedula_profesional" class="medico-cedula">Cédula: {{ medico.cedula_profesional }}</span>
-                  </div>
+                <div class="autocomplete-avatar" :style="{ background: medico.especialidad_color ? '#' + medico.especialidad_color : '#0984e3' }">
+                  <img v-if="medico.foto_url" :src="medico.foto_url" :alt="medico.nombre" />
+                  <span v-else>{{ medico.nombre?.charAt(0) }}{{ medico.apellido?.charAt(0) }}</span>
                 </div>
-
-                <!-- Estadísticas rápidas -->
-                <div class="medico-stats">
-                  <span class="stat" title="Citas pendientes">
-                    📋 {{ medico.estadisticas?.pendientes || 0 }} pendientes
-                  </span>
-                  <span class="stat" title="Citas confirmadas">
-                    ✅ {{ medico.estadisticas?.confirmadas || 0 }} confirmadas
-                  </span>
-                  <span class="stat" title="Citas hoy">
-                    📅 {{ medico.estadisticas?.hoy || 0 }} hoy
-                  </span>
-                </div>
-
-                <!-- Citas existentes (próximas 5) -->
-                <div v-if="medico.citas && medico.citas.length > 0" class="medico-citas-list">
-                  <div class="citas-header">Próximas citas:</div>
-                  <div v-for="cita in medico.citas.slice(0, 5)" :key="cita.id" class="cita-item">
-                    <span class="cita-fecha">{{ formatearFecha(cita.fecha_hora) }}</span>
-                    <span class="cita-paciente">{{ cita.paciente_nombre }} {{ cita.paciente_apellido }}</span>
-                    <span class="cita-estado" :style="{ background: estadoBadge(cita.estado) }">{{ cita.estado }}</span>
+                <div class="autocomplete-info">
+                  <div class="autocomplete-name">{{ medico.titulo || 'Dr.' }} {{ medico.nombre }} {{ medico.apellido }}</div>
+                  <div class="autocomplete-meta">
+                    <span v-if="medico.especialidad_nombre" class="meta-specialty">{{ medico.especialidad_nombre }}</span>
+                    <span v-if="medico.cedula_profesional">Céd: {{ medico.cedula_profesional }}</span>
+                    <span v-if="medico.email">{{ medico.email }}</span>
                   </div>
-                  <div v-if="medico.citas.length > 5" class="citas-more">
-                    +{{ medico.citas.length - 5 }} citas más
+                  <div class="autocomplete-stats">
+                    <span class="stat-badge blue" title="Citas pendientes">📋 {{ medico.estadisticas?.pendientes || 0 }}</span>
+                    <span class="stat-badge yellow" title="Citas confirmadas">✅ {{ medico.estadisticas?.confirmadas || 0 }}</span>
+                    <span class="stat-badge orange" title="Citas hoy">📅 {{ medico.estadisticas?.hoy || 0 }} hoy</span>
                   </div>
                 </div>
-                <div v-else class="medico-citas-empty">
-                  Sin citas programadas
-                </div>
+                <svg class="autocomplete-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg>
               </div>
             </div>
 
@@ -1659,4 +1669,32 @@ h1 { font-size: 1.5rem; color: #2d3436; }
 .paciente-info { display: flex; flex-direction: column; gap: 0.1rem; }
 .paciente-info strong { font-size: 0.9rem; }
 .paciente-info span { font-size: 0.8rem; color: #636e72; }
+
+/* Autocomplete styles */
+.autocomplete-wrapper { position: relative; }
+.autocomplete-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: #b2bec3; pointer-events: none; }
+.autocomplete-input { width: 100%; padding: 0.75rem 0.75rem 0.75rem 2.5rem; border: 1.5px solid #dfe6e9; border-radius: 8px; font-size: 0.9rem; box-sizing: border-box; transition: border-color 0.2s; background: #fff; }
+.autocomplete-input:focus { outline: none; border-color: #0984e3; box-shadow: 0 0 0 3px rgba(9,132,227,0.1); }
+.autocomplete-spinner { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; border: 2px solid #dfe6e9; border-top-color: #0984e3; border-radius: 50%; animation: spin 0.6s linear infinite; }
+@keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
+.autocomplete-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #e0e6ed; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 100; max-height: 320px; overflow-y: auto; margin-top: 4px; }
+.autocomplete-count { padding: 0.5rem 0.75rem; font-size: 0.75rem; color: #636e72; border-bottom: 1px solid #f0f2f5; background: #fafbfc; border-radius: 8px 8px 0 0; }
+.autocomplete-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0.75rem; cursor: pointer; transition: background 0.15s; border-bottom: 1px solid #f8f9fa; }
+.autocomplete-item:last-child { border-bottom: none; border-radius: 0 0 8px 8px; }
+.autocomplete-item:hover { background: #f0f7ff; }
+.autocomplete-avatar { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 0.8rem; flex-shrink: 0; overflow: hidden; }
+.autocomplete-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.autocomplete-avatar.green { background: #00b894; }
+.autocomplete-info { flex: 1; min-width: 0; }
+.autocomplete-name { font-size: 0.88rem; font-weight: 600; color: #2d3436; }
+.autocomplete-meta { display: flex; gap: 0.5rem; font-size: 0.76rem; color: #636e72; margin-top: 2px; flex-wrap: wrap; }
+.autocomplete-meta span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+.meta-specialty { background: #e8f8f5; color: #00b894; padding: 1px 6px; border-radius: 4px; font-weight: 500; }
+.autocomplete-stats { display: flex; gap: 0.4rem; margin-top: 4px; }
+.stat-badge { font-size: 0.7rem; padding: 1px 5px; border-radius: 4px; font-weight: 500; }
+.stat-badge.blue { background: #f0f7ff; color: #0984e3; }
+.stat-badge.yellow { background: #ffeaa7; color: #d35400; }
+.stat-badge.orange { background: #ffeaa7; color: #fdcb6e; }
+.autocomplete-arrow { flex-shrink: 0; color: #b2bec3; }
+.autocomplete-empty { padding: 0.75rem; text-align: center; color: #636e72; font-size: 0.85rem; background: #fafbfc; border: 1px solid #e0e6ed; border-radius: 8px; margin-top: 4px; }
 </style>

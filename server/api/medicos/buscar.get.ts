@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
     user = jwt.verify(authHeader, process.env.JWT_SECRET || 'mediprotect_jwt_secret_key_2026')
   } catch { throw createError({ statusCode: 401, message: 'Token inválido' }) }
 
-  if (!['asistente', 'admin'].includes(user.tipo)) {
+  if (!['asistente', 'admin'].includes(user.tipo?.toLowerCase())) {
     throw createError({ statusCode: 403, message: 'Acceso no autorizado' })
   }
 
@@ -38,11 +38,12 @@ export default defineEventHandler(async (event) => {
     LEFT JOIN especialidades e ON m.id_especialidad = e.id
     WHERE m.activo = true
       AND (
-        LOWER(REPLACE(CONCAT(COALESCE(m.nombre, ''), ' ', COALESCE(m.apellido, '')), 'dr. ', ''))
-        ILIKE '%' || $1 || '%'
-        OR LOWER(m.nombre) ILIKE '%' || $1 || '%'
+        LOWER(m.nombre) ILIKE '%' || $1 || '%'
         OR LOWER(m.apellido) ILIKE '%' || $1 || '%'
+        OR LOWER(CONCAT(COALESCE(m.nombre, ''), ' ', COALESCE(m.apellido, ''))) ILIKE '%' || $1 || '%'
         OR LOWER(m.slug) ILIKE '%' || $1 || '%'
+        OR LOWER(m.cedula_profesional) ILIKE '%' || $1 || '%'
+        OR LOWER(e.nombre) ILIKE '%' || $1 || '%'
       )
     ORDER BY
       CASE
