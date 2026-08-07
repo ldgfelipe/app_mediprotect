@@ -15,12 +15,16 @@ const planesDisponibles = computed(() => {
 })
 
 const formPaciente = ref({
-  nombre: '', apellido: '', email: '', password: '', telefono: '',
-  fecha_nacimiento: '', genero: '', ciudad: '', como_nos_conociste: '',
+  nombre: '', apellido: '', apellido_paterno: '', apellido_materno: '',
+  email: '', password: '', telefono: '', telefono2: '',
+  fecha_nacimiento: '', genero: '', direccion: '', ciudad: '',
+  codigo_postal: '', estado: '', municipio: '',
+  como_nos_conociste: '',
   acepta_terminos: false, acepta_marketing: false,
   id_paquete: '',
-  curp: '', estado_civil: '', ocupacion: '',
+  curp: '', estado_civil: '', ocupacion: '', hospital_consultorio: '',
   beneficiario_nombre: '', beneficiario_parentesco: '', beneficiario_telefono: '',
+  beneficiarios: [] as any[],
   identificacion_tipo: 'INE', identificacion_numero: '', acepta_seguro: false,
   curp_valido: false,
   curp_validando: false,
@@ -226,19 +230,63 @@ async function handleSubmit() {
           <label>Nombre completo *</label>
           <div class="form-row">
             <input v-model="formPaciente.nombre" type="text" placeholder="Nombre(s)" required />
-            <input v-model="formPaciente.apellido" type="text" placeholder="Apellido(s)" required />
+            <input v-model="formPaciente.apellido_paterno" type="text" placeholder="Apellido paterno" required />
+            <input v-model="formPaciente.apellido_materno" type="text" placeholder="Apellido materno" />
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group"><label>Fecha de nacimiento</label><input v-model="formPaciente.fecha_nacimiento" type="date" /></div>
           <div class="form-group"><label>Teléfono / WhatsApp *</label><input v-model="formPaciente.telefono" type="tel" placeholder="2221234567" required /></div>
+          <div class="form-group"><label>Teléfono 2</label><input v-model="formPaciente.telefono2" type="tel" placeholder="Opcional" /></div>
         </div>
 
         <div class="form-group"><label>Correo electrónico *</label><input v-model="formPaciente.email" type="email" placeholder="correo@ejemplo.com" required /></div>
         <div class="form-group"><label>Contraseña *</label><input v-model="formPaciente.password" type="password" placeholder="Mínimo 6 caracteres" required /></div>
 
-        <div class="form-group"><label>Ciudad o municipio</label><input v-model="formPaciente.ciudad" type="text" placeholder="Puebla" /></div>
+        <div class="form-row">
+          <div class="form-group"><label>Estado</label>
+            <select v-model="formPaciente.estado">
+              <option value="">Seleccionar...</option>
+              <option value="Aguascalientes">Aguascalientes</option>
+              <option value="Baja California">Baja California</option>
+              <option value="Baja California Sur">Baja California Sur</option>
+              <option value="Campeche">Campeche</option>
+              <option value="Chiapas">Chiapas</option>
+              <option value="Chihuahua">Chihuahua</option>
+              <option value="Ciudad de México">Ciudad de México</option>
+              <option value="Coahuila">Coahuila</option>
+              <option value="Colima">Colima</option>
+              <option value="Durango">Durango</option>
+              <option value="Estado de México">Estado de México</option>
+              <option value="Guanajuato">Guanajuato</option>
+              <option value="Guerrero">Guerrero</option>
+              <option value="Hidalgo">Hidalgo</option>
+              <option value="Jalisco">Jalisco</option>
+              <option value="Michoacán">Michoacán</option>
+              <option value="Morelos">Morelos</option>
+              <option value="Nayarit">Nayarit</option>
+              <option value="Nuevo León">Nuevo León</option>
+              <option value="Oaxaca">Oaxaca</option>
+              <option value="Puebla">Puebla</option>
+              <option value="Querétaro">Querétaro</option>
+              <option value="Quintana Roo">Quintana Roo</option>
+              <option value="San Luis Potosí">San Luis Potosí</option>
+              <option value="Sinaloa">Sinaloa</option>
+              <option value="Sonora">Sonora</option>
+              <option value="Tabasco">Tabasco</option>
+              <option value="Tamaulipas">Tamaulipas</option>
+              <option value="Tlaxcala">Tlaxcala</option>
+              <option value="Veracruz">Veracruz</option>
+              <option value="Yucatán">Yucatán</option>
+              <option value="Zacatecas">Zacatecas</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Municipio</label><input v-model="formPaciente.municipio" type="text" placeholder="Municipio" /></div>
+          <div class="form-group"><label>Código Postal</label><input v-model="formPaciente.codigo_postal" type="text" placeholder="72000" maxlength="5" /></div>
+        </div>
+
+        <div class="form-group"><label>Ciudad</label><input v-model="formPaciente.ciudad" type="text" placeholder="Puebla" /></div>
 
         <div class="form-group">
           <label>¿Cómo nos conociste?</label>
@@ -323,7 +371,49 @@ async function handleSubmit() {
             <span>Datos completados: {{ formPaciente.datos_renapo.nombre }} {{ formPaciente.datos_renapo.apellido }} | {{ formPaciente.datos_renapo.fecha_nacimiento }} | {{ formPaciente.datos_renapo.genero }}</span>
           </div>
         </div>
-          <div class="form-group"><label>Domicilio completo</label><input v-model="formPaciente.direccion" type="text" placeholder="Calle, número, colonia, CP" /></div>
+          <div class="form-group"><label>Domicilio completo</label><input v-model="formPaciente.direccion" type="text" placeholder="Calle, número, colonia" /></div>
+
+          <div class="form-row">
+            <div class="form-group"><label>Código Postal</label><input v-model="formPaciente.codigo_postal" type="text" placeholder="72000" maxlength="5" /></div>
+            <div class="form-group"><label>Estado</label>
+              <select v-model="formPaciente.estado">
+                <option value="">Seleccionar...</option>
+                <option value="Aguascalientes">Aguascalientes</option>
+                <option value="Baja California">Baja California</option>
+                <option value="Baja California Sur">Baja California Sur</option>
+                <option value="Campeche">Campeche</option>
+                <option value="Chiapas">Chiapas</option>
+                <option value="Chihuahua">Chihuahua</option>
+                <option value="Ciudad de México">Ciudad de México</option>
+                <option value="Coahuila">Coahuila</option>
+                <option value="Colima">Colima</option>
+                <option value="Durango">Durango</option>
+                <option value="Estado de México">Estado de México</option>
+                <option value="Guanajuato">Guanajuato</option>
+                <option value="Guerrero">Guerrero</option>
+                <option value="Hidalgo">Hidalgo</option>
+                <option value="Jalisco">Jalisco</option>
+                <option value="Michoacán">Michoacán</option>
+                <option value="Morelos">Morelos</option>
+                <option value="Nayarit">Nayarit</option>
+                <option value="Nuevo León">Nuevo León</option>
+                <option value="Oaxaca">Oaxaca</option>
+                <option value="Puebla">Puebla</option>
+                <option value="Querétaro">Querétaro</option>
+                <option value="Quintana Roo">Quintana Roo</option>
+                <option value="San Luis Potosí">San Luis Potosí</option>
+                <option value="Sinaloa">Sinaloa</option>
+                <option value="Sonora">Sonora</option>
+                <option value="Tabasco">Tabasco</option>
+                <option value="Tamaulipas">Tamaulipas</option>
+                <option value="Tlaxcala">Tlaxcala</option>
+                <option value="Veracruz">Veracruz</option>
+                <option value="Yucatán">Yucatán</option>
+                <option value="Zacatecas">Zacatecas</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Municipio</label><input v-model="formPaciente.municipio" type="text" placeholder="Municipio" /></div>
+          </div>
 
           <div class="form-row">
             <div class="form-group">
@@ -338,14 +428,32 @@ async function handleSubmit() {
               </select>
             </div>
             <div class="form-group"><label>Ocupación</label><input v-model="formPaciente.ocupacion" type="text" placeholder="Ej: Ingeniero" /></div>
+            <div class="form-group"><label>Hospital / Consultorio</label><input v-model="formPaciente.hospital_consultorio" type="text" placeholder="Ej: Hospital Ángeles" /></div>
           </div>
 
-          <h3 class="form-section-subtitle">Beneficiario</h3>
+          <h3 class="form-section-subtitle">Beneficiario(s)</h3>
           <div class="form-group"><label>Nombre completo *</label><input v-model="formPaciente.beneficiario_nombre" type="text" placeholder="Nombre del beneficiario" /></div>
           <div class="form-row">
             <div class="form-group"><label>Parentesco</label><input v-model="formPaciente.beneficiario_parentesco" type="text" placeholder="Ej: Esposo/a" /></div>
             <div class="form-group"><label>Teléfono</label><input v-model="formPaciente.beneficiario_telefono" type="tel" placeholder="2221234567" /></div>
           </div>
+
+          <div v-for="(ben, idx) in formPaciente.beneficiarios" :key="idx" class="beneficiario-card">
+            <div class="beneficiario-header">
+              <strong>Beneficiario {{ idx + 2 }}</strong>
+              <button type="button" class="btn-remove-ben" @click="formPaciente.beneficiarios.splice(idx, 1)">✕</button>
+            </div>
+            <div class="form-group"><label>Nombre</label><input v-model="ben.nombre" type="text" placeholder="Nombre completo" /></div>
+            <div class="form-row">
+              <div class="form-group"><label>Apellido paterno</label><input v-model="ben.apellido_paterno" type="text" /></div>
+              <div class="form-group"><label>Apellido materno</label><input v-model="ben.apellido_materno" type="text" /></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Parentesco</label><input v-model="ben.parentesco" type="text" placeholder="Ej: Hijo/a" /></div>
+              <div class="form-group"><label>Teléfono</label><input v-model="ben.telefono" type="tel" placeholder="2221234567" /></div>
+            </div>
+          </div>
+          <button type="button" class="btn-add-ben" @click="formPaciente.beneficiarios.push({ nombre: '', apellido_paterno: '', apellido_materno: '', parentesco: '', telefono: '' })">+ Agregar otro beneficiario</button>
 
           <h3 class="form-section-subtitle">Identificación oficial</h3>
           <div class="form-row">
@@ -447,4 +555,11 @@ async function handleSubmit() {
 .curp-validation:not(.error):not(.info) { background: #e8f5e9; color: #2e7d32; }
 .curp-validation.error { background: #ffebee; color: #c62828; }
 .curp-validation.info { background: #e3f2fd; color: #1565c0; }
+.beneficiario-card { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1rem; margin-bottom: 0.8rem; }
+.beneficiario-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; }
+.beneficiario-header strong { font-size: 0.9rem; color: #2d3436; }
+.btn-remove-ben { background: none; border: none; color: #d63031; cursor: pointer; font-size: 1.1rem; padding: 0.2rem 0.5rem; }
+.btn-remove-ben:hover { background: #ffebee; border-radius: 4px; }
+.btn-add-ben { background: none; border: 1px dashed #00b894; color: #00b894; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; width: 100%; margin-top: 0.5rem; }
+.btn-add-ben:hover { background: #f0fff4; }
 </style>

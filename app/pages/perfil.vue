@@ -12,11 +12,17 @@ const photoPreview = ref<string | null>(null)
 const form = ref({
   nombre: usuario.value?.nombre || '',
   apellido: usuario.value?.apellido || '',
+  apellido_paterno: usuario.value?.apellido_paterno || '',
+  apellido_materno: usuario.value?.apellido_materno || '',
   telefono: usuario.value?.telefono || '',
+  telefono2: usuario.value?.telefono2 || '',
   fecha_nacimiento: usuario.value?.fecha_nacimiento || '',
   genero: usuario.value?.genero || '',
   direccion: usuario.value?.direccion || '',
   ciudad: usuario.value?.ciudad || '',
+  codigo_postal: usuario.value?.codigo_postal || '',
+  estado: usuario.value?.estado || '',
+  municipio: usuario.value?.municipio || '',
   cedula_profesional: usuario.value?.cedula_profesional || '',
   consultorio_direccion: usuario.value?.consultorio_direccion || '',
   consultorio_ciudad: usuario.value?.consultorio_ciudad || '',
@@ -26,6 +32,9 @@ const form = ref({
   beneficiario_parentesco: usuario.value?.beneficiario_parentesco || '',
   beneficiario_telefono: usuario.value?.beneficiario_telefono || '',
 })
+
+const beneficiarios = ref<any[]>([])
+const nuevoBeneficiario = ref({ nombre: '', apellido_paterno: '', apellido_materno: '', parentesco: '', telefono: '' })
 
 const estudios = ref<any[]>([])
 const nuevoEstudio = ref({ titulo: '', institucion: '', anio: '', descripcion: '' })
@@ -44,14 +53,21 @@ onMounted(async () => {
     if (u) {
       form.value.nombre = u.nombre || ''
       form.value.apellido = u.apellido || ''
+      form.value.apellido_paterno = u.apellido_paterno || ''
+      form.value.apellido_materno = u.apellido_materno || ''
       form.value.telefono = u.telefono || ''
+      form.value.telefono2 = u.telefono2 || ''
       form.value.fecha_nacimiento = u.fecha_nacimiento ? u.fecha_nacimiento.slice(0, 10) : ''
       form.value.genero = u.genero || ''
       form.value.direccion = u.direccion || ''
       form.value.ciudad = u.ciudad || ''
+      form.value.codigo_postal = u.codigo_postal || ''
+      form.value.estado = u.estado || ''
+      form.value.municipio = u.municipio || ''
       form.value.beneficiario_nombre = u.beneficiario_nombre || ''
       form.value.beneficiario_parentesco = u.beneficiario_parentesco || ''
       form.value.beneficiario_telefono = u.beneficiario_telefono || ''
+      if (u.beneficiarios) beneficiarios.value = u.beneficiarios
       if (esMedico.value) {
         form.value.cedula_profesional = u.cedula_profesional || ''
         form.value.consultorio_direccion = u.consultorio_direccion || ''
@@ -64,6 +80,16 @@ onMounted(async () => {
   } catch {}
 })
 
+function agregarBeneficiario() {
+  if (!nuevoBeneficiario.value.nombre) return
+  beneficiarios.value.push({ ...nuevoBeneficiario.value })
+  nuevoBeneficiario.value = { nombre: '', apellido_paterno: '', apellido_materno: '', parentesco: '', telefono: '' }
+}
+
+function eliminarBeneficiario(idx: number) {
+  beneficiarios.value.splice(idx, 1)
+}
+
 async function guardar() {
   error.value = ''
   success.value = ''
@@ -72,7 +98,7 @@ async function guardar() {
     const { data } = await useFetch('/api/auth/perfil', {
       method: 'PUT',
       headers: { Authorization: `Bearer ${token.value}` },
-      body: form.value,
+      body: { ...form.value, beneficiarios: beneficiarios.value },
     })
     const u = (data.value as any)?.usuario
     if (u) usuario.value = { ...usuario.value, ...u }
@@ -221,9 +247,13 @@ function cerrarSesion() {
       <form @submit.prevent="guardar" class="perfil-form">
         <div class="form-row">
           <div class="form-group"><label>Nombre</label><input v-model="form.nombre" required /></div>
-          <div class="form-group"><label>Apellido</label><input v-model="form.apellido" required /></div>
+          <div class="form-group"><label>Apellido paterno</label><input v-model="form.apellido_paterno" /></div>
+          <div class="form-group"><label>Apellido materno</label><input v-model="form.apellido_materno" /></div>
         </div>
-        <div class="form-group"><label>Telefono</label><input v-model="form.telefono" type="tel" placeholder="+52 55 1234 5678" /></div>
+        <div class="form-row">
+          <div class="form-group"><label>Telefono</label><input v-model="form.telefono" type="tel" placeholder="+52 55 1234 5678" /></div>
+          <div class="form-group"><label>Telefono 2</label><input v-model="form.telefono2" type="tel" placeholder="Opcional" /></div>
+        </div>
 
         <template v-if="esPaciente">
           <div class="form-row">
@@ -234,7 +264,50 @@ function cerrarSesion() {
             </div>
           </div>
           <div class="form-group"><label>Direccion</label><textarea v-model="form.direccion" rows="2"></textarea></div>
-          <div class="form-group"><label>Ciudad</label><input v-model="form.ciudad" /></div>
+          <div class="form-row">
+            <div class="form-group"><label>Ciudad</label><input v-model="form.ciudad" /></div>
+            <div class="form-group"><label>Municipio</label><input v-model="form.municipio" /></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Estado</label>
+              <select v-model="form.estado">
+                <option value="">Seleccionar...</option>
+                <option value="Aguascalientes">Aguascalientes</option>
+                <option value="Baja California">Baja California</option>
+                <option value="Baja California Sur">Baja California Sur</option>
+                <option value="Campeche">Campeche</option>
+                <option value="Chiapas">Chiapas</option>
+                <option value="Chihuahua">Chihuahua</option>
+                <option value="Ciudad de México">Ciudad de México</option>
+                <option value="Coahuila">Coahuila</option>
+                <option value="Colima">Colima</option>
+                <option value="Durango">Durango</option>
+                <option value="Estado de México">Estado de México</option>
+                <option value="Guanajuato">Guanajuato</option>
+                <option value="Guerrero">Guerrero</option>
+                <option value="Hidalgo">Hidalgo</option>
+                <option value="Jalisco">Jalisco</option>
+                <option value="Michoacán">Michoacán</option>
+                <option value="Morelos">Morelos</option>
+                <option value="Nayarit">Nayarit</option>
+                <option value="Nuevo León">Nuevo León</option>
+                <option value="Oaxaca">Oaxaca</option>
+                <option value="Puebla">Puebla</option>
+                <option value="Querétaro">Querétaro</option>
+                <option value="Quintana Roo">Quintana Roo</option>
+                <option value="San Luis Potosí">San Luis Potosí</option>
+                <option value="Sinaloa">Sinaloa</option>
+                <option value="Sonora">Sonora</option>
+                <option value="Tabasco">Tabasco</option>
+                <option value="Tamaulipas">Tamaulipas</option>
+                <option value="Tlaxcala">Tlaxcala</option>
+                <option value="Veracruz">Veracruz</option>
+                <option value="Yucatán">Yucatán</option>
+                <option value="Zacatecas">Zacatecas</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Codigo Postal</label><input v-model="form.codigo_postal" maxlength="5" /></div>
+          </div>
         </template>
 
         <template v-if="esMedico">
@@ -265,6 +338,40 @@ function cerrarSesion() {
             <div class="form-group"><label>Telefono del beneficiario</label><input v-model="form.beneficiario_telefono" type="tel" /></div>
           </div>
           <button type="button" class="btn-primary" @click="guardar" :disabled="loading">{{ loading ? 'Guardando...' : 'Guardar Beneficiario' }}</button>
+        </div>
+      </div>
+
+      <div v-if="esPaciente" class="section-divider"></div>
+
+      <div v-if="esPaciente" class="section-card">
+        <div class="section-header">
+          <h2>Beneficiarios Adicionales</h2>
+        </div>
+        <div class="perfil-form">
+          <div class="form-row">
+            <div class="form-group"><label>Nombre</label><input v-model="nuevoBeneficiario.nombre" placeholder="Nombre completo" /></div>
+            <div class="form-group"><label>Apellido paterno</label><input v-model="nuevoBeneficiario.apellido_paterno" /></div>
+            <div class="form-group"><label>Apellido materno</label><input v-model="nuevoBeneficiario.apellido_materno" /></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Parentesco</label><input v-model="nuevoBeneficiario.parentesco" placeholder="Ej: Hijo/a" /></div>
+            <div class="form-group"><label>Telefono</label><input v-model="nuevoBeneficiario.telefono" type="tel" placeholder="2221234567" /></div>
+          </div>
+          <button type="button" class="btn-add" @click="agregarBeneficiario">+ Agregar Beneficiario</button>
+
+          <div v-if="beneficiarios.length > 0" class="beneficiarios-list">
+            <div v-for="(ben, idx) in beneficiarios" :key="idx" class="beneficiario-item">
+              <div class="beneficiario-info">
+                <strong>{{ ben.nombre }} {{ ben.apellido_paterno }} {{ ben.apellido_materno }}</strong>
+                <span v-if="ben.parentesco">{{ ben.parentesco }}</span>
+                <span v-if="ben.telefono">{{ ben.telefono }}</span>
+              </div>
+              <button class="btn-delete" @click="eliminarBeneficiario(idx)">Eliminar</button>
+            </div>
+          </div>
+          <div v-else class="empty-state">No hay beneficiarios adicionales registrados</div>
+
+          <button type="button" class="btn-primary" @click="guardar" :disabled="loading">{{ loading ? 'Guardando...' : 'Guardar Beneficiarios' }}</button>
         </div>
       </div>
 
@@ -354,4 +461,9 @@ function cerrarSesion() {
 .btn-delete { background: none; border: none; color: #d63031; cursor: pointer; font-size: 0.8rem; }
 .btn-delete:hover { text-decoration: underline; }
 .empty-state { text-align: center; color: #b2bec3; padding: 1.5rem; font-size: 0.9rem; }
+.beneficiarios-list { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.8rem; }
+.beneficiario-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; border: 1px solid #f0f0f0; border-radius: 8px; }
+.beneficiario-info { display: flex; flex-direction: column; gap: 0.15rem; }
+.beneficiario-info strong { font-size: 0.95rem; }
+.beneficiario-info span { font-size: 0.8rem; color: #636e72; }
 </style>

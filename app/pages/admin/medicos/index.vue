@@ -14,10 +14,10 @@ const formText = ref('')
 const perfilUrl = ref('')
 const importMode = ref<'url' | 'text'>('url')
 const newMedico = ref({
-  nombre: '', apellido: '', email: '', telefono: '',
+  nombre: '', apellido_paterno: '', apellido_materno: '', email: '', telefono: '',
   cedula_profesional: '', titulo: '', especialidad: '',
-  ciudad: '', hospital: '', bio: '', servicios: '',
-  universidad: '', horario_atencion: '', idiomas: 'Espanol',
+  ciudad: '', hospital_consultorio: '', rfc: '', tipo_consulta: '',
+  bio: '', servicios: '', universidad: '', horario_atencion: '', idiomas: 'Espanol',
   precio_regular: '', precio_miembro: '', usuario: '', password: ''
 })
 
@@ -113,7 +113,7 @@ async function loadEspecialidades() {
 }
 
 function openNewModal() {
-  newMedico.value = { nombre: '', apellido: '', email: '', telefono: '', cedula_profesional: '', titulo: '', especialidad: '', ciudad: '', hospital: '', bio: '', servicios: '', universidad: '', horario_atencion: '', idiomas: 'Espanol', precio_regular: '', precio_miembro: '', usuario: '', password: '' }
+  newMedico.value = { nombre: '', apellido_paterno: '', apellido_materno: '', email: '', telefono: '', cedula_profesional: '', titulo: '', especialidad: '', ciudad: '', hospital_consultorio: '', rfc: '', tipo_consulta: '', bio: '', servicios: '', universidad: '', horario_atencion: '', idiomas: 'Espanol', precio_regular: '', precio_miembro: '', usuario: '', password: '' }
   formText.value = ''; perfilUrl.value = ''; importMode.value = 'url'
   aiResult.value = null; aiError.value = ''; showAiPreview.value = false
   showModal.value = true
@@ -147,11 +147,13 @@ function applyAiData() {
   if (!aiResult.value) return
   const p = aiResult.value
   const nm = newMedico.value
-  if (p.nombre) nm.nombre = p.nombre; if (p.apellido) nm.apellido = p.apellido
+  if (p.nombre) nm.nombre = p.nombre; if (p.apellido_paterno) nm.apellido_paterno = p.apellido_paterno
+  if (p.apellido_materno) nm.apellido_materno = p.apellido_materno
   if (p.titulo) nm.titulo = p.titulo; if (p.cedula_profesional) nm.cedula_profesional = p.cedula_profesional
   if (p.email) nm.email = p.email; if (p.telefono) nm.telefono = p.telefono
   if (p.especialidad) nm.especialidad = p.especialidad; if (p.ciudad) nm.ciudad = p.ciudad
-  if (p.hospital) nm.hospital = p.hospital; if (p.bio) nm.bio = p.bio
+  if (p.hospital_consultorio) nm.hospital_consultorio = p.hospital_consultorio; if (p.bio) nm.bio = p.bio
+  if (p.rfc) nm.rfc = p.rfc; if (p.tipo_consulta) nm.tipo_consulta = p.tipo_consulta
   if (p.universidad) nm.universidad = p.universidad
   if (p.horario_atencion) nm.horario_atencion = p.horario_atencion
   if (p.idiomas?.length) nm.idiomas = p.idiomas.join(', ')
@@ -160,7 +162,7 @@ function applyAiData() {
 }
 
 async function saveNewMedico() {
-  if (!newMedico.value.nombre || !newMedico.value.apellido || !newMedico.value.especialidad) { alert('Nombre, apellido y especialidad son requeridos'); return }
+  if (!newMedico.value.nombre || !newMedico.value.apellido_paterno || !newMedico.value.especialidad) { alert('Nombre, apellido paterno y especialidad son requeridos'); return }
   savingNew.value = true
   try {
     const response = await $fetch('/api/admin/medicos', { method: 'POST', headers: { Authorization: `Bearer ${token.value}` }, body: newMedico.value })
@@ -172,12 +174,13 @@ async function saveNewMedico() {
 
 function abrirEditar(m: any) {
   editForm.value = {
-    id: m.id, nombre: m.nombre, apellido: m.apellido, email: m.email || '',
-    telefono: m.telefono || '', cedula_profesional: m.cedula_profesional || '',
+    id: m.id, nombre: m.nombre, apellido_paterno: m.apellido_paterno || m.apellido || '', apellido_materno: m.apellido_materno || '',
+    email: m.email || '', telefono: m.telefono || '', cedula_profesional: m.cedula_profesional || '',
     titulo: m.titulo || '', especialidad: m.especialidad_nombre || '',
     consultorio_ciudad: m.consultorio_ciudad || '', bio: m.bio || '',
     activo: m.activo, password: '', usuario: m.usuario || '',
-    precio_regular: m.precio_regular || '', precio_miembro: m.precio_miembro || ''
+    precio_regular: m.precio_regular || '', precio_miembro: m.precio_miembro || '',
+    rfc: m.rfc || '', hospital_consultorio: m.hospital_consultorio || '', tipo_consulta: m.tipo_consulta || ''
   }
   editError.value = ''; editOk.value = ''
   editando.value = true
@@ -187,7 +190,7 @@ function cerrarEditar() { editando.value = false; editError.value = ''; editOk.v
 
 async function guardarEdicion() {
   editError.value = ''; editOk.value = ''
-  if (!editForm.value.nombre || !editForm.value.apellido) { editError.value = 'Nombre y apellido son requeridos'; return }
+  if (!editForm.value.nombre || !editForm.value.apellido_paterno) { editError.value = 'Nombre y apellido paterno son requeridos'; return }
   editSaving.value = true
   try {
     const body: any = { ...editForm.value }
@@ -345,7 +348,11 @@ async function confirmarEliminar(medico: any) {
             <form @submit.prevent="saveNewMedico">
               <div class="form-row">
                 <div class="form-group"><label>Nombre *</label><input v-model="newMedico.nombre" required /></div>
-                <div class="form-group"><label>Apellido *</label><input v-model="newMedico.apellido" required /></div>
+                <div class="form-group"><label>Apellido Paterno *</label><input v-model="newMedico.apellido_paterno" required /></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Apellido Materno</label><input v-model="newMedico.apellido_materno" /></div>
+                <div class="form-group"><label>RFC</label><input v-model="newMedico.rfc" placeholder="XXXX000000XXX" /></div>
               </div>
               <div class="form-row">
                 <div class="form-group"><label>Email</label><input v-model="newMedico.email" type="email" /></div>
@@ -363,6 +370,17 @@ async function confirmarEliminar(medico: any) {
                   </select>
                 </div>
                 <div class="form-group"><label>Ciudad</label><input v-model="newMedico.ciudad" /></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Hospital o Consultorio</label><input v-model="newMedico.hospital_consultorio" placeholder="Ej: Hospital Angeles" /></div>
+                <div class="form-group"><label>Tipo de Consulta</label>
+                  <select v-model="newMedico.tipo_consulta">
+                    <option value="">Seleccionar...</option>
+                    <option value="presencial">Presencial</option>
+                    <option value="virtual">Virtual</option>
+                    <option value="ambos">Ambos</option>
+                  </select>
+                </div>
               </div>
               <div class="form-row">
                 <div class="form-group"><label>Precio Regular ($)</label><input v-model="newMedico.precio_regular" type="number" step="0.01" min="0" placeholder="Ej: 500" /></div>
@@ -394,7 +412,11 @@ async function confirmarEliminar(medico: any) {
             <div v-if="editOk" class="msg-ok">{{ editOk }}</div>
             <div class="form-row">
               <div class="form-group"><label>Nombre *</label><input v-model="editForm.nombre" /></div>
-              <div class="form-group"><label>Apellido *</label><input v-model="editForm.apellido" /></div>
+              <div class="form-group"><label>Apellido Paterno *</label><input v-model="editForm.apellido_paterno" /></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Apellido Materno</label><input v-model="editForm.apellido_materno" /></div>
+              <div class="form-group"><label>RFC</label><input v-model="editForm.rfc" placeholder="XXXX000000XXX" /></div>
             </div>
             <div class="form-row">
               <div class="form-group"><label>Email</label><input v-model="editForm.email" type="email" /></div>
@@ -412,6 +434,17 @@ async function confirmarEliminar(medico: any) {
                 </select>
               </div>
               <div class="form-group"><label>Ciudad</label><input v-model="editForm.consultorio_ciudad" /></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Hospital o Consultorio</label><input v-model="editForm.hospital_consultorio" placeholder="Ej: Hospital Angeles" /></div>
+              <div class="form-group"><label>Tipo de Consulta</label>
+                <select v-model="editForm.tipo_consulta">
+                  <option value="">Seleccionar...</option>
+                  <option value="presencial">Presencial</option>
+                  <option value="virtual">Virtual</option>
+                  <option value="ambos">Ambos</option>
+                </select>
+              </div>
             </div>
             <div class="form-row">
               <div class="form-group"><label>Precio Regular ($)</label><input v-model="editForm.precio_regular" type="number" step="0.01" min="0" /></div>
@@ -452,7 +485,7 @@ async function confirmarEliminar(medico: any) {
                   <div v-else class="foto-placeholder">👤</div>
                 </div>
                 <div>
-                  <h3>{{ viewMedico.titulo }} {{ viewMedico.nombre }} {{ viewMedico.apellido }}</h3>
+                  <h3>{{ viewMedico.titulo }} {{ viewMedico.nombre }} {{ viewMedico.apellido_paterno || viewMedico.apellido }} {{ viewMedico.apellido_materno }}</h3>
                   <p class="especialidad">{{ viewMedico.especialidad_nombre || 'Sin especialidad' }}</p>
                   <p class="estado" :class="{ activo: viewMedico.activo, inactivo: !viewMedico.activo }">
                     {{ viewMedico.activo ? 'Activo' : 'Inactivo' }}
@@ -462,9 +495,12 @@ async function confirmarEliminar(medico: any) {
 
               <div class="perfil-grid">
                 <div class="perfil-field"><label>Cédula Profesional</label><span>{{ viewMedico.cedula_profesional || 'N/A' }}</span></div>
+                <div class="perfil-field"><label>RFC</label><span>{{ viewMedico.rfc || 'N/A' }}</span></div>
                 <div class="perfil-field"><label>Email</label><span>{{ viewMedico.email || 'N/A' }}</span></div>
                 <div class="perfil-field"><label>Teléfono</label><span>{{ viewMedico.telefono || 'N/A' }}</span></div>
                 <div class="perfil-field"><label>Ciudad</label><span>{{ viewMedico.consultorio_ciudad || 'N/A' }}</span></div>
+                <div class="perfil-field"><label>Hospital o Consultorio</label><span>{{ viewMedico.hospital_consultorio || 'N/A' }}</span></div>
+                <div class="perfil-field"><label>Tipo de Consulta</label><span>{{ viewMedico.tipo_consulta || 'N/A' }}</span></div>
                 <div class="perfil-field"><label>Precio Regular ($)</label><span>{{ viewMedico.precio_regular || 'No configurado' }}</span></div>
                 <div class="perfil-field"><label>Precio Miembro ($)</label><span>{{ viewMedico.precio_miembro || 'No configurado' }}</span></div>
                 <div class="perfil-field"><label>Citas Confirmadas</label><span>{{ viewMedico.citas_confirmadas || 0 }}</span></div>

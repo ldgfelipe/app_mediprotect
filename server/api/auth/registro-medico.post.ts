@@ -10,7 +10,7 @@ function generarSlug(nombre: string, apellido: string): string {
 }
 
 export default defineEventHandler(async (event) => {
-  const { nombre, apellido, email, password, telefono, cedula_profesional, id_especialidad, consultorio_direccion, consultorio_ciudad, consultorio_estado, bio } = await readBody(event)
+  const { nombre, apellido, email, password, telefono, cedula_profesional, id_especialidad, consultorio_direccion, consultorio_ciudad, consultorio_estado, bio, apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta } = await readBody(event)
 
   const pool = getPool()
   const existing = await pool.query('SELECT id FROM medicos WHERE email = $1', [email])
@@ -26,10 +26,11 @@ export default defineEventHandler(async (event) => {
 
   const password_hash = await bcrypt.hash(password, 10)
   const result = await pool.query(
-    `INSERT INTO medicos (nombre, apellido, email, password_hash, telefono, cedula_profesional, id_especialidad, consultorio_direccion, consultorio_ciudad, consultorio_estado, bio, slug)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
-     RETURNING id, nombre, apellido, email, telefono, cedula_profesional, id_especialidad, slug, created_at`,
-    [nombre, apellido, email, password_hash, telefono, cedula_profesional, id_especialidad, consultorio_direccion, consultorio_ciudad, consultorio_estado, bio, slug]
+    `INSERT INTO medicos (nombre, apellido, email, password_hash, telefono, cedula_profesional, id_especialidad, consultorio_direccion, consultorio_ciudad, consultorio_estado, bio, slug, apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+     RETURNING id, nombre, apellido, email, telefono, cedula_profesional, id_especialidad, slug, created_at,
+               apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta`,
+    [nombre, apellido, email, password_hash, telefono, cedula_profesional, id_especialidad, consultorio_direccion, consultorio_ciudad, consultorio_estado, bio, slug, apellido_paterno || apellido || null, apellido_materno || null, rfc || null, hospital_consultorio || null, tipo_consulta || null]
   )
 
   const medico = result.rows[0]

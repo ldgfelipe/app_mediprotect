@@ -11,7 +11,8 @@ export default defineEventHandler(async (event) => {
   const {
     nombre, apellido, email, telefono, cedula_profesional,
     titulo, especialidad, ciudad, hospital, bio, servicios,
-    universidad, horario_atencion, idiomas, usuario, password
+    universidad, horario_atencion, idiomas, usuario, password,
+    apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta
   } = body
 
   if (!nombre || !apellido) {
@@ -66,13 +67,17 @@ export default defineEventHandler(async (event) => {
     const result = await pool.query(`
       INSERT INTO medicos (
         nombre, apellido, email, telefono, cedula_profesional,
-        titulo, id_especialidad, slug, activo, usuario, password_hash
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, $9, $10)
+        titulo, id_especialidad, slug, activo, usuario, password_hash,
+        apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, $9, $10, $11, $12, $13, $14, $15)
       RETURNING id, nombre, apellido, email, telefono, cedula_profesional,
-                titulo, slug, activo, usuario, created_at
+                titulo, slug, activo, usuario, created_at,
+                apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta
     `, [
       nombre, apellido, email || null, telefono || null, cedula_profesional || null,
-      titulo || null, idEspecialidad, slug, usuario || null, passwordHash
+      titulo || null, idEspecialidad, slug, usuario || null, passwordHash,
+      apellido_paterno || apellido || null, apellido_materno || null, rfc || null,
+      hospital_consultorio || null, tipo_consulta || null
     ])
 
     const medico = result.rows[0]

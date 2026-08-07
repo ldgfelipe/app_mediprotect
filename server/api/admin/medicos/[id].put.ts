@@ -13,7 +13,8 @@ export default defineEventHandler(async (event) => {
     nombre, apellido, email, telefono, cedula_profesional,
     titulo, especialidad, consultorio_ciudad, consultorio_estado,
     consultorio_direccion, bio, activo, password,
-    precio_regular, precio_miembro, usuario
+    precio_regular, precio_miembro, usuario,
+    apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta
   } = body
 
   const pool = getPool()
@@ -82,6 +83,11 @@ export default defineEventHandler(async (event) => {
   if (precio_miembro !== undefined) { sets.push(`precio_miembro = $${idx++}`); params.push(precio_miembro || null) }
   if (usuario !== undefined) { sets.push(`usuario = $${idx++}`); params.push(usuario || null) }
   if (passwordHash) { sets.push(`password_hash = $${idx++}`); params.push(passwordHash) }
+  if (apellido_paterno !== undefined) { sets.push(`apellido_paterno = $${idx++}`); params.push(apellido_paterno || apellido || null) }
+  if (apellido_materno !== undefined) { sets.push(`apellido_materno = $${idx++}`); params.push(apellido_materno || null) }
+  if (rfc !== undefined) { sets.push(`rfc = $${idx++}`); params.push(rfc || null) }
+  if (hospital_consultorio !== undefined) { sets.push(`hospital_consultorio = $${idx++}`); params.push(hospital_consultorio || null) }
+  if (tipo_consulta !== undefined) { sets.push(`tipo_consulta = $${idx++}`); params.push(tipo_consulta || null) }
 
   if (sets.length === 0) {
     throw createError({ statusCode: 400, message: 'No hay datos para actualizar' })
@@ -90,7 +96,8 @@ export default defineEventHandler(async (event) => {
   params.push(id)
   const result = await pool.query(
     `UPDATE medicos SET ${sets.join(', ')} WHERE id = $${idx}
-     RETURNING id, nombre, apellido, email, telefono, cedula_profesional, titulo, activo, precio_regular, precio_miembro, created_at`,
+     RETURNING id, nombre, apellido, email, telefono, cedula_profesional, titulo, activo, precio_regular, precio_miembro, created_at,
+              apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta`,
     params
   )
 

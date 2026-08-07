@@ -20,17 +20,25 @@ const filtered = computed(() => {
   const s = search.value.toLowerCase()
   return pacientes.value.filter(p =>
     p.nombre?.toLowerCase().includes(s) ||
+    p.apellido_paterno?.toLowerCase().includes(s) ||
+    p.apellido_materno?.toLowerCase().includes(s) ||
     p.apellido?.toLowerCase().includes(s) ||
     p.email?.toLowerCase().includes(s) ||
-    p.telefono?.includes(s)
+    p.telefono?.includes(s) ||
+    p.curp?.toLowerCase().includes(s)
   )
 })
 
 function abrirEditar(p: any) {
   editForm.value = {
-    id: p.id, nombre: p.nombre, apellido: p.apellido, email: p.email,
+    id: p.id, nombre: p.nombre, apellido_paterno: p.apellido_paterno || p.apellido || '',
+    apellido_materno: p.apellido_materno || '', email: p.email,
     telefono: p.telefono || '', fecha_nacimiento: p.fecha_nacimiento || '',
-    genero: p.genero || '', ciudad: p.ciudad || '', password: ''
+    genero: p.genero || '', curp: p.curp || '',
+    estado_civil: p.estado_civil || '', ocupacion: p.ocupacion || '',
+    telefono_2: p.telefono_2 || '', codigo_postal: p.codigo_postal || '',
+    estado: p.estado || '', municipio: p.municipio || '',
+    ciudad: p.ciudad || '', domicilio: p.domicilio || '', password: ''
   }
   errorMsg.value = ''
   okMsg.value = ''
@@ -64,9 +72,19 @@ async function guardar() {
     const idx = pacientes.value.findIndex(p => p.id === editForm.value.id)
     if (idx !== -1) {
       pacientes.value[idx].nombre = editForm.value.nombre
-      pacientes.value[idx].apellido = editForm.value.apellido
+      pacientes.value[idx].apellido_paterno = editForm.value.apellido_paterno
+      pacientes.value[idx].apellido_materno = editForm.value.apellido_materno
       pacientes.value[idx].email = editForm.value.email
       pacientes.value[idx].telefono = editForm.value.telefono
+      pacientes.value[idx].telefono_2 = editForm.value.telefono_2
+      pacientes.value[idx].curp = editForm.value.curp
+      pacientes.value[idx].estado_civil = editForm.value.estado_civil
+      pacientes.value[idx].ocupacion = editForm.value.ocupacion
+      pacientes.value[idx].codigo_postal = editForm.value.codigo_postal
+      pacientes.value[idx].estado = editForm.value.estado
+      pacientes.value[idx].municipio = editForm.value.municipio
+      pacientes.value[idx].ciudad = editForm.value.ciudad
+      pacientes.value[idx].domicilio = editForm.value.domicilio
     }
     okMsg.value = 'Paciente actualizado correctamente'
     setTimeout(() => { okMsg.value = ''; editando.value = false }, 1500)
@@ -110,7 +128,7 @@ async function guardar() {
           <thead><tr><th>Nombre</th><th>Email</th><th>Telefono</th><th>Registro</th><th></th></tr></thead>
           <tbody>
             <tr v-for="p in filtered" :key="p.id">
-              <td><strong>{{ p.nombre }} {{ p.apellido }}</strong></td>
+              <td><strong>{{ p.nombre }} {{ p.apellido_paterno || p.apellido }} {{ p.apellido_materno }}</strong></td>
               <td>{{ p.email }}</td><td>{{ p.telefono || '---' }}</td>
               <td>{{ new Date(p.created_at).toLocaleDateString('es-MX') }}</td>
               <td><button class="btn-edit" @click="abrirEditar(p)">Editar</button></td>
@@ -132,14 +150,21 @@ async function guardar() {
 
             <div class="form-row">
               <div class="form-group"><label>Nombre *</label><input v-model="editForm.nombre" /></div>
-              <div class="form-group"><label>Apellido</label><input v-model="editForm.apellido" /></div>
+              <div class="form-group"><label>Apellido Paterno</label><input v-model="editForm.apellido_paterno" /></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Apellido Materno</label><input v-model="editForm.apellido_materno" /></div>
+              <div class="form-group"><label>CURP</label><input v-model="editForm.curp" /></div>
             </div>
             <div class="form-row">
               <div class="form-group"><label>Email *</label><input v-model="editForm.email" type="email" /></div>
               <div class="form-group"><label>Telefono</label><input v-model="editForm.telefono" /></div>
             </div>
             <div class="form-row">
+              <div class="form-group"><label>Telefono 2</label><input v-model="editForm.telefono_2" /></div>
               <div class="form-group"><label>Fecha nacimiento</label><input v-model="editForm.fecha_nacimiento" type="date" /></div>
+            </div>
+            <div class="form-row">
               <div class="form-group">
                 <label>Genero</label>
                 <select v-model="editForm.genero">
@@ -149,9 +174,31 @@ async function guardar() {
                   <option value="otro">Otro</option>
                 </select>
               </div>
+              <div class="form-group">
+                <label>Estado Civil</label>
+                <select v-model="editForm.estado_civil">
+                  <option value="">---</option>
+                  <option value="soltero/a">Soltero/a</option>
+                  <option value="casado/a">Casado/a</option>
+                  <option value="divorciado/a">Divorciado/a</option>
+                  <option value="viudo/a">Viudo/a</option>
+                  <option value="union libre">Union libre</option>
+                </select>
+              </div>
             </div>
-            <div class="form-group"><label>Ciudad</label><input v-model="editForm.ciudad" /></div>
-            <div class="form-group"><label>Nueva contrasena (dejar vacio para no cambiar)</label><input v-model="editForm.password" type="password" placeholder="******" /></div>
+            <div class="form-row">
+              <div class="form-group"><label>Ocupacion</label><input v-model="editForm.ocupacion" /></div>
+              <div class="form-group"><label>Codigo Postal</label><input v-model="editForm.codigo_postal" /></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Estado</label><input v-model="editForm.estado" /></div>
+              <div class="form-group"><label>Municipio</label><input v-model="editForm.municipio" /></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Ciudad</label><input v-model="editForm.ciudad" /></div>
+              <div class="form-group"><label>Password</label><input v-model="editForm.password" type="password" placeholder="Dejar vacio para no cambiar" /></div>
+            </div>
+            <div class="form-group"><label>Domicilio</label><textarea v-model="editForm.domicilio" rows="3"></textarea></div>
 
             <div class="form-actions">
               <button class="btn-cancel" @click="cerrarModal">Cancelar</button>
@@ -187,7 +234,7 @@ th { background: #f8f9fa; color: #636e72; font-weight: 600; }
 .btn-edit { background: none; border: 1px solid #0984e3; color: #0984e3; padding: 0.3rem 0.75rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
 .btn-edit:hover { background: #0984e3; color: white; }
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
-.modal { background: white; border-radius: 12px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; }
+.modal { background: white; border-radius: 12px; width: 100%; max-width: 620px; max-height: 90vh; overflow-y: auto; }
 .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 1.5rem; border-bottom: 1px solid #f0f0f0; }
 .modal-header h2 { margin: 0; font-size: 1.15rem; }
 .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #636e72; }
@@ -197,8 +244,9 @@ th { background: #f8f9fa; color: #636e72; font-weight: 600; }
 .form-row > .form-group { flex: 1; }
 .form-group { display: flex; flex-direction: column; margin-bottom: 0.75rem; }
 .form-group label { font-size: 0.8rem; color: #636e72; margin-bottom: 0.3rem; font-weight: 500; }
-.form-group input, .form-group select { padding: 0.55rem 0.75rem; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 0.85rem; }
-.form-group input:focus, .form-group select:focus { outline: none; border-color: #00b894; }
+.form-group input, .form-group select, .form-group textarea { padding: 0.55rem 0.75rem; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 0.85rem; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #00b894; }
+.form-group textarea { resize: vertical; font-family: inherit; }
 .form-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #f0f0f0; }
 .btn-cancel { background: #f5f5f5; border: 1px solid #e0e0e0; padding: 0.55rem 1.25rem; border-radius: 6px; font-size: 0.9rem; cursor: pointer; }
 .btn-cancel:hover { background: #eee; }
