@@ -234,15 +234,15 @@ th { background: #f8f9fa; color: #636e72; font-weight: 600; }
 .btn-edit { background: none; border: 1px solid #0984e3; color: #0984e3; padding: 0.3rem 0.75rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
 .btn-edit:hover { background: #0984e3; color: white; }
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
-.modal { background: white; border-radius: 12px; width: 100%; max-width: 620px; max-height: 90vh; overflow-y: auto; }
+.modal { background: white; border-radius: 12px; width: 100%; max-width: 620px; max-height: 90vh; overflow-y: auto; box-sizing: border-box; }
 .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 1.5rem; border-bottom: 1px solid #f0f0f0; }
 .modal-header h2 { margin: 0; font-size: 1.15rem; }
 .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #636e72; }
 .modal-close:hover { color: #d63031; }
 .modal-body { padding: 1.5rem; }
-.form-row { display: flex; gap: 1rem; }
-.form-row > .form-group { flex: 1; }
-.form-group { display: flex; flex-direction: column; margin-bottom: 0.75rem; }
+.form-row { display: flex; gap: 1rem; flex-wrap: wrap; }
+.form-row > .form-group { flex: 1 1 0; min-width: 0; }
+.form-group { display: flex; flex-direction: column; margin-bottom: 0.75rem; flex: 1 1 100%; }
 .form-group label { font-size: 0.8rem; color: #636e72; margin-bottom: 0.3rem; font-weight: 500; }
 .form-group input, .form-group select, .form-group textarea { padding: 0.55rem 0.75rem; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 0.85rem; }
 .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #00b894; }
@@ -255,4 +255,9 @@ th { background: #f8f9fa; color: #636e72; font-weight: 600; }
 .btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
 .msg-error { background: #ffebee; color: #c62828; padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 0.75rem; }
 .msg-ok { background: #e8f5e9; color: #2e7d32; padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 0.75rem; }
+@media (max-width: 640px) {
+  .form-row > .form-group { flex: 1 1 100%; min-width: 0; }
+  .modal { margin: 0.5rem; max-height: 95vh; }
+  .modal-body { padding: 1rem; }
+}
 </style>

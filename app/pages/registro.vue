@@ -521,8 +521,8 @@ async function handleSubmit() {
 .plan-seleccionado-banner { display: flex; justify-content: space-between; align-items: center; background: #f0fff4; border: 1px solid #00b894; border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 1rem; font-size: 0.9rem; }
 .cambiar-plan { color: #0984e3; font-size: 0.85rem; text-decoration: none; }
 .form-section-subtitle { font-size: 0.95rem; color: #2d3436; margin: 1.2rem 0 0.6rem; font-weight: 600; border-top: 1px solid #eee; padding-top: 0.8rem; }
-.form-row { display: flex; gap: 1rem; }
-.form-row > .form-group { flex: 1; }
+.form-row { display: flex; gap: 1rem; flex-wrap: wrap; }
+.form-row > .form-group { flex: 1 1 0; min-width: 0; }
 .checkbox-group { margin-top: 0.3rem; }
 .checkbox-label { display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.85rem; color: #636e72; cursor: pointer; }
 .checkbox-label input[type="checkbox"] { margin-top: 0.2rem; width: auto; }
@@ -562,4 +562,10 @@ async function handleSubmit() {
 .btn-remove-ben:hover { background: #ffebee; border-radius: 4px; }
 .btn-add-ben { background: none; border: 1px dashed #00b894; color: #00b894; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; width: 100%; margin-top: 0.5rem; }
 .btn-add-ben:hover { background: #f0fff4; }
+@media (max-width: 640px) {
+  .form-row > .form-group { flex: 1 1 100%; min-width: 0; }
+  .curp-input-group { flex-direction: column; }
+  .planes-grid { grid-template-columns: 1fr; }
+  .plan-seleccionado-banner { flex-direction: column; gap: 0.5rem; text-align: center; }
+}
 </style>

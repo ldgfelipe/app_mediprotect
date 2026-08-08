@@ -425,9 +425,9 @@ function cerrarSesion() {
 .success-msg { color: #00b894; background: #e6fcf5; padding: 0.7rem; border-radius: 8px; font-size: 0.9rem; border: 1px solid #b2dfdb; margin-bottom: 1rem; }
 .error-msg { color: #c62828; background: #ffebee; padding: 0.7rem; border-radius: 8px; font-size: 0.9rem; border: 1px solid #ffcdd2; margin-bottom: 1rem; }
 .perfil-form { display: flex; flex-direction: column; gap: 1rem; }
-.form-row { display: flex; gap: 1rem; }
-.form-row > .form-group { flex: 1; }
-.form-group { display: flex; flex-direction: column; }
+.form-row { display: flex; gap: 1rem; flex-wrap: wrap; }
+.form-row > .form-group { flex: 1 1 0; min-width: 0; }
+.form-group { display: flex; flex-direction: column; flex: 1 1 100%; }
 .form-group label { font-size: 0.85rem; color: #636e72; margin-bottom: 0.3rem; font-weight: 500; }
 .form-group input, .form-group textarea, .form-group select { padding: 0.6rem 0.8rem; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 0.9rem; }
 .form-group input:focus, .form-group textarea:focus, .form-group select:focus { outline: none; border-color: #00b894; }
@@ -466,4 +466,10 @@ function cerrarSesion() {
 .beneficiario-info { display: flex; flex-direction: column; gap: 0.15rem; }
 .beneficiario-info strong { font-size: 0.95rem; }
 .beneficiario-info span { font-size: 0.8rem; color: #636e72; }
+@media (max-width: 640px) {
+  .form-row > .form-group { flex: 1 1 100%; min-width: 0; }
+  .section-header { flex-direction: column; gap: 0.5rem; align-items: flex-start; }
+  .beneficiario-item { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+  .photo-container { flex-direction: column; align-items: flex-start; }
+}
 </style>

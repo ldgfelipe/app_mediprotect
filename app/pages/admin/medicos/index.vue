@@ -588,15 +588,16 @@ async function confirmarEliminar(medico: any) {
 .btn-primary:hover:not(:disabled) { background: #00a884; }
 .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
-.modal { background: white; border-radius: 12px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; }
+.modal { background: white; border-radius: 12px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; box-sizing: border-box; }
 .modal-lg { max-width: 720px; }
 .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 1.5rem; border-bottom: 1px solid #f0f0f0; }
 .modal-header h2 { margin: 0; font-size: 1.2rem; color: #2d3436; }
 .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #636e72; }
 .modal-close:hover { color: #d63031; }
 .modal-body { padding: 1.5rem; }
-.form-row { display: flex; gap: 1rem; margin-bottom: 0.75rem; }
-.form-group { display: flex; flex-direction: column; flex: 1; margin-bottom: 0.75rem; }
+.form-row { display: flex; gap: 1rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+.form-row > .form-group { flex: 1 1 0; min-width: 0; }
+.form-group { display: flex; flex-direction: column; flex: 1 1 100%; margin-bottom: 0.75rem; }
 .form-group label { font-size: 0.8rem; color: #636e72; margin-bottom: 0.3rem; font-weight: 500; }
 .form-group input, .form-group select, .form-group textarea { padding: 0.55rem 0.75rem; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 0.85rem; font-family: inherit; }
 .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #00b894; }
@@ -634,6 +635,14 @@ async function confirmarEliminar(medico: any) {
 .form-divider { text-align: center; margin: 1rem 0; position: relative; }
 .form-divider::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: #e0e0e0; }
 .form-divider span { background: white; padding: 0 1rem; position: relative; color: #636e72; font-size: 0.8rem; }
+@media (max-width: 640px) {
+  .form-row > .form-group { flex: 1 1 100%; min-width: 0; }
+  .modal { margin: 0.5rem; max-height: 95vh; }
+  .modal-body { padding: 1rem; }
+  .perfil-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+  .perfil-grid { grid-template-columns: 1fr; }
+  .ai-preview-grid { grid-template-columns: 1fr; }
+}
 
 .perfil-view { padding: 0.5rem; }
 .perfil-header { display: flex; gap: 1.5rem; align-items: center; margin-bottom: 1.5rem; }
