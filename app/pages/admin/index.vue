@@ -25,6 +25,11 @@ const formMedico = ref({ nombre: '', apellido: '', email: '', telefono: '', cedu
 const formPaciente = ref({ nombre: '', apellido: '', email: '', telefono: '', fecha_nacimiento: '', genero: '', ciudad: '', curp: '', password: '' })
 const formEmpresa = ref({ nombre: '', rfc: '', email: '', telefono: '', contacto_nombre: '', direccion: '', ciudad: '', estado: '' })
 
+const curpInput = ref('')
+const curpResult = ref<any>(null)
+const curpLoading = ref(false)
+const curpError = ref('')
+
 const especialidades = ref<any[]>([])
 
 onMounted(async () => {
@@ -144,6 +149,24 @@ async function guardarEmpresa() {
   } catch (e: any) { errorMsg.value = e.data?.message || 'Error al guardar' }
   finally { saving.value = false }
 }
+
+async function validarCURP() {
+  curpError.value = ''
+  curpResult.value = null
+  const curp = curpInput.value.toUpperCase().trim()
+  if (!curp || curp.length !== 18) {
+    curpError.value = 'La CURP debe tener exactamente 18 caracteres'
+    return
+  }
+  curpLoading.value = true
+  try {
+    const data = await $fetch('/api/admin/validar-curp', { params: { curp } })
+    curpResult.value = data
+  } catch (e: any) {
+    curpError.value = e?.data?.message || e?.message || 'Error al validar CURP'
+  }
+  curpLoading.value = false
+}
 </script>
 
 <template>
@@ -187,6 +210,7 @@ async function guardarEmpresa() {
           <button :class="['nav-btn', { active: activeSection === 'medicos' }]" @click="activeSection = 'medicos'">Medicos</button>
           <button :class="['nav-btn', { active: activeSection === 'pacientes' }]" @click="activeSection = 'pacientes'">Pacientes</button>
           <button :class="['nav-btn', { active: activeSection === 'empresas' }]" @click="activeSection = 'empresas'">Empresas</button>
+          <button :class="['nav-btn', { active: activeSection === 'integraciones' }]" @click="activeSection = 'integraciones'">Integraciones</button>
         </div>
 
         <div v-if="activeSection === 'resumen'" class="panel">
@@ -238,6 +262,59 @@ async function guardarEmpresa() {
           </div>
           <div v-else-if="searchEmpresas.length >= 2" class="empty-results">No se encontraron empresas con "{{ searchEmpresas }}"</div>
           <div v-else class="empty-results">Escribe al menos 2 caracteres para buscar una empresa</div>
+        </div>
+
+        <div v-if="activeSection === 'integraciones'" class="panel">
+          <div class="panel-header"><h2>Pruebas de Integracion</h2></div>
+
+          <div class="integration-card">
+            <div class="integration-header">
+              <h3>Validador de CURP</h3>
+              <span class="integration-badge">API Externa</span>
+            </div>
+            <p class="integration-desc">Consulta datos de una CURP contra el servicio de validacion oficial de Mexico.</p>
+
+            <div class="curp-input-row">
+              <div class="form-group" style="flex:1">
+                <label>CURP a validar</label>
+                <input v-model="curpInput" maxlength="18" placeholder="18 caracteres (ej. XAXX010101HTCPRL09)" style="text-transform:uppercase; font-family:monospace; letter-spacing:1px;" @keyup.enter="validarCURP" />
+              </div>
+              <button class="btn-primary" @click="validarCURP" :disabled="curpLoading" style="align-self:flex-end">{{ curpLoading ? 'Consultando...' : 'Validar CURP' }}</button>
+            </div>
+
+            <div v-if="curpError" class="integration-error">{{ curpError }}</div>
+
+            <div v-if="curpResult" class="curp-result">
+              <div class="result-section">
+                <h4>Datos del Solicitante</h4>
+                <div class="result-grid">
+                  <div class="result-field"><label>CURP</label><span>{{ curpResult.response?.Solicitante?.CURP || '-' }}</span></div>
+                  <div class="result-field"><label>Status</label><span :class="curpResult.error ? 'status-error' : 'status-ok'">{{ curpResult.error ? 'Error' : 'Valida' }}</span></div>
+                  <div class="result-field"><label>Nombres</label><span>{{ curpResult.response?.Solicitante?.Nombres || '-' }}</span></div>
+                  <div class="result-field"><label>Apellido Paterno</label><span>{{ curpResult.response?.Solicitante?.ApellidoPaterno || '-' }}</span></div>
+                  <div class="result-field"><label>Apellido Materno</label><span>{{ curpResult.response?.Solicitante?.ApellidoMaterno || '-' }}</span></div>
+                  <div class="result-field"><label>Sexo</label><span>{{ curpResult.response?.Solicitante?.Sexo || '-' }}</span></div>
+                  <div class="result-field"><label>Fecha Nacimiento</label><span>{{ curpResult.response?.Solicitante?.FechaNacimiento || '-' }}</span></div>
+                  <div class="result-field"><label>Nacionalidad</label><span>{{ curpResult.response?.Solicitante?.Nacionalidad || '-' }}</span></div>
+                  <div class="result-field"><label>Entidad Nacimiento</label><span>{{ curpResult.response?.Solicitante?.EntidadNacimiento || '-' }}</span></div>
+                  <div class="result-field"><label>Doc. Probatorio</label><span>{{ curpResult.response?.Solicitante?.DocProbatorio || '-' }}</span></div>
+                </div>
+              </div>
+              <div class="result-section">
+                <h4>Documento Probatorio</h4>
+                <div class="result-grid">
+                  <div class="result-field"><label>Anio Registro</label><span>{{ curpResult.response?.DocProbatorio?.AnioRegistro || '-' }}</span></div>
+                  <div class="result-field"><label>Entidad Emisora</label><span>{{ curpResult.response?.DocProbatorio?.EntidadRegistrante || '-' }}</span></div>
+                  <div class="result-field"><label>Num Acta</label><span>{{ curpResult.response?.DocProbatorio?.NumActa || '-' }}</span></div>
+                  <div class="result-field"><label>Foja</label><span>{{ curpResult.response?.DocProbatorio?.Foja || '-' }}</span></div>
+                </div>
+              </div>
+              <details class="json-details">
+                <summary>Ver respuesta JSON completa</summary>
+                <pre>{{ JSON.stringify(curpResult, null, 2) }}</pre>
+              </details>
+            </div>
+          </div>
         </div>
       </div>
     </main>
@@ -358,4 +435,27 @@ async function guardarEmpresa() {
 .form-group input, .form-group select { padding: 0.55rem 0.75rem; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 0.85rem; }
 .form-group input:focus, .form-group select:focus { outline: none; border-color: #00b894; }
 .form-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #f0f0f0; }
+.integration-card { background: white; border: 1px solid #e0e0e0; border-radius: 10px; padding: 1.5rem; margin-bottom: 1rem; }
+.integration-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; }
+.integration-header h3 { margin: 0; font-size: 1.05rem; color: #2d3436; }
+.integration-badge { background: #e3f2fd; color: #1565c0; font-size: 0.7rem; font-weight: 600; padding: 0.2rem 0.6rem; border-radius: 10px; }
+.integration-desc { color: #636e72; font-size: 0.85rem; margin: 0 0 1rem; }
+.curp-input-row { display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap; }
+.integration-error { background: #ffebee; color: #c62828; padding: 0.6rem 1rem; border-radius: 8px; font-size: 0.85rem; margin-top: 1rem; border: 1px solid #ffd7d7; }
+.curp-result { margin-top: 1.25rem; }
+.result-section { margin-bottom: 1.25rem; }
+.result-section h4 { margin: 0 0 0.75rem; font-size: 0.95rem; color: #2d3436; border-bottom: 1px solid #f0f0f0; padding-bottom: 0.5rem; }
+.result-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem; }
+.result-field { display: flex; flex-direction: column; }
+.result-field label { font-size: 0.75rem; color: #636e72; margin-bottom: 0.15rem; font-weight: 500; }
+.result-field span { font-size: 0.9rem; color: #2d3436; }
+.status-ok { color: #2e7d32; font-weight: 600; }
+.status-error { color: #c62828; font-weight: 600; }
+.json-details { margin-top: 1rem; }
+.json-details summary { cursor: pointer; font-size: 0.85rem; color: #0984e3; font-weight: 500; padding: 0.4rem 0; }
+.json-details pre { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1rem; font-size: 0.78rem; overflow-x: auto; max-height: 400px; overflow-y: auto; margin-top: 0.5rem; }
+@media (max-width: 640px) {
+  .curp-input-row { flex-direction: column; }
+  .result-grid { grid-template-columns: 1fr; }
+}
 </style>
