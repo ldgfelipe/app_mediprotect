@@ -41,7 +41,7 @@ const irAlDashboard = () => {
 }
 
 onMounted(async () => {
-  doctorPendiente.value = route.query.doctor as string || localStorage.getItem('agendar_doctor') || ''
+  doctorPendiente.value = String(route.query.doctor || '') || localStorage.getItem('agendar_doctor') || ''
   const pagoId = route.query.pago_id
   if (pagoId) {
     try {

@@ -59,7 +59,7 @@ function seleccionarDoctor(medico: any) {
   }
 }
 
-function ir Registro() { paso.value = 'registro' }
+function irRegistro() { paso.value = 'registro' }
 function irLogin() { paso.value = 'login' }
 
 async function doLogin() {
@@ -154,7 +154,7 @@ function nuevaCita() {
     <header class="test-header">
       <div class="header-inner">
         <div class="brand">
-          <img src="/images/LogoHorizontal2.png" alt="MediProtect" class="logo" />
+          <img src="https://imagedelivery.net/xaKlCos5cTg_1RWzIu_h-A/0a041066-aa69-4fe5-07ed-50ee74875100/public" alt="MediProtect" class="logo" />
           <span class="badge-test">PRUEBA</span>
         </div>
         <p class="subtitle">app.mediprotect.com.mx — Registro de Cita</p>
