@@ -150,7 +150,7 @@ const procesarPago = async () => {
       }
     })
     if (data.success) {
-      const doctorParam = route.query.doctor ? '&doctor=' + encodeURIComponent(route.query.doctor as string) : ''
+      const doctorParam = route.query.doctor ? '&doctor=' + encodeURIComponent(String(route.query.doctor)) : ''
       router.push('/pago-exito?pago_id=' + pago.value.id + doctorParam)
     }
     else error.value = data.message || 'Error al procesar el pago'
