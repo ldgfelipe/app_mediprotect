@@ -166,7 +166,7 @@ async function doRegister() {
         <p>Para agendar una cita con <strong>{{ doctorName }}</strong>, primero inicia sesión o crea una cuenta.</p>
         <div class="auth-buttons">
           <button @click="paso = 'login'" class="btn-primary">Iniciar Sesión</button>
-          <button @click="paso = 'paquetes'" class="btn-secondary">Crear Cuenta</button>
+          <NuxtLink :to="'/registro-curp?doctor=' + encodeURIComponent(doctorName)" class="btn-secondary">Crear Cuenta</NuxtLink>
         </div>
       </div>
 
@@ -180,7 +180,7 @@ async function doRegister() {
           <button @click="doLogin" :disabled="loginLoading" class="btn-primary">
             {{ loginLoading ? 'Entrando...' : 'Entrar' }}
           </button>
-          <p class="switch-text">¿No tienes cuenta? <a @click="paso = 'paquetes'">Regístrate</a></p>
+          <p class="switch-text">¿No tienes cuenta? <NuxtLink :to="'/registro-curp?doctor=' + encodeURIComponent(doctorName)">Regístrate</NuxtLink></p>
           <p class="switch-text"><a @click="paso = 'inicio'">← Volver</a></p>
         </div>
       </div>
