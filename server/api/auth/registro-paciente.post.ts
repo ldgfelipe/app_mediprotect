@@ -17,21 +17,18 @@ export default defineEventHandler(async (event) => {
   }
 
   const password_hash = await bcrypt.hash(password, 10)
-  const apellidoPat = apellido_paterno || (apellido ? apellido : null)
+  const apellidoCompleto = [apellido_paterno, apellido_materno].filter(Boolean).join(' ') || apellido || null
   const result = await pool.query(
-    `INSERT INTO pacientes (nombre, apellido, apellido_paterno, apellido_materno, email, password_hash, telefono, fecha_nacimiento, genero, direccion,
+    `INSERT INTO pacientes (nombre, apellido, email, password_hash, telefono, fecha_nacimiento, genero, direccion,
       ciudad, como_nos_conociste, acepta_terminos, acepta_marketing,
       curp, estado_civil, ocupacion, beneficiario_nombre, beneficiario_parentesco, beneficiario_telefono,
-      identificacion_tipo, identificacion_numero, acepta_seguro, plan_contratado,
-      codigo_postal, estado, municipio, telefono2, hospital_consultorio)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29)
-     RETURNING id, nombre, apellido, apellido_paterno, apellido_materno, email, telefono, created_at,
-       codigo_postal, estado, municipio, telefono2, hospital_consultorio`,
-    [nombre, apellido || null, apellidoPat, apellido_materno || null, email, password_hash, telefono, fecha_nacimiento, genero, direccion,
+      identificacion_tipo, identificacion_numero, acepta_seguro, plan_contratado)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
+     RETURNING id, nombre, apellido, email, telefono, created_at`,
+    [nombre, apellidoCompleto, email, password_hash, telefono, fecha_nacimiento, genero, direccion,
       ciudad || null, como_nos_conociste || null, acepta_terminos || false, acepta_marketing || false,
       curp || null, estado_civil || null, ocupacion || null, beneficiario_nombre || null, beneficiario_parentesco || null, beneficiario_telefono || null,
-      identificacion_tipo || null, identificacion_numero || null, acepta_seguro || false, null,
-      codigo_postal || null, estado || null, municipio || null, telefono2 || null, hospital_consultorio || null]
+      identificacion_tipo || null, identificacion_numero || null, acepta_seguro || false, null]
   )
 
   const paciente = result.rows[0]

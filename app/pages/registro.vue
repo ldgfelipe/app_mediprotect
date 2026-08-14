@@ -219,106 +219,21 @@ async function handleSubmit() {
       </div>
 
       <!-- PASO 1: AFILIACIÓN GRATUITA -->
-      <form v-if="tipo === 'paciente' && paso === 'datos'" @submit.prevent="continuarAlPlan" class="auth-form">
-        <div v-if="route.query.plan" class="plan-seleccionado-banner">
-          <span>📋 Plan seleccionado: <strong>{{ paquetes.find(p => p.id === paqueteSeleccionado)?.nombre }}</strong></span>
-          <NuxtLink to="/paquetes" class="cambiar-plan">Cambiar</NuxtLink>
+      <div v-if="tipo === 'paciente' && paso === 'datos'" class="auth-form paciente-redirect">
+        <div class="redirect-icon">
+          <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+            <rect width="64" height="64" rx="16" fill="#f0fff4"/>
+            <path d="M32 20v24M20 32h24" stroke="#00b894" stroke-width="3" stroke-linecap="round"/>
+          </svg>
         </div>
-        <h2 class="form-section-title">{{ route.query.plan ? 'Completa tus datos' : 'Afiliación Gratuita' }}</h2>
-
-        <div class="form-group">
-          <label>Nombre completo *</label>
-          <div class="form-row">
-            <input v-model="formPaciente.nombre" type="text" placeholder="Nombre(s)" required />
-            <input v-model="formPaciente.apellido_paterno" type="text" placeholder="Apellido paterno" required />
-            <input v-model="formPaciente.apellido_materno" type="text" placeholder="Apellido materno" />
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group"><label>Fecha de nacimiento</label><input v-model="formPaciente.fecha_nacimiento" type="date" /></div>
-          <div class="form-group"><label>Teléfono / WhatsApp *</label><input v-model="formPaciente.telefono" type="tel" placeholder="2221234567" required /></div>
-          <div class="form-group"><label>Teléfono 2</label><input v-model="formPaciente.telefono2" type="tel" placeholder="Opcional" /></div>
-        </div>
-
-        <div class="form-group"><label>Correo electrónico *</label><input v-model="formPaciente.email" type="email" placeholder="correo@ejemplo.com" required /></div>
-        <div class="form-group"><label>Contraseña *</label><input v-model="formPaciente.password" type="password" placeholder="Mínimo 6 caracteres" required /></div>
-
-        <div class="form-row">
-          <div class="form-group"><label>Estado</label>
-            <select v-model="formPaciente.estado">
-              <option value="">Seleccionar...</option>
-              <option value="Aguascalientes">Aguascalientes</option>
-              <option value="Baja California">Baja California</option>
-              <option value="Baja California Sur">Baja California Sur</option>
-              <option value="Campeche">Campeche</option>
-              <option value="Chiapas">Chiapas</option>
-              <option value="Chihuahua">Chihuahua</option>
-              <option value="Ciudad de México">Ciudad de México</option>
-              <option value="Coahuila">Coahuila</option>
-              <option value="Colima">Colima</option>
-              <option value="Durango">Durango</option>
-              <option value="Estado de México">Estado de México</option>
-              <option value="Guanajuato">Guanajuato</option>
-              <option value="Guerrero">Guerrero</option>
-              <option value="Hidalgo">Hidalgo</option>
-              <option value="Jalisco">Jalisco</option>
-              <option value="Michoacán">Michoacán</option>
-              <option value="Morelos">Morelos</option>
-              <option value="Nayarit">Nayarit</option>
-              <option value="Nuevo León">Nuevo León</option>
-              <option value="Oaxaca">Oaxaca</option>
-              <option value="Puebla">Puebla</option>
-              <option value="Querétaro">Querétaro</option>
-              <option value="Quintana Roo">Quintana Roo</option>
-              <option value="San Luis Potosí">San Luis Potosí</option>
-              <option value="Sinaloa">Sinaloa</option>
-              <option value="Sonora">Sonora</option>
-              <option value="Tabasco">Tabasco</option>
-              <option value="Tamaulipas">Tamaulipas</option>
-              <option value="Tlaxcala">Tlaxcala</option>
-              <option value="Veracruz">Veracruz</option>
-              <option value="Yucatán">Yucatán</option>
-              <option value="Zacatecas">Zacatecas</option>
-            </select>
-          </div>
-          <div class="form-group"><label>Municipio</label><input v-model="formPaciente.municipio" type="text" placeholder="Municipio" /></div>
-          <div class="form-group"><label>Código Postal</label><input v-model="formPaciente.codigo_postal" type="text" placeholder="72000" maxlength="5" /></div>
-        </div>
-
-        <div class="form-group"><label>Ciudad</label><input v-model="formPaciente.ciudad" type="text" placeholder="Puebla" /></div>
-
-        <div class="form-group">
-          <label>¿Cómo nos conociste?</label>
-          <select v-model="formPaciente.como_nos_conociste">
-            <option value="">Seleccionar...</option>
-            <option value="facebook">Facebook</option>
-            <option value="instagram">Instagram</option>
-            <option value="google">Google</option>
-            <option value="amigo">Recomendación de amigo</option>
-            <option value="medico">Recomendación de médico</option>
-            <option value="otro">Otro</option>
-          </select>
-        </div>
-
-        <div class="form-group checkbox-group">
-          <label class="checkbox-label">
-            <input type="checkbox" v-model="formPaciente.acepta_terminos" />
-            <span>Acepto <a href="/terminos" target="_blank">Términos y Condiciones</a> y <a href="/privacidad" target="_blank">Política de Privacidad</a> *</span>
-          </label>
-        </div>
-
-        <div class="form-group checkbox-group">
-          <label class="checkbox-label">
-            <input type="checkbox" v-model="formPaciente.acepta_marketing" />
-            <span>Autorizo contacto por WhatsApp/correo para información y promociones</span>
-          </label>
-        </div>
-
-        <p v-if="error" class="error-msg">{{ error }}</p>
-        <button type="submit" class="btn-primary full">Continuar: Elegir Plan →</button>
-        <p class="auth-footer">¿Ya tienes cuenta? <NuxtLink to="/login">Inicia sesión</NuxtLink></p>
-      </form>
+        <h2>Registro de Paciente</h2>
+        <p class="redirect-desc">Valida tu CURP y completa tus datos en un proceso rapido y seguro</p>
+        <button type="button" class="btn-primary btn-register" @click="navigateTo('/registro-curp')">
+          Registrarme como Paciente
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <p class="auth-footer">¿Ya tienes cuenta? <NuxtLink to="/login">Inicia sesion</NuxtLink></p>
+      </div>
 
       <!-- PASO 2: SELECCIÓN DE PLAN -->
       <form v-if="tipo === 'paciente' && paso === 'plan'" @submit.prevent="handleSubmit" class="auth-form">
@@ -562,6 +477,21 @@ async function handleSubmit() {
 .btn-remove-ben:hover { background: #ffebee; border-radius: 4px; }
 .btn-add-ben { background: none; border: 1px dashed #00b894; color: #00b894; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; width: 100%; margin-top: 0.5rem; }
 .btn-add-ben:hover { background: #f0fff4; }
+
+/* Redirect to CURP registration */
+.paciente-redirect { text-align: center; padding: 2rem 0; }
+.redirect-icon { margin-bottom: 1rem; }
+.paciente-redirect h2 { font-size: 1.3rem; color: #2d3436; margin: 0 0 0.5rem; }
+.redirect-desc { color: #636e72; font-size: 0.9rem; margin: 0 0 1.5rem; line-height: 1.5; }
+.btn-register {
+  background: linear-gradient(135deg, #00b894, #00cec9);
+  color: white; border: none; padding: 0.85rem 2rem; border-radius: 10px;
+  cursor: pointer; font-size: 1rem; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  transition: all 0.2s;
+}
+.btn-register:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,184,148,0.3); }
+
 @media (max-width: 640px) {
   .form-row > .form-group { flex: 1 1 100%; min-width: 0; }
   .curp-input-group { flex-direction: column; }
