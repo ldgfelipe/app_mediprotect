@@ -88,7 +88,7 @@ onMounted(() => {
   if (!saved) { navigateTo('/login-asistente'); return }
   usuario.value = JSON.parse(saved)
   cargarCitas()
-  $fetch('/api/paquetes').then((d: any) => { paquetesLista.value = d?.paquetes || [] }).catch(() => {})
+  $fetch('/api/paquetes').then(d => { paquetesLista.value = d?.paquetes || [] }).catch(() => {})
 })
 
 async function cargarCitas() {
