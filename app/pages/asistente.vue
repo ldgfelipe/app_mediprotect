@@ -88,6 +88,7 @@ onMounted(() => {
   if (!saved) { navigateTo('/login-asistente'); return }
   usuario.value = JSON.parse(saved)
   cargarCitas()
+  $fetch('/api/paquetes').then((d: any) => { paquetesLista.value = d?.paquetes || [] }).catch(() => {})
 })
 
 async function cargarCitas() {
@@ -467,10 +468,14 @@ const loadingSearchPaciente = ref(false)
 const showNuevoPaciente = ref(false)
 const editandoPaciente = ref(false)
 const pacienteEditId = ref(null)
-const formPaciente = ref({ nombre: '', apellido: '', email: '', telefono: '', fecha_nacimiento: '', genero: '', ciudad: '', curp: '', password: '' })
+const formPaciente = ref({ nombre: '', apellido_paterno: '', apellido_materno: '', email: '', telefono: '', fecha_nacimiento: '', genero: '', ciudad: '', curp: '', estado_civil: '', ocupacion: '', codigo_postal: '', estado: '', municipio: '', id_paquete: '', password: '' })
 const savingPaciente = ref(false)
 const errorMsgPaciente = ref('')
 const okMsgPaciente = ref('')
+const curpValidandoPaciente = ref(false)
+const curpErrorPaciente = ref('')
+const curpDatosPaciente = ref<any>(null)
+const paquetesLista = ref<any[]>([])
 
 let adminPacienteSearchTimeout = null
 function buscarPacientesAdmin() {
@@ -484,8 +489,8 @@ function buscarPacientesAdmin() {
       const all = data?.pacientes || []
       const s = q.toLowerCase()
       resultadosPacientes.value = all.filter(p =>
-        `${p.nombre} ${p.apellido}`.toLowerCase().includes(s) ||
-        p.email?.toLowerCase().includes(s) || p.telefono?.includes(s)
+        `${p.nombre} ${p.apellido || ''}`.toLowerCase().includes(s) ||
+        p.email?.toLowerCase().includes(s) || p.telefono?.includes(s) || p.curp?.toLowerCase().includes(s)
       )
     } catch (e) { console.error(e) }
     loadingSearchPaciente.value = false
@@ -497,11 +502,14 @@ async function guardarPaciente() {
   if (!formPaciente.value.nombre || !formPaciente.value.email) { errorMsgPaciente.value = 'Nombre y email son requeridos'; return }
   savingPaciente.value = true
   try {
+    const body: any = { ...formPaciente.value }
+    if (!body.password) delete body.password
+    if (!body.id_paquete) delete body.id_paquete
     if (editandoPaciente.value && pacienteEditId.value) {
-      await $fetch(`/api/admin/pacientes/${pacienteEditId.value}`, { method: 'PUT', headers: { Authorization: 'Bearer ' + authToken.value }, body: formPaciente.value })
+      await $fetch(`/api/admin/pacientes/${pacienteEditId.value}`, { method: 'PUT', headers: { Authorization: 'Bearer ' + authToken.value }, body })
       okMsgPaciente.value = 'Paciente actualizado correctamente'
     } else {
-      await $fetch('/api/admin/pacientes', { method: 'POST', headers: { Authorization: 'Bearer ' + authToken.value }, body: formPaciente.value })
+      await $fetch('/api/admin/pacientes', { method: 'POST', headers: { Authorization: 'Bearer ' + authToken.value }, body })
       okMsgPaciente.value = 'Paciente registrado correctamente'
     }
     cerrarFormPaciente()
@@ -512,18 +520,49 @@ async function guardarPaciente() {
 }
 
 function abrirEditarPaciente(p) {
-  formPaciente.value = { nombre: p.nombre, apellido: p.apellido || '', email: p.email || '', telefono: p.telefono || '', fecha_nacimiento: p.fecha_nacimiento ? p.fecha_nacimiento.slice(0,10) : '', genero: p.genero || '', ciudad: p.ciudad || '', curp: p.curp || '', password: '' }
+  formPaciente.value = { nombre: p.nombre, apellido_paterno: p.apellido_paterno || p.apellido || '', apellido_materno: p.apellido_materno || '', email: p.email || '', telefono: p.telefono || '', fecha_nacimiento: p.fecha_nacimiento ? p.fecha_nacimiento.slice(0,10) : '', genero: p.genero || '', ciudad: p.ciudad || '', curp: p.curp || '', estado_civil: p.estado_civil || '', ocupacion: p.ocupacion || '', codigo_postal: p.codigo_postal || '', estado: p.estado || '', municipio: p.municipio || '', id_paquete: '', password: '' }
   pacienteEditId.value = p.id
   editandoPaciente.value = true
   showNuevoPaciente.value = true
+  curpDatosPaciente.value = null
+  curpErrorPaciente.value = ''
 }
 
 function cerrarFormPaciente() {
   showNuevoPaciente.value = false
   editandoPaciente.value = false
   pacienteEditId.value = null
-  formPaciente.value = { nombre: '', apellido: '', email: '', telefono: '', fecha_nacimiento: '', genero: '', ciudad: '', curp: '', password: '' }
+  formPaciente.value = { nombre: '', apellido_paterno: '', apellido_materno: '', email: '', telefono: '', fecha_nacimiento: '', genero: '', ciudad: '', curp: '', estado_civil: '', ocupacion: '', codigo_postal: '', estado: '', municipio: '', id_paquete: '', password: '' }
   errorMsgPaciente.value = ''
+  curpDatosPaciente.value = null
+  curpErrorPaciente.value = ''
+}
+
+// ========== CURP VALIDATION (PACIENTE) ==========
+async function validarCURPPaciente() {
+  curpErrorPaciente.value = ''
+  curpDatosPaciente.value = null
+  const curp = formPaciente.value.curp.toUpperCase().trim()
+  if (!curp || curp.length !== 18) { curpErrorPaciente.value = 'La CURP debe tener 18 caracteres'; return }
+  curpValidandoPaciente.value = true
+  try {
+    const data: any = await $fetch('/api/curp/validar', { params: { curp } })
+    if (data.error) { curpErrorPaciente.value = data.error_msg || 'No se pudieron obtener datos'; return }
+    curpDatosPaciente.value = data.response
+    const s = data.response?.Solicitante || {}
+    formPaciente.value.nombre = s.Nombres || formPaciente.value.nombre
+    formPaciente.value.apellido_paterno = s.ApellidoPaterno || formPaciente.value.apellido_paterno
+    formPaciente.value.apellido_materno = s.ApellidoMaterno || formPaciente.value.apellido_materno
+    if (s.FechaNacimiento) {
+      const parts = s.FechaNacimiento.split('/')
+      if (parts.length === 3) formPaciente.value.fecha_nacimiento = `${parts[2]}-${parts[1]}-${parts[0]}`
+    }
+    formPaciente.value.genero = s.ClaveSexo === 'H' ? 'masculino' : s.ClaveSexo === 'M' ? 'femenino' : formPaciente.value.genero
+    if (s.EntidadNacimiento) formPaciente.value.estado = s.EntidadNacimiento
+  } catch (e: any) {
+    curpErrorPaciente.value = e?.data?.message || 'Error al validar CURP'
+  }
+  curpValidandoPaciente.value = false
 }
 
 // ========== SECCION: EMPRESAS (crear/buscar/editar/asociar) ==========
@@ -1277,15 +1316,43 @@ async function crearPacienteParaEmpresa() {
 
     <!-- Modal NUEVO/EDITAR PACIENTE -->
     <div v-if="showNuevoPaciente" class="modal-overlay" @click.self="cerrarFormPaciente">
-      <div class="modal">
+      <div class="modal" style="max-width:650px">
         <div class="modal-header"><h2>{{ editandoPaciente ? 'Editar' : 'Nuevo' }} Paciente</h2><button @click="cerrarFormPaciente" class="close">&times;</button></div>
         <div class="modal-body">
           <div v-if="errorMsgPaciente" class="error">{{ errorMsgPaciente }}</div>
-          <div class="field-row"><div class="field"><label>Nombre *</label><input v-model="formPaciente.nombre" /></div><div class="field"><label>Apellido</label><input v-model="formPaciente.apellido" /></div></div>
+          <div v-if="okMsgPaciente" class="success">{{ okMsgPaciente }}</div>
+
+          <!-- CURP -->
+          <div class="form-section-label">Datos Oficiales (CURP)</div>
+          <div class="curp-row">
+            <div class="field" style="flex:1"><label>CURP</label><input v-model="formPaciente.curp" maxlength="18" placeholder="18 caracteres" style="text-transform:uppercase;font-family:monospace;letter-spacing:1px" @keyup.enter="validarCURPPaciente" /></div>
+            <button class="btn-validate" @click="validarCURPPaciente" :disabled="curpValidandoPaciente || !formPaciente.curp || formPaciente.curp.length !== 18">
+              <span v-if="curpValidandoPaciente" class="spinner-sm"></span><span v-else>Validar</span>
+            </button>
+          </div>
+          <div v-if="curpErrorPaciente" class="error" style="margin-top:0.5rem">{{ curpErrorPaciente }}</div>
+          <div v-if="curpDatosPaciente" class="curp-success"><span class="check-icon">&#10003;</span> Datos cargados de CURP</div>
+
+          <!-- PERSONAL -->
+          <div class="form-section-label">Datos Personales</div>
+          <div class="field-row"><div class="field"><label>Nombre *</label><input v-model="formPaciente.nombre" /></div><div class="field"><label>Apellido Paterno</label><input v-model="formPaciente.apellido_paterno" /></div></div>
+          <div class="field-row"><div class="field"><label>Apellido Materno</label><input v-model="formPaciente.apellido_materno" /></div><div class="field"><label>Genero</label><select v-model="formPaciente.genero"><option value="">---</option><option value="masculino">Masculino</option><option value="femenino">Femenino</option></select></div></div>
+          <div class="field-row"><div class="field"><label>Fecha nacimiento</label><input v-model="formPaciente.fecha_nacimiento" type="date" /></div><div class="field"><label>Estado Civil</label><select v-model="formPaciente.estado_civil"><option value="">---</option><option value="soltero/a">Soltero/a</option><option value="casado/a">Casado/a</option><option value="divorciado/a">Divorciado/a</option><option value="viudo/a">Viudo/a</option><option value="union libre">Union libre</option></select></div></div>
+          <div class="field-row"><div class="field"><label>Ocupacion</label><input v-model="formPaciente.ocupacion" /></div><div class="field"><label>Ciudad</label><input v-model="formPaciente.ciudad" /></div></div>
+
+          <!-- CONTACTO -->
+          <div class="form-section-label">Contacto</div>
           <div class="field-row"><div class="field"><label>Email *</label><input v-model="formPaciente.email" type="email" /></div><div class="field"><label>Telefono</label><input v-model="formPaciente.telefono" /></div></div>
-          <div class="field-row"><div class="field"><label>Fecha nacimiento</label><input v-model="formPaciente.fecha_nacimiento" type="date" /></div><div class="field"><label>Genero</label><select v-model="formPaciente.genero"><option value="">---</option><option value="masculino">Masculino</option><option value="femenino">Femenino</option></select></div></div>
-          <div class="field-row"><div class="field"><label>Ciudad</label><input v-model="formPaciente.ciudad" /></div><div class="field"><label>CURP</label><input v-model="formPaciente.curp" maxlength="18" /></div></div>
-          <div class="field"><label>Contrasena (default: mediprotect123)</label><input v-model="formPaciente.password" type="password" placeholder="******" /></div>
+          <div class="field-row"><div class="field"><label>Codigo Postal</label><input v-model="formPaciente.codigo_postal" maxlength="5" /></div><div class="field"><label>Estado</label><input v-model="formPaciente.estado" /></div></div>
+          <div class="field"><label>Municipio</label><input v-model="formPaciente.municipio" /></div>
+
+          <!-- PLAN & PASSWORD -->
+          <div class="form-section-label">Plan y Acceso</div>
+          <div class="field-row">
+            <div class="field"><label>Plan / Paquete</label><select v-model="formPaciente.id_paquete"><option value="">Sin plan</option><option v-for="p in paquetesLista" :key="p.id" :value="p.id">{{ p.nombre }} — ${{ p.precio }}</option></select></div>
+            <div class="field"><label>{{ editandoPaciente ? 'Password (vacio = no cambiar)' : 'Password' }}</label><input v-model="formPaciente.password" type="password" :placeholder="editandoPaciente ? 'Dejar vacio para no cambiar' : 'mediprotect123'" /></div>
+          </div>
+
           <div class="btn-row"><button @click="cerrarFormPaciente" class="btn-secondary">Cancelar</button><button @click="guardarPaciente" :disabled="savingPaciente" class="btn-primary">{{ savingPaciente ? 'Guardando...' : (editandoPaciente ? 'Actualizar' : 'Guardar') }}</button></div>
         </div>
       </div>
@@ -1697,4 +1764,20 @@ h1 { font-size: 1.5rem; color: #2d3436; }
 .stat-badge.orange { background: #ffeaa7; color: #fdcb6e; }
 .autocomplete-arrow { flex-shrink: 0; color: #b2bec3; }
 .autocomplete-empty { padding: 0.75rem; text-align: center; color: #636e72; font-size: 0.85rem; background: #fafbfc; border: 1px solid #e0e6ed; border-radius: 8px; margin-top: 4px; }
+
+/* CURP & Plan Assignment */
+.curp-row { display: flex; gap: 0.75rem; align-items: flex-end; }
+.btn-validate { background: #0984e3; color: white; border: none; padding: 0.55rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; white-space: nowrap; min-width: 90px; display: flex; align-items: center; justify-content: center; height: fit-content; }
+.btn-validate:hover:not(:disabled) { background: #0770c2; }
+.btn-validate:disabled { opacity: 0.5; cursor: not-allowed; }
+.spinner-sm { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spinCurp 0.6s linear infinite; display: inline-block; }
+@keyframes spinCurp { to { transform: rotate(360deg); } }
+.curp-success { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.5rem; font-size: 0.82rem; color: #2e7d32; background: #e8f5e9; padding: 0.4rem 0.75rem; border-radius: 6px; }
+.check-icon { width: 20px; height: 20px; background: #2e7d32; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; }
+.form-section-label { font-size: 0.72rem; color: #00b894; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin: 0.75rem 0 0.5rem; padding-top: 0.75rem; border-top: 1px solid #f0f2f5; }
+.form-section-label:first-child { border-top: none; margin-top: 0; padding-top: 0; }
+.success { background: #e8f5e9; color: #2e7d32; padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 0.75rem; }
+@media (max-width: 640px) {
+  .curp-row { flex-direction: column; }
+}
 </style>

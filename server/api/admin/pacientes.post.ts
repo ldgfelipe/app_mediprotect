@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event)
   const { nombre, apellido, email, password, telefono, fecha_nacimiento, genero, ciudad, curp, id_empresa,
     apellido_paterno, apellido_materno, codigo_postal, estado, municipio, telefono2, hospital_consultorio,
-    beneficiarios } = body
+    id_paquete, beneficiarios } = body
 
   if (!nombre || !email) {
     throw createError({ statusCode: 400, message: 'Nombre y email son requeridos' })
@@ -60,6 +60,27 @@ export default defineEventHandler(async (event) => {
           [paciente.id, b.nombre, b.apellido_paterno || null, b.apellido_materno || null, b.parentesco || null, b.telefono || null]
         )
       } catch {}
+    }
+  }
+
+  if (id_paquete) {
+    const planInfo = await pool.query('SELECT id, precio, slug FROM paquetes WHERE id = $1 AND activo = true', [id_paquete])
+    if (planInfo.rows.length > 0) {
+      const esGratis = parseFloat(planInfo.rows[0].precio) === 0
+      if (esGratis) {
+        await pool.query(
+          `INSERT INTO paciente_paquete (id_paciente, id_paquete, fecha_inicio, activo)
+           VALUES ($1, $2, NOW(), true)`,
+          [paciente.id, id_paquete]
+        )
+        await pool.query('UPDATE pacientes SET plan_contratado = $1 WHERE id = $2', [planInfo.rows[0].slug, paciente.id])
+      } else {
+        await pool.query(
+          `INSERT INTO pagos (id_paciente, id_plan, monto, moneda, provedor, estado, sandbox, descripcion)
+           VALUES ($1, $2, $3, 'MXN', 'admin', 'pendiente', true, $4)`,
+          [paciente.id, id_paquete, planInfo.rows[0].precio, `Plan ${planInfo.rows[0].slug} - Asignado por admin`]
+        )
+      }
     }
   }
 
