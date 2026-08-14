@@ -474,8 +474,8 @@ const errorMsgPaciente = ref('')
 const okMsgPaciente = ref('')
 const curpValidandoPaciente = ref(false)
 const curpErrorPaciente = ref('')
-const curpDatosPaciente = ref<any>(null)
-const paquetesLista = ref<any[]>([])
+const curpDatosPaciente = ref(null)
+const paquetesLista = ref([])
 
 let adminPacienteSearchTimeout = null
 function buscarPacientesAdmin() {
@@ -502,7 +502,7 @@ async function guardarPaciente() {
   if (!formPaciente.value.nombre || !formPaciente.value.email) { errorMsgPaciente.value = 'Nombre y email son requeridos'; return }
   savingPaciente.value = true
   try {
-    const body: any = { ...formPaciente.value }
+    const body = { ...formPaciente.value }
     if (!body.password) delete body.password
     if (!body.id_paquete) delete body.id_paquete
     if (editandoPaciente.value && pacienteEditId.value) {
@@ -546,7 +546,7 @@ async function validarCURPPaciente() {
   if (!curp || curp.length !== 18) { curpErrorPaciente.value = 'La CURP debe tener 18 caracteres'; return }
   curpValidandoPaciente.value = true
   try {
-    const data: any = await $fetch('/api/curp/validar', { params: { curp } })
+    const data = await $fetch('/api/curp/validar', { params: { curp } })
     if (data.error) { curpErrorPaciente.value = data.error_msg || 'No se pudieron obtener datos'; return }
     curpDatosPaciente.value = data.response
     const s = data.response?.Solicitante || {}
@@ -559,7 +559,7 @@ async function validarCURPPaciente() {
     }
     formPaciente.value.genero = s.ClaveSexo === 'H' ? 'masculino' : s.ClaveSexo === 'M' ? 'femenino' : formPaciente.value.genero
     if (s.EntidadNacimiento) formPaciente.value.estado = s.EntidadNacimiento
-  } catch (e: any) {
+  } catch (e) {
     curpErrorPaciente.value = e?.data?.message || 'Error al validar CURP'
   }
   curpValidandoPaciente.value = false
