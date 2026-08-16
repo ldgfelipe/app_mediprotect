@@ -20,7 +20,8 @@ export default defineEventHandler(async (event) => {
     const { clave, valor } = config
     if (!clave) continue
 
-    const result = await pool.query(
+    // Intentar UPDATE primero, si no existe hacer INSERT
+    let result = await pool.query(
       `UPDATE configuracion_sistema
        SET valor = $1, updated_at = NOW()
        WHERE clave = $2
@@ -28,9 +29,16 @@ export default defineEventHandler(async (event) => {
       [valor || '', clave]
     )
 
-    if (result.rowCount > 0) {
-      resultados.push(result.rows[0])
+    if (result.rowCount === 0) {
+      result = await pool.query(
+        `INSERT INTO configuracion_sistema (clave, valor, tipo, categoria)
+         VALUES ($1, $2, 'text', 'general')
+         RETURNING id, clave, valor, tipo, categoria`,
+        [clave, valor || '']
+      )
     }
+
+    resultados.push(result.rows[0])
   }
 
   return { success: true, actualizados: resultados.length, configuracion: resultados }

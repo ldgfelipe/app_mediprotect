@@ -107,6 +107,97 @@
           </div>
         </div>
 
+        <!-- Configuración CURP -->
+        <div class="config-section">
+          <div class="section-header">
+            <div class="section-title">
+              <span class="provider-icon-lg">🪪</span>
+              <div>
+                <h3>Validación CURP</h3>
+                <p class="section-desc">API para consulta de datos oficiales del Registro Nacional de Población</p>
+              </div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" v-model="curp.enabled" @change="markDirty">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="section-body" v-if="curp.enabled">
+            <!-- Modo Producción / Prueba -->
+            <div class="mode-switcher">
+              <div class="mode-option" :class="{ active: curp.modo === 'produccion' }" @click="curp.modo = 'produccion'; markDirty()">
+                <div class="mode-icon mode-icon--prod">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M8 12l3 3 5-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <div class="mode-info">
+                  <strong>Produccion</strong>
+                  <span>API Key real con consultas ilimitadas</span>
+                </div>
+                <div class="mode-radio" :class="{ checked: curp.modo === 'produccion' }"></div>
+              </div>
+
+              <div class="mode-option" :class="{ active: curp.modo === 'prueba' }" @click="curp.modo = 'prueba'; markDirty()">
+                <div class="mode-icon mode-icon--test">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                </div>
+                <div class="mode-info">
+                  <strong>Prueba</strong>
+                  <span>Token de prueba con consultas limitadas</span>
+                </div>
+                <div class="mode-radio" :class="{ checked: curp.modo === 'prueba' }"></div>
+              </div>
+            </div>
+
+            <!-- API Key (solo en modo produccion) -->
+            <div v-if="curp.modo === 'produccion'" class="form-row" style="margin-top: 1rem;">
+              <div class="form-group flex-1">
+                <label>API Key de Valida CURP</label>
+                <div class="input-with-action">
+                  <input
+                    :type="curp.showKey ? 'text' : 'password'"
+                    v-model="curp.apiKey"
+                    placeholder="Ingresa tu API Key de valida-curp.com.mx"
+                    @input="markDirty"
+                  >
+                  <button class="btn-icon" @click="curp.showKey = !curp.showKey">
+                    {{ curp.showKey ? '🙈' : '👁️' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Token de prueba (solo en modo prueba) -->
+            <div v-if="curp.modo === 'prueba'" class="form-row" style="margin-top: 1rem;">
+              <div class="form-group flex-1">
+                <label>Token de prueba</label>
+                <input
+                  type="text"
+                  v-model="curp.testToken"
+                  placeholder="pruebas"
+                  @input="markDirty"
+                >
+              </div>
+            </div>
+
+            <div class="provider-info">
+              <p>Obtén tu API Key en <a href="https://api.valida-curp.com.mx" target="_blank">api.valida-curp.com.mx</a>.
+              En modo prueba se usa el token generico con limites de consultas.</p>
+            </div>
+
+            <div class="curp-status" :class="curp.modo === 'produccion' ? 'status-prod' : 'status-test'">
+              <span class="status-badge" :class="curp.modo === 'produccion' ? 'badge-prod' : 'badge-test'">
+                {{ curp.modo === 'produccion' ? 'Produccion' : 'Prueba' }}
+              </span>
+              <span class="status-detail">
+                {{ curp.modo === 'produccion'
+                  ? (curp.apiKey ? 'API Key configurada - consultas reales' : 'Configura tu API Key para activar')
+                  : 'Token de prueba activo - consultas de demostracion' }}
+              </span>
+            </div>
+          </div>
+        </div>
+
         <!-- Configuración general de IA -->
         <div class="config-section">
           <div class="section-header">
@@ -261,6 +352,14 @@ const general = ref({
   buscarFotos: true
 })
 
+const curp = ref({
+  enabled: true,
+  modo: 'prueba',
+  apiKey: '',
+  testToken: 'pruebas',
+  showKey: false,
+})
+
 const loadConfig = async () => {
   try {
     const { data } = await useFetch('/api/admin/configuracion', {
@@ -288,6 +387,12 @@ const loadConfig = async () => {
     general.value.idioma = configMap['ai_idioma_busqueda'] || 'es'
     general.value.buscarFotos = configMap['ai_buscar_fotos'] === 'true'
 
+    // CURP config
+    curp.value.enabled = configMap['curp_enabled'] !== 'false'
+    curp.value.modo = configMap['curp_modo'] || 'prueba'
+    curp.value.apiKey = configMap['curp_api_key'] || ''
+    curp.value.testToken = configMap['curp_test_token'] || 'pruebas'
+
     isDirty.value = false
   } catch (err) {
     console.error('Error cargando configuración:', err)
@@ -311,6 +416,12 @@ const saveConfig = async () => {
     configuraciones.push({ clave: 'ai_provider_preferido', valor: general.value.preferido })
     configuraciones.push({ clave: 'ai_idioma_busqueda', valor: general.value.idioma })
     configuraciones.push({ clave: 'ai_buscar_fotos', valor: general.value.buscarFotos ? 'true' : 'false' })
+
+    // CURP config
+    configuraciones.push({ clave: 'curp_enabled', valor: curp.value.enabled ? 'true' : 'false' })
+    configuraciones.push({ clave: 'curp_modo', valor: curp.value.modo })
+    configuraciones.push({ clave: 'curp_api_key', valor: curp.value.apiKey || '' })
+    configuraciones.push({ clave: 'curp_test_token', valor: curp.value.testToken || 'pruebas' })
 
     await $fetch('/api/admin/configuracion', {
       method: 'POST',
@@ -668,6 +779,136 @@ nav {
 
 .provider-info a:hover {
   text-decoration: underline;
+}
+
+/* CURP Status */
+.mode-switcher {
+  display: flex;
+  gap: 1rem;
+}
+
+.mode-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #fafafa;
+}
+
+.mode-option:hover {
+  border-color: #b2bec3;
+}
+
+.mode-option.active {
+  border-color: #00b894;
+  background: #f0fff4;
+}
+
+.mode-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mode-icon--prod {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.mode-icon--test {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.mode-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.mode-info strong {
+  display: block;
+  font-size: 0.9rem;
+  color: #2d3436;
+  margin-bottom: 0.1rem;
+}
+
+.mode-info span {
+  font-size: 0.75rem;
+  color: #636e72;
+}
+
+.mode-radio {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid #d0d0d0;
+  flex-shrink: 0;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.mode-radio.checked {
+  border-color: #00b894;
+}
+
+.mode-radio.checked::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  background: #00b894;
+  border-radius: 50%;
+}
+
+.curp-status {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+}
+
+.curp-status.status-prod {
+  background: #f0fff4;
+  border: 1px solid #c8e6c9;
+}
+
+.curp-status.status-test {
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+}
+
+.status-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-prod {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.badge-test {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.status-detail {
+  font-size: 0.8rem;
+  color: #636e72;
 }
 
 /* Action Bar */

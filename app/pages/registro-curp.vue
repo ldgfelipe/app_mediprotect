@@ -172,8 +172,15 @@ async function completarRegistro(esPago = false) {
 
 function formatoFecha(fecha: string) {
   if (!fecha) return ''
-  const [d, m, y] = fecha.split('/')
-  return `${d}/${m}/${y}`
+  if (fecha.includes('-')) {
+    const [y, m, d] = fecha.split('-')
+    return `${d}/${m}/${y}`
+  }
+  if (fecha.includes('/')) {
+    const [d, m, y] = fecha.split('/')
+    return `${d}/${m}/${y}`
+  }
+  return fecha
 }
 
 const esPlanGratis = computed(() => paqueteSeleccionado.value && parseFloat(paqueteSeleccionado.value.precio) === 0)
