@@ -29,9 +29,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const { nombre, apellido, telefono, fecha_nacimiento, genero, direccion, ciudad, beneficiario_nombre, beneficiario_parentesco, beneficiario_telefono, estudios,
-    apellido_paterno, apellido_materno, codigo_postal, estado, municipio, telefono2, hospital_consultorio,
-    beneficiarios } = body
-  const apellidoPat = apellido_paterno || (apellido ? apellido : undefined)
+    estado_civil, ocupacion, beneficiarios } = body
   const result = await pool.query(
     `UPDATE pacientes SET nombre = COALESCE($1, nombre), apellido = COALESCE($2, apellido),
      telefono = COALESCE($3, telefono), fecha_nacimiento = COALESCE($4, fecha_nacimiento),
@@ -40,16 +38,15 @@ export default defineEventHandler(async (event) => {
      beneficiario_nombre = COALESCE($8, beneficiario_nombre),
      beneficiario_parentesco = COALESCE($9, beneficiario_parentesco),
      beneficiario_telefono = COALESCE($10, beneficiario_telefono),
-     apellido_paterno = COALESCE($11, apellido_paterno), apellido_materno = COALESCE($12, apellido_materno),
-     codigo_postal = COALESCE($13, codigo_postal), estado = COALESCE($14, estado),
-     municipio = COALESCE($15, municipio), telefono2 = COALESCE($16, telefono2),
-     hospital_consultorio = COALESCE($17, hospital_consultorio),
+     estado_civil = COALESCE($11, estado_civil),
+     ocupacion = COALESCE($12, ocupacion),
      updated_at = NOW()
-     WHERE id = $18 RETURNING id, nombre, apellido, apellido_paterno, apellido_materno, email, telefono, fecha_nacimiento, genero, direccion, ciudad,
+     WHERE id = $13 RETURNING id, nombre, apellido, email, telefono, fecha_nacimiento, genero, direccion, ciudad,
+     curp, estado_civil, ocupacion, como_nos_conociste,
      beneficiario_nombre, beneficiario_parentesco, beneficiario_telefono,
-     codigo_postal, estado, municipio, telefono2, hospital_consultorio, created_at`,
+     identificacion_tipo, identificacion_numero, acepta_seguro, plan_contratado, created_at`,
     [nombre, apellido, telefono, fecha_nacimiento, genero, direccion, ciudad, beneficiario_nombre, beneficiario_parentesco, beneficiario_telefono,
-      apellidoPat, apellido_materno, codigo_postal || null, estado || null, municipio || null, telefono2 || null, hospital_consultorio || null,
+      estado_civil || null, ocupacion || null,
       decoded.id]
   )
   if (result.rows.length === 0) throw createError({ statusCode: 404, message: 'No encontrado' })

@@ -12,26 +12,22 @@ const photoPreview = ref<string | null>(null)
 const form = ref({
   nombre: usuario.value?.nombre || '',
   apellido: usuario.value?.apellido || '',
-  apellido_paterno: usuario.value?.apellido_paterno || '',
-  apellido_materno: usuario.value?.apellido_materno || '',
-  telefono: usuario.value?.telefono || '',
-  telefono2: usuario.value?.telefono2 || '',
+  curp: usuario.value?.curp || '',
   fecha_nacimiento: usuario.value?.fecha_nacimiento || '',
   genero: usuario.value?.genero || '',
+  estado_civil: usuario.value?.estado_civil || '',
+  ocupacion: usuario.value?.ocupacion || '',
+  telefono: usuario.value?.telefono || '',
+  email: usuario.value?.email || '',
   direccion: usuario.value?.direccion || '',
   ciudad: usuario.value?.ciudad || '',
-  codigo_postal: usuario.value?.codigo_postal || '',
-  estado: usuario.value?.estado || '',
-  municipio: usuario.value?.municipio || '',
-  cedula_profesional: usuario.value?.cedula_profesional || '',
-  consultorio_direccion: usuario.value?.consultorio_direccion || '',
-  consultorio_ciudad: usuario.value?.consultorio_ciudad || '',
-  consultorio_estado: usuario.value?.consultorio_estado || '',
-  bio: usuario.value?.bio || '',
   beneficiario_nombre: usuario.value?.beneficiario_nombre || '',
   beneficiario_parentesco: usuario.value?.beneficiario_parentesco || '',
   beneficiario_telefono: usuario.value?.beneficiario_telefono || '',
 })
+
+const planContratado = ref(usuario.value?.plan_contratado || null)
+const esPlanPago = computed(() => planContratado.value && planContratado.value !== 'basico')
 
 const beneficiarios = ref<any[]>([])
 const nuevoBeneficiario = ref({ nombre: '', apellido_paterno: '', apellido_materno: '', parentesco: '', telefono: '' })
@@ -53,20 +49,19 @@ onMounted(async () => {
     if (u) {
       form.value.nombre = u.nombre || ''
       form.value.apellido = u.apellido || ''
-      form.value.apellido_paterno = u.apellido_paterno || ''
-      form.value.apellido_materno = u.apellido_materno || ''
-      form.value.telefono = u.telefono || ''
-      form.value.telefono2 = u.telefono2 || ''
+      form.value.curp = u.curp || ''
       form.value.fecha_nacimiento = u.fecha_nacimiento ? u.fecha_nacimiento.slice(0, 10) : ''
       form.value.genero = u.genero || ''
+      form.value.estado_civil = u.estado_civil || ''
+      form.value.ocupacion = u.ocupacion || ''
+      form.value.telefono = u.telefono || ''
+      form.value.email = u.email || ''
       form.value.direccion = u.direccion || ''
       form.value.ciudad = u.ciudad || ''
-      form.value.codigo_postal = u.codigo_postal || ''
-      form.value.estado = u.estado || ''
-      form.value.municipio = u.municipio || ''
       form.value.beneficiario_nombre = u.beneficiario_nombre || ''
       form.value.beneficiario_parentesco = u.beneficiario_parentesco || ''
       form.value.beneficiario_telefono = u.beneficiario_telefono || ''
+      planContratado.value = u.plan_contratado || null
       if (u.beneficiarios) beneficiarios.value = u.beneficiarios
       if (esMedico.value) {
         form.value.cedula_profesional = u.cedula_profesional || ''
@@ -247,67 +242,35 @@ function cerrarSesion() {
       <form @submit.prevent="guardar" class="perfil-form">
         <div class="form-row">
           <div class="form-group"><label>Nombre</label><input v-model="form.nombre" required /></div>
-          <div class="form-group"><label>Apellido paterno</label><input v-model="form.apellido_paterno" /></div>
-          <div class="form-group"><label>Apellido materno</label><input v-model="form.apellido_materno" /></div>
+          <div class="form-group"><label>Apellido</label><input v-model="form.apellido" /></div>
         </div>
         <div class="form-row">
           <div class="form-group"><label>Telefono</label><input v-model="form.telefono" type="tel" placeholder="+52 55 1234 5678" /></div>
-          <div class="form-group"><label>Telefono 2</label><input v-model="form.telefono2" type="tel" placeholder="Opcional" /></div>
+          <div class="form-group"><label>Email</label><input v-model="form.email" type="email" disabled style="background:#f5f5f5" /></div>
         </div>
 
         <template v-if="esPaciente">
+          <div class="section-divider">
+            <span>Datos del CURP</span>
+          </div>
+          <div class="form-group"><label>CURP</label><input v-model="form.curp" disabled style="background:#f5f5f5; font-family:monospace; letter-spacing:1px" /></div>
           <div class="form-row">
-            <div class="form-group"><label>Fecha de Nacimiento</label><input v-model="form.fecha_nacimiento" type="date" /></div>
+            <div class="form-group"><label>Fecha de Nacimiento</label><input v-model="form.fecha_nacimiento" type="date" disabled style="background:#f5f5f5" /></div>
             <div class="form-group">
               <label>Genero</label>
-              <select v-model="form.genero"><option value="">Seleccionar</option><option value="masculino">Masculino</option><option value="femenino">Femenino</option><option value="otro">Otro</option></select>
+              <select v-model="form.genero" disabled style="background:#f5f5f5"><option value="">Seleccionar</option><option value="masculino">Masculino</option><option value="femenino">Femenino</option></select>
             </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Estado Civil</label><input v-model="form.estado_civil" disabled style="background:#f5f5f5" /></div>
+            <div class="form-group"><label>Ocupacion</label><input v-model="form.ocupacion" /></div>
+          </div>
+
+          <div class="section-divider">
+            <span>Direccion</span>
           </div>
           <div class="form-group"><label>Direccion</label><textarea v-model="form.direccion" rows="2"></textarea></div>
-          <div class="form-row">
-            <div class="form-group"><label>Ciudad</label><input v-model="form.ciudad" /></div>
-            <div class="form-group"><label>Municipio</label><input v-model="form.municipio" /></div>
-          </div>
-          <div class="form-row">
-            <div class="form-group"><label>Estado</label>
-              <select v-model="form.estado">
-                <option value="">Seleccionar...</option>
-                <option value="Aguascalientes">Aguascalientes</option>
-                <option value="Baja California">Baja California</option>
-                <option value="Baja California Sur">Baja California Sur</option>
-                <option value="Campeche">Campeche</option>
-                <option value="Chiapas">Chiapas</option>
-                <option value="Chihuahua">Chihuahua</option>
-                <option value="Ciudad de México">Ciudad de México</option>
-                <option value="Coahuila">Coahuila</option>
-                <option value="Colima">Colima</option>
-                <option value="Durango">Durango</option>
-                <option value="Estado de México">Estado de México</option>
-                <option value="Guanajuato">Guanajuato</option>
-                <option value="Guerrero">Guerrero</option>
-                <option value="Hidalgo">Hidalgo</option>
-                <option value="Jalisco">Jalisco</option>
-                <option value="Michoacán">Michoacán</option>
-                <option value="Morelos">Morelos</option>
-                <option value="Nayarit">Nayarit</option>
-                <option value="Nuevo León">Nuevo León</option>
-                <option value="Oaxaca">Oaxaca</option>
-                <option value="Puebla">Puebla</option>
-                <option value="Querétaro">Querétaro</option>
-                <option value="Quintana Roo">Quintana Roo</option>
-                <option value="San Luis Potosí">San Luis Potosí</option>
-                <option value="Sinaloa">Sinaloa</option>
-                <option value="Sonora">Sonora</option>
-                <option value="Tabasco">Tabasco</option>
-                <option value="Tamaulipas">Tamaulipas</option>
-                <option value="Tlaxcala">Tlaxcala</option>
-                <option value="Veracruz">Veracruz</option>
-                <option value="Yucatán">Yucatán</option>
-                <option value="Zacatecas">Zacatecas</option>
-              </select>
-            </div>
-            <div class="form-group"><label>Codigo Postal</label><input v-model="form.codigo_postal" maxlength="5" /></div>
-          </div>
+          <div class="form-group"><label>Ciudad</label><input v-model="form.ciudad" /></div>
         </template>
 
         <template v-if="esMedico">
@@ -323,9 +286,9 @@ function cerrarSesion() {
         <button type="submit" class="btn-primary" :disabled="loading">{{ loading ? 'Guardando...' : 'Guardar Cambios' }}</button>
       </form>
 
-      <div v-if="esPaciente" class="section-divider"></div>
+      <div v-if="esPaciente && esPlanPago" class="section-divider"></div>
 
-      <div v-if="esPaciente" class="section-card">
+      <div v-if="esPaciente && esPlanPago" class="section-card">
         <div class="section-header">
           <h2>Beneficiario / Contacto de Emergencia</h2>
         </div>
@@ -341,9 +304,9 @@ function cerrarSesion() {
         </div>
       </div>
 
-      <div v-if="esPaciente" class="section-divider"></div>
+      <div v-if="esPaciente && esPlanPago" class="section-divider"></div>
 
-      <div v-if="esPaciente" class="section-card">
+      <div v-if="esPaciente && esPlanPago" class="section-card">
         <div class="section-header">
           <h2>Beneficiarios Adicionales</h2>
         </div>
@@ -431,6 +394,8 @@ function cerrarSesion() {
 .form-group label { font-size: 0.85rem; color: #636e72; margin-bottom: 0.3rem; font-weight: 500; }
 .form-group input, .form-group textarea, .form-group select { padding: 0.6rem 0.8rem; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 0.9rem; }
 .form-group input:focus, .form-group textarea:focus, .form-group select:focus { outline: none; border-color: #00b894; }
+.section-divider { border-top: 1px solid #eee; padding-top: 0.75rem; margin-top: 0.5rem; }
+.section-divider span { font-size: 0.75rem; color: #00b894; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
 .btn-primary { background: #00b894; color: white; border: none; padding: 0.7rem 1.5rem; border-radius: 8px; cursor: pointer; font-size: 0.95rem; margin-top: 0.5rem; align-self: flex-start; }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 .photo-section { margin-bottom: 2rem; padding: 1.5rem; background: #f8f9fa; border-radius: 12px; }

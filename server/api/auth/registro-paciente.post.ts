@@ -24,7 +24,11 @@ export default defineEventHandler(async (event) => {
       curp, estado_civil, ocupacion, beneficiario_nombre, beneficiario_parentesco, beneficiario_telefono,
       identificacion_tipo, identificacion_numero, acepta_seguro, plan_contratado)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
-     RETURNING id, nombre, apellido, email, telefono, created_at`,
+     RETURNING id, nombre, apellido, email, telefono, fecha_nacimiento, genero, direccion, ciudad,
+       curp, estado_civil, ocupacion, como_nos_conociste,
+       beneficiario_nombre, beneficiario_parentesco, beneficiario_telefono,
+       identificacion_tipo, identificacion_numero, acepta_seguro, plan_contratado,
+       acepta_terminos, acepta_marketing, created_at`,
     [nombre, apellidoCompleto, email, password_hash, telefono, fecha_nacimiento, genero, direccion,
       ciudad || null, como_nos_conociste || null, acepta_terminos || false, acepta_marketing || false,
       curp || null, estado_civil || null, ocupacion || null, beneficiario_nombre || null, beneficiario_parentesco || null, beneficiario_telefono || null,

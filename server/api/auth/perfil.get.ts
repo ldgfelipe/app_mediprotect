@@ -17,7 +17,10 @@ export default defineEventHandler(async (event) => {
 
   const result = await pool.query(
     `SELECT id, nombre, apellido, email, telefono, fecha_nacimiento, genero, direccion, ciudad,
+     curp, estado_civil, ocupacion, como_nos_conociste,
      beneficiario_nombre, beneficiario_parentesco, beneficiario_telefono,
+     identificacion_tipo, identificacion_numero, acepta_seguro, plan_contratado,
+     acepta_terminos, acepta_marketing,
      COALESCE(estudios, '[]'::jsonb) as estudios, created_at
      FROM pacientes WHERE id = $1`, [id]
   )
