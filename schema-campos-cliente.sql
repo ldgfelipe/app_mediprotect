@@ -63,6 +63,13 @@ UPDATE medicos SET apellido_paterno = apellido WHERE apellido_paterno IS NULL AN
 -- RFC
 ALTER TABLE medicos ADD COLUMN IF NOT EXISTS rfc VARCHAR(13);
 
+-- CURP
+ALTER TABLE medicos ADD COLUMN IF NOT EXISTS curp VARCHAR(18);
+
+-- Domicilio del consultorio
+ALTER TABLE medicos ADD COLUMN IF NOT EXISTS codigo_postal VARCHAR(10);
+ALTER TABLE medicos ADD COLUMN IF NOT EXISTS colonia VARCHAR(200);
+
 -- Hospital o consultorio (texto libre)
 ALTER TABLE medicos ADD COLUMN IF NOT EXISTS hospital_consultorio VARCHAR(200);
 

@@ -1,5 +1,7 @@
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
+import crypto from 'crypto'
+import { enviarCorreo } from '../../utils/email.js'
 
 export default defineEventHandler(async (event) => {
   const token = getHeader(event, 'authorization')?.replace('Bearer ', '') || getCookie(event, 'admin_token')
@@ -10,10 +12,19 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event)
   const { nombre, apellido, email, password, telefono, fecha_nacimiento, genero, ciudad, curp, id_empresa,
     apellido_paterno, apellido_materno, codigo_postal, estado, municipio, telefono2, hospital_consultorio,
-    id_paquete, beneficiarios } = body
+    id_paquete, beneficiarios, colonia } = body
 
   if (!nombre || !email) {
     throw createError({ statusCode: 400, message: 'Nombre y email son requeridos' })
+  }
+
+  const curpUpper = (curp || '').toUpperCase().trim()
+  if (curpUpper && !/^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/.test(curpUpper)) {
+    throw createError({ statusCode: 400, message: 'El formato de CURP no es válido' })
+  }
+
+  if (codigo_postal && !/^\d{5}$/.test(codigo_postal)) {
+    throw createError({ statusCode: 400, message: 'El código postal debe tener 5 dígitos' })
   }
 
   const pool = getPool()
@@ -24,23 +35,50 @@ export default defineEventHandler(async (event) => {
   }
 
   const password_hash = await bcrypt.hash(password || 'mediprotect123', 10)
-
   const apellidoPat = apellido_paterno || (apellido ? apellido : null)
 
   const result = await pool.query(`
     INSERT INTO pacientes (nombre, apellido, apellido_paterno, apellido_materno, email, password_hash, telefono, fecha_nacimiento, genero, ciudad, curp,
-      codigo_postal, estado, municipio, telefono2, hospital_consultorio)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
-    RETURNING id, nombre, apellido, apellido_paterno, apellido_materno, email, telefono, fecha_nacimiento, genero, ciudad, curp,
-      codigo_postal, estado, municipio, telefono2, hospital_consultorio, created_at
+      codigo_postal, estado, municipio, telefono2, hospital_consultorio, colonia, email_confirmado)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17, false)
+    RETURNING id, nombre, apellido, apellido_paterno, apellido_materno, email, email_confirmado, telefono, fecha_nacimiento, genero, ciudad, curp,
+      codigo_postal, estado, municipio, telefono2, hospital_consultorio, colonia, created_at
   `, [
     nombre, apellido || null, apellidoPat, apellido_materno || null, email, password_hash,
     telefono || null, fecha_nacimiento || null, genero || null,
-    ciudad || null, curp || null, codigo_postal || null, estado || null, municipio || null,
-    telefono2 || null, hospital_consultorio || null
+    ciudad || null, curpUpper || null, codigo_postal || null, estado || null, municipio || null,
+    telefono2 || null, hospital_consultorio || null, colonia || null
   ])
 
   const paciente = result.rows[0]
+
+  const confirmToken = crypto.randomBytes(32).toString('hex')
+  const expiraEn = new Date(Date.now() + 24 * 60 * 60 * 1000)
+  await pool.query(
+    `INSERT INTO email_confirmacion_tokens (id_usuario, tipo_usuario, email, token, expira_en)
+     VALUES ($1, 'paciente', $2, $3, $4)`,
+    [paciente.id, email, confirmToken, expiraEn]
+  )
+
+  const baseUrl = process.env.APP_URL || 'https://app.mediprotect.com.mx'
+  const confirmUrl = `${baseUrl}/confirmar-email?token=${confirmToken}&tipo=paciente`
+
+  try {
+    await enviarCorreo(
+      email,
+      'Confirma tu correo en MediProtect',
+      `<h2>Bienvenido, ${nombre} ${apellido || ''}!</h2>
+       <p>Tu cuenta de paciente ha sido registrada exitosamente en <strong>MediProtect</strong>.</p>
+       <p>Para completar tu registro, confirma tu correo electrónico:</p>
+       <p><a href="${confirmUrl}" style="display:inline-block;background:#00b894;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">Confirmar mi correo</a></p>
+       <p>Si no puedes hacer clic, copia y pega esta URL en tu navegador:</p>
+       <p style="word-break:break-all;font-size:0.85rem;color:#636e72;">${confirmUrl}</p>
+       <p>Este enlace expira en 24 horas.</p>
+       <p>Saludos,<br>Equipo MediProtect</p>`
+    )
+  } catch (e: any) {
+    console.error('Error enviando correo de confirmación:', e.message)
+  }
 
   if (id_empresa) {
     try {

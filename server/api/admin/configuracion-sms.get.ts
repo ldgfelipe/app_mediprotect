@@ -1,0 +1,29 @@
+import jwt from 'jsonwebtoken'
+
+export default defineEventHandler(async (event) => {
+  const token = getHeader(event, 'authorization')?.replace('Bearer ', '') || getCookie(event, 'admin_token')
+  if (!token) throw createError({ statusCode: 401, message: 'No autorizado' })
+  try { jwt.verify(token, process.env.JWT_SECRET || 'mediprotect_jwt_secret_key_2026') }
+  catch { throw createError({ statusCode: 401, message: 'Token invalido' }) }
+
+  const pool = getPool()
+
+  const result = await pool.query(
+    "SELECT clave, valor, valor_encriptado, descripcion, tipo FROM configuracion_sistema WHERE categoria = 'sms'"
+  )
+
+  const configuracion = result.rows.map((row: any) => ({
+    clave: row.clave,
+    valor: row.tipo === 'password' && row.valor
+      ? row.valor.substring(0, 8) + '...' + row.valor.slice(-4)
+      : row.valor,
+    valor_display: row.tipo === 'password'
+      ? (row.valor ? 'Configurado' : 'No configurado')
+      : row.valor,
+    tiene_valor: !!row.valor,
+    descripcion: row.descripcion,
+    tipo: row.tipo
+  }))
+
+  return { configuracion }
+})

@@ -13,9 +13,11 @@
     "bcryptjs": "^3.0.3",
     "cheerio": "^1.2.0",
     "jsonwebtoken": "^9.0.3",
+    "nodemailer": "^9.1.1",
     "nuxt": "^4.4.8",
     "oxc-parser": "^0.137.0",
     "pg": "^8.22.0",
+    "twilio": "^6.1.0",
     "vue": "^3.5.35",
     "vue-router": "^5.1.0"
   }

@@ -40,6 +40,34 @@ const esMedico = computed(() => usuario.value?.tipo === 'medico')
 const esPaciente = computed(() => usuario.value?.tipo === 'paciente')
 const fotoUrl = computed(() => usuario.value?.foto_url || photoPreview.value)
 
+const coloniasPerfil = ref<any[]>([])
+const coloniasPerfilLoading = ref(false)
+const coloniaPerfilManual = ref(false)
+
+let cpPerfilTimeout: ReturnType<typeof setTimeout> | null = null
+watch(() => form.value.codigo_postal, (val) => {
+  form.value.colonia = ''
+  coloniaPerfilManual.value = false
+  coloniasPerfil.value = []
+  if (cpPerfilTimeout) clearTimeout(cpPerfilTimeout)
+  if (!val || val.length !== 5 || !/^\d{5}$/.test(val)) return
+  cpPerfilTimeout = setTimeout(() => buscarColoniasPerfil(val), 400)
+})
+
+async function buscarColoniasPerfil(cp: string) {
+  coloniasPerfilLoading.value = true
+  coloniasPerfil.value = []
+  try {
+    const data: any = await $fetch('/api/sepomex/colonias', { params: { zip_code: cp } })
+    coloniasPerfil.value = data?.colonias || []
+    if (data?.ciudad && !form.value.consultorio_ciudad) form.value.consultorio_ciudad = data.ciudad
+    if (data?.estado && !form.value.consultorio_estado) form.value.consultorio_estado = data.estado
+  } catch (e) {
+    coloniasPerfil.value = []
+  }
+  coloniasPerfilLoading.value = false
+}
+
 onMounted(async () => {
   try {
     const { data } = await useFetch('/api/auth/perfil', {
@@ -64,7 +92,10 @@ onMounted(async () => {
       planContratado.value = u.plan_contratado || null
       if (u.beneficiarios) beneficiarios.value = u.beneficiarios
       if (esMedico.value) {
+        form.value.curp = u.curp || ''
         form.value.cedula_profesional = u.cedula_profesional || ''
+        form.value.codigo_postal = u.codigo_postal || ''
+        form.value.colonia = u.colonia || ''
         form.value.consultorio_direccion = u.consultorio_direccion || ''
         form.value.consultorio_ciudad = u.consultorio_ciudad || ''
         form.value.consultorio_estado = u.consultorio_estado || ''
@@ -274,8 +305,34 @@ function cerrarSesion() {
         </template>
 
         <template v-if="esMedico">
+          <div class="section-divider">
+            <span>Datos de identificación</span>
+          </div>
+          <div class="form-group"><label>CURP</label><input v-model="form.curp" disabled style="background:#f5f5f5; font-family:monospace; letter-spacing:1px" /></div>
           <div class="form-group"><label>Cedula Profesional</label><input v-model="form.cedula_profesional" /></div>
+          <div class="section-divider">
+            <span>Consultorio</span>
+          </div>
           <div class="form-group"><label>Direccion del Consultorio</label><input v-model="form.consultorio_direccion" /></div>
+          <div class="form-row">
+            <div class="form-group"><label>Codigo Postal</label><input v-model="form.codigo_postal" maxlength="5" @input="form.codigo_postal = form.codigo_postal.replace(/\D/g, '')" /></div>
+            <div class="form-group">
+              <label>Colonia</label>
+              <template v-if="coloniasPerfil.length > 0 && !coloniaPerfilManual">
+                <select v-model="form.colonia">
+                  <option value="">Seleccionar colonia...</option>
+                  <option v-for="c in coloniasPerfil" :key="c.colonia" :value="c.colonia">{{ c.colonia }}</option>
+                </select>
+                <span class="sepomex-hint" @click="coloniaPerfilManual = true">Escribir manualmente</span>
+              </template>
+              <template v-else>
+                <input v-model="form.colonia" type="text" placeholder="Nombre de la colonia" />
+                <span v-if="coloniasPerfil.length > 0 && coloniaPerfilManual" class="sepomex-hint" @click="coloniaPerfilManual = false">Elegir del listado</span>
+              </template>
+              <span v-if="coloniasPerfilLoading" class="loading-hint">Buscando colonias...</span>
+              <span v-else-if="form.codigo_postal && form.codigo_postal.length === 5 && !coloniaPerfilManual && coloniasPerfil.length === 0 && !coloniasPerfilLoading" class="loading-hint">No se encontraron colonias para este CP, ingresa manualmente</span>
+            </div>
+          </div>
           <div class="form-row">
             <div class="form-group"><label>Ciudad</label><input v-model="form.consultorio_ciudad" /></div>
             <div class="form-group"><label>Estado</label><input v-model="form.consultorio_estado" /></div>
@@ -417,6 +474,9 @@ function cerrarSesion() {
 .section-header h2 { margin: 0; font-size: 1.15rem; color: #2d3436; }
 .btn-add { background: none; border: 1px solid #00b894; color: #00b894; padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
 .btn-add:hover { background: #00b894; color: white; }
+.sepomex-hint, .loading-hint { display: inline-block; margin-top: 0.35rem; font-size: 0.78rem; color: #0984e3; cursor: pointer; }
+.sepomex-hint:hover { text-decoration: underline; }
+.loading-hint { color: #636e72; cursor: default; }
 .study-form { background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; }
 .studies-list { display: flex; flex-direction: column; gap: 0.5rem; }
 .study-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; border: 1px solid #f0f0f0; border-radius: 8px; }

@@ -1,5 +1,7 @@
 ﻿import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
+import crypto from 'crypto'
+import { enviarCorreo } from '../../utils/email.js'
 
 export default defineEventHandler(async (event) => {
   const token = getHeader(event, 'authorization')?.replace('Bearer ', '') || getCookie(event, 'admin_token')
@@ -12,16 +14,39 @@ export default defineEventHandler(async (event) => {
     nombre, apellido, email, telefono, cedula_profesional,
     titulo, especialidad, ciudad, hospital, bio, servicios,
     universidad, horario_atencion, idiomas, usuario, password,
-    apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta
+    apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta,
+    curp, codigo_postal, colonia
   } = body
 
   if (!nombre || !apellido) {
     throw createError({ statusCode: 400, message: 'Nombre y apellido son requeridos' })
   }
 
+  const curpUpper = (curp || '').toUpperCase().trim()
+  if (curpUpper && !/^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/.test(curpUpper)) {
+    throw createError({ statusCode: 400, message: 'El formato de CURP no es válido' })
+  }
+
+  if (codigo_postal && !/^\d{5}$/.test(codigo_postal)) {
+    throw createError({ statusCode: 400, message: 'El código postal debe tener 5 dígitos' })
+  }
+
   const pool = getPool()
 
-  // Buscar o crear especialidad
+  if (email) {
+    const existing = await pool.query('SELECT id FROM medicos WHERE email = $1', [email])
+    if (existing.rows.length > 0) {
+      throw createError({ statusCode: 400, message: 'El email ya está registrado' })
+    }
+  }
+
+  if (usuario) {
+    const dupUser = await pool.query('SELECT id FROM medicos WHERE usuario = $1', [usuario])
+    if (dupUser.rowCount > 0) {
+      throw createError({ statusCode: 400, message: 'Ya existe un médico con ese usuario' })
+    }
+  }
+
   let idEspecialidad = null
   if (especialidad) {
     const espResult = await pool.query(
@@ -39,7 +64,6 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  // Generar slug
   const slug = `${nombre} ${apellido}`
     .toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -47,7 +71,6 @@ export default defineEventHandler(async (event) => {
     .trim()
     .replace(/\s+/g, '-')
 
-  // Preparar datos JSON
   const serviciosArray = servicios ? servicios.split(',').map((s: string) => s.trim()).filter(Boolean) : []
   const idiomasArray = idiomas ? idiomas.split(',').map((i: string) => i.trim()).filter(Boolean) : ['Español']
 
@@ -56,35 +79,57 @@ export default defineEventHandler(async (event) => {
     passwordHash = await bcrypt.hash(password, 10)
   }
 
-  if (usuario) {
-    const dupUser = await pool.query('SELECT id FROM medicos WHERE usuario = $1', [usuario])
-    if (dupUser.rowCount > 0) {
-      throw createError({ statusCode: 400, message: 'Ya existe un médico con ese usuario' })
-    }
-  }
-
   try {
     const result = await pool.query(`
       INSERT INTO medicos (
         nombre, apellido, email, telefono, cedula_profesional,
         titulo, id_especialidad, slug, activo, usuario, password_hash,
-        apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, $9, $10, $11, $12, $13, $14, $15)
-      RETURNING id, nombre, apellido, email, telefono, cedula_profesional,
+        apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta,
+        curp, codigo_postal, colonia, email_confirmado
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, false)
+      RETURNING id, nombre, apellido, email, email_confirmado, telefono, cedula_profesional,
                 titulo, slug, activo, usuario, created_at,
-                apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta
+                apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta,
+                curp, codigo_postal, colonia
     `, [
       nombre, apellido, email || null, telefono || null, cedula_profesional || null,
       titulo || null, idEspecialidad, slug, usuario || null, passwordHash,
       apellido_paterno || apellido || null, apellido_materno || null, rfc || null,
-      hospital_consultorio || null, tipo_consulta || null
+      hospital_consultorio || null, tipo_consulta || null,
+      curpUpper || null, codigo_postal || null, colonia || null
     ])
 
     const medico = result.rows[0]
 
-    // Actualizar campos adicionales si la tabla los soporta
-    // Nota: campos como bio, servicios, universidad, etc. se actualizan después
-    // ya que pueden no existir en todas las versiones del schema
+    if (email) {
+      const confirmToken = crypto.randomBytes(32).toString('hex')
+      const expiraEn = new Date(Date.now() + 24 * 60 * 60 * 1000)
+      await pool.query(
+        `INSERT INTO email_confirmacion_tokens (id_usuario, tipo_usuario, email, token, expira_en)
+         VALUES ($1, 'medico', $2, $3, $4)`,
+        [medico.id, email, confirmToken, expiraEn]
+      )
+
+      const baseUrl = process.env.APP_URL || 'https://app.mediprotect.com.mx'
+      const confirmUrl = `${baseUrl}/confirmar-email?token=${confirmToken}&tipo=medico`
+
+      try {
+        await enviarCorreo(
+          email,
+          'Confirma tu correo en MediProtect',
+          `<h2>Bienvenido, ${nombre} ${apellido}!</h2>
+           <p>Tu cuenta de médico ha sido registrada exitosamente en <strong>MediProtect</strong>.</p>
+           <p>Para completar tu registro, confirma tu correo electrónico:</p>
+           <p><a href="${confirmUrl}" style="display:inline-block;background:#00b894;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">Confirmar mi correo</a></p>
+           <p>Si no puedes hacer clic, copia y pega esta URL en tu navegador:</p>
+           <p style="word-break:break-all;font-size:0.85rem;color:#636e72;">${confirmUrl}</p>
+           <p>Este enlace expira en 24 horas.</p>
+           <p>Saludos,<br>Equipo MediProtect</p>`
+        )
+      } catch (e: any) {
+        console.error('Error enviando correo de confirmación:', e.message)
+      }
+    }
 
     return {
       success: true,

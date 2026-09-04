@@ -87,13 +87,77 @@ async function buscarPorRfc(rfc: string) {
 
 const formMedico = ref({
   nombre: '', apellido: '', email: '', password: '', telefono: '',
-  cedula_profesional: '', id_especialidad: '', consultorio_direccion: '',
-  consultorio_ciudad: '', consultorio_estado: '', bio: '', titulo: 'Dr.'
+  cedula_profesional: '', consultorio_direccion: '',
+  consultorio_ciudad: '', consultorio_estado: '', bio: '', titulo: 'Dr.',
+  especialidad: '', rfc: '', curp: '', curp_valido: false, curp_validando: false,
+  codigo_postal: '', colonia: ''
 })
 
-const especialidades = ref<any[]>([])
+const coloniasMedico = ref<any[]>([])
+const coloniasMedicoLoading = ref(false)
+const coloniaMedicoManual = ref(false)
 const tokenCookie = useCookie('token')
 const usuarioCookie = useCookie('usuario')
+
+async function validarCurpMedico() {
+  const curp = formMedico.value.curp.toUpperCase().trim()
+  if (!curp || curp.length !== 18) {
+    error.value = 'La CURP debe tener exactamente 18 caracteres'
+    return
+  }
+  formMedico.value.curp_validando = true
+  error.value = ''
+  try {
+    const data: any = await $fetch('/api/curp/validar', { params: { curp } })
+    if (data.error) {
+      formMedico.value.curp_valido = false
+      error.value = data.error_msg || 'No se pudieron obtener datos de la CURP'
+      return
+    }
+    const s = data.response?.Solicitante
+    if (!s) {
+      formMedico.value.curp_valido = false
+      error.value = 'No se encontraron datos para esta CURP'
+      return
+    }
+    formMedico.value.curp_valido = true
+    if (!formMedico.value.nombre) formMedico.value.nombre = s.Nombres || formMedico.value.nombre
+    if (!formMedico.value.apellido) {
+      const ap = [s.ApellidoPaterno, s.ApellidoMaterno].filter(Boolean).join(' ')
+      formMedico.value.apellido = ap || formMedico.value.apellido
+    }
+    if (!formMedico.value.rfc && s.RFC) formMedico.value.rfc = s.RFC
+  } catch (e: any) {
+    formMedico.value.curp_valido = false
+    error.value = e?.data?.message || 'Error al validar CURP'
+  } finally {
+    formMedico.value.curp_validando = false
+  }
+}
+
+let cpMedicoTimeout: ReturnType<typeof setTimeout> | null = null
+watch(() => formMedico.value.codigo_postal, (val) => {
+  formMedico.value.colonia = ''
+  coloniaMedicoManual.value = false
+  coloniasMedico.value = []
+  if (cpMedicoTimeout) clearTimeout(cpMedicoTimeout)
+  if (!val || val.length !== 5 || !/^\d{5}$/.test(val)) return
+  cpMedicoTimeout = setTimeout(() => buscarColoniasMedico(val), 400)
+})
+
+async function buscarColoniasMedico(cp: string) {
+  coloniasMedicoLoading.value = true
+  coloniasMedico.value = []
+  try {
+    const data: any = await $fetch('/api/sepomex/colonias', { params: { zip_code: cp } })
+    coloniasMedico.value = data?.colonias || []
+    if (data?.ciudad && !formMedico.value.consultorio_ciudad) formMedico.value.consultorio_ciudad = data.ciudad
+    if (data?.estado && !formMedico.value.consultorio_estado) formMedico.value.consultorio_estado = data.estado
+  } catch (e) {
+    coloniasMedico.value = []
+  }
+  coloniasMedicoLoading.value = false
+}
 
 const esPlanPago = computed(() => {
   const p = paquetes.value.find((p: any) => p.id === paqueteSeleccionado.value)
@@ -102,12 +166,10 @@ const esPlanPago = computed(() => {
 
 async function cargarDatos() {
   try {
-    const [esp, paq, config] = await Promise.all([
-      $fetch('/api/especialidades'),
+    const [paq, config] = await Promise.all([
       $fetch('/api/paquetes'),
       $fetch('/api/pagos/configuracion')
     ])
-    especialidades.value = esp.especialidades || []
     paquetes.value = paq.paquetes || []
     pagosConfigurados.value = config.configurado
 
@@ -151,8 +213,20 @@ function continuarAlPlan() {
 async function handleSubmit() {
   error.value = ''
   if (tipo.value === 'medico') {
-    if (!formMedico.value.nombre || !formMedico.value.apellido || !formMedico.value.email || !formMedico.value.password || !formMedico.value.id_especialidad) {
+    if (!formMedico.value.nombre || !formMedico.value.apellido || !formMedico.value.email || !formMedico.value.password || !formMedico.value.especialidad) {
       error.value = 'Completa todos los campos requeridos'
+      return
+    }
+    if (!formMedico.value.curp || formMedico.value.curp.length !== 18) {
+      error.value = 'La CURP es requerida (18 caracteres)'
+      return
+    }
+    if (!formMedico.value.curp_valido) {
+      error.value = 'Valida tu CURP antes de continuar'
+      return
+    }
+    if (!formMedico.value.codigo_postal || !/^\d{5}$/.test(formMedico.value.codigo_postal)) {
+      error.value = 'El código postal debe tener 5 dígitos'
       return
     }
   }
@@ -406,18 +480,51 @@ async function handleSubmit() {
         </div>
         <div class="form-group"><label>Correo electrónico</label><input v-model="formMedico.email" type="email" placeholder="correo@ejemplo.com" required /></div>
         <div class="form-group"><label>Contraseña</label><input v-model="formMedico.password" type="password" placeholder="Mínimo 6 caracteres" required /></div>
-        <div class="form-row">
-          <div class="form-group"><label>Teléfono</label><input v-model="formMedico.telefono" type="tel" placeholder="2221234567" /></div>
-          <div class="form-group"><label>Cédula Profesional</label><input v-model="formMedico.cedula_profesional" type="text" placeholder="12345678" /></div>
-        </div>
         <div class="form-group">
-          <label>Especialidad</label>
-          <select v-model="formMedico.id_especialidad">
-            <option value="">Seleccionar especialidad...</option>
-            <option v-for="esp in especialidades" :key="esp.id" :value="esp.id">{{ esp.nombre }}</option>
-          </select>
+          <label>CURP *</label>
+          <div class="curp-input-group">
+            <input v-model="formMedico.curp" type="text" placeholder="18 caracteres" maxlength="18" style="text-transform:uppercase; font-family:monospace; letter-spacing:1px;" @keyup.enter="formMedico.curp.length === 18 && validarCurpMedico()" required />
+            <button type="button" class="btn-validar-curp" @click="validarCurpMedico()" :disabled="formMedico.curp_validando || formMedico.curp.length !== 18">
+              {{ formMedico.curp_validando ? 'Validando...' : 'Validar CURP' }}
+            </button>
+          </div>
+          <div class="curp-validation" v-if="formMedico.curp_valido">
+            <span class="valid-icon">✅</span>
+            <span class="valid-text">CURP válida y verificada</span>
+          </div>
+          <div class="curp-validation error" v-else-if="formMedico.curp && !formMedico.curp_valido && !formMedico.curp_validando && formMedico.curp.length === 18">
+            <span class="error-icon">❌</span>
+            <span class="error-text">CURP inválida</span>
+          </div>
         </div>
-        <div class="form-group"><label>Dirección del Consultorio</label><input v-model="formMedico.consultorio_direccion" type="text" placeholder="Calle, número, colonia" /></div>
+         <div class="form-row">
+           <div class="form-group"><label>Teléfono</label><input v-model="formMedico.telefono" type="tel" placeholder="2221234567" /></div>
+           <div class="form-group"><label>Cédula Profesional</label><input v-model="formMedico.cedula_profesional" type="text" placeholder="12345678" /></div>
+         </div>
+         <div class="form-row">
+           <div class="form-group"><label>RFC (opcional)</label><input v-model="formMedico.rfc" type="text" placeholder="ABC123456DEF" maxlength="13" /></div>
+           <div class="form-group"><label>Especialidad</label><input v-model="formMedico.especialidad" type="text" placeholder="Ej: Medicina General" required /></div>
+         </div>
+        <div class="form-group"><label>Dirección del Consultorio</label><input v-model="formMedico.consultorio_direccion" type="text" placeholder="Calle, número" /></div>
+        <div class="form-row">
+          <div class="form-group"><label>Código Postal</label><input v-model="formMedico.codigo_postal" type="text" placeholder="72000" maxlength="5" @input="formMedico.codigo_postal = formMedico.codigo_postal.replace(/\D/g, '')" /></div>
+          <div class="form-group">
+            <label>Colonia</label>
+            <template v-if="coloniasMedico.length > 0 && !coloniaMedicoManual">
+              <select v-model="formMedico.colonia">
+                <option value="">Seleccionar colonia...</option>
+                <option v-for="c in coloniasMedico" :key="c.colonia" :value="c.colonia">{{ c.colonia }}</option>
+              </select>
+              <span class="sepomex-hint" @click="coloniaMedicoManual = true">Escribir manualmente</span>
+            </template>
+            <template v-else>
+              <input v-model="formMedico.colonia" type="text" placeholder="Nombre de la colonia" />
+              <span v-if="coloniasMedico.length > 0 && coloniaMedicoManual" class="sepomex-hint" @click="coloniaMedicoManual = false">Elegir del listado</span>
+            </template>
+            <span v-if="coloniasMedicoLoading" class="loading-hint"><span class="spinner-xs"></span> Buscando colonias...</span>
+            <span v-else-if="formMedico.codigo_postal && formMedico.codigo_postal.length === 5 && !coloniaMedicoManual && coloniasMedico.length === 0 && !coloniasMedicoLoading" class="loading-hint">No se encontraron colonias para este CP, ingresa manualmente</span>
+          </div>
+        </div>
         <div class="form-row">
           <div class="form-group"><label>Ciudad</label><input v-model="formMedico.consultorio_ciudad" type="text" placeholder="Puebla" /></div>
           <div class="form-group"><label>Estado</label><input v-model="formMedico.consultorio_estado" type="text" placeholder="Puebla" /></div>
@@ -470,6 +577,11 @@ async function handleSubmit() {
 .curp-validation:not(.error):not(.info) { background: #e8f5e9; color: #2e7d32; }
 .curp-validation.error { background: #ffebee; color: #c62828; }
 .curp-validation.info { background: #e3f2fd; color: #1565c0; }
+.sepomex-hint, .loading-hint { display: inline-block; margin-top: 0.35rem; font-size: 0.78rem; color: #0984e3; cursor: pointer; }
+.sepomex-hint:hover { text-decoration: underline; }
+.loading-hint { color: #636e72; cursor: default; display: flex; align-items: center; gap: 0.4rem; }
+.spinner-xs { width: 12px; height: 12px; border: 2px solid #dfe6e9; border-top-color: #0984e3; border-radius: 50%; display: inline-block; animation: spin-xs .6s linear infinite; }
+@keyframes spin-xs { to { transform: rotate(360deg); } }
 .beneficiario-card { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1rem; margin-bottom: 0.8rem; }
 .beneficiario-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; }
 .beneficiario-header strong { font-size: 0.9rem; color: #2d3436; }

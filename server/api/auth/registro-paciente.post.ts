@@ -1,5 +1,7 @@
 ﻿import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
+import crypto from 'crypto'
+import { enviarCorreo } from '../../utils/email.js'
 
 export default defineEventHandler(async (event) => {
   const b = await readBody(event)
@@ -7,7 +9,7 @@ export default defineEventHandler(async (event) => {
     ciudad, como_nos_conociste, acepta_terminos, acepta_marketing,
     curp, estado_civil, ocupacion, beneficiario_nombre, beneficiario_parentesco, beneficiario_telefono,
     identificacion_tipo, identificacion_numero, acepta_seguro,
-    apellido_paterno, apellido_materno, codigo_postal, estado, municipio, telefono2, hospital_consultorio,
+    apellido_paterno, apellido_materno, codigo_postal, estado, municipio, colonia, telefono2, hospital_consultorio,
     beneficiarios } = b
 
   const pool = getPool()
@@ -22,9 +24,10 @@ export default defineEventHandler(async (event) => {
     `INSERT INTO pacientes (nombre, apellido, email, password_hash, telefono, fecha_nacimiento, genero, direccion,
       ciudad, como_nos_conociste, acepta_terminos, acepta_marketing,
       curp, estado_civil, ocupacion, beneficiario_nombre, beneficiario_parentesco, beneficiario_telefono,
-      identificacion_tipo, identificacion_numero, acepta_seguro, plan_contratado)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
-     RETURNING id, nombre, apellido, email, telefono, fecha_nacimiento, genero, direccion, ciudad,
+      identificacion_tipo, identificacion_numero, acepta_seguro, plan_contratado,
+      codigo_postal, colonia, estado, municipio)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26)
+     RETURNING id, nombre, apellido, email, email_confirmado, telefono, fecha_nacimiento, genero, direccion, ciudad,
        curp, estado_civil, ocupacion, como_nos_conociste,
        beneficiario_nombre, beneficiario_parentesco, beneficiario_telefono,
        identificacion_tipo, identificacion_numero, acepta_seguro, plan_contratado,
@@ -32,7 +35,8 @@ export default defineEventHandler(async (event) => {
     [nombre, apellidoCompleto, email, password_hash, telefono, fecha_nacimiento, genero, direccion,
       ciudad || null, como_nos_conociste || null, acepta_terminos || false, acepta_marketing || false,
       curp || null, estado_civil || null, ocupacion || null, beneficiario_nombre || null, beneficiario_parentesco || null, beneficiario_telefono || null,
-      identificacion_tipo || null, identificacion_numero || null, acepta_seguro || false, null]
+      identificacion_tipo || null, identificacion_numero || null, acepta_seguro || false, null,
+      codigo_postal || null, colonia || null, estado || null, municipio || null]
   )
 
   const paciente = result.rows[0]
@@ -96,6 +100,36 @@ export default defineEventHandler(async (event) => {
     process.env.JWT_SECRET || 'mediprotect_jwt_secret_key_2026',
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   )
+
+  const confirmToken = crypto.randomBytes(32).toString('hex')
+  const expiraEn = new Date(Date.now() + 24 * 60 * 60 * 1000)
+  await pool.query(
+    `INSERT INTO email_confirmacion_tokens (id_usuario, tipo_usuario, email, token, expira_en)
+     VALUES ($1, 'paciente', $2, $3, $4)`,
+    [paciente.id, paciente.email, confirmToken, expiraEn]
+  )
+
+  const baseUrl = process.env.APP_URL || 'https://app.mediprotect.com.mx'
+  const confirmUrl = `${baseUrl}/confirmar-email?token=${confirmToken}&tipo=paciente`
+
+  try {
+    const planText = esPlanPago && planInfo ? `Tu plan: ${planInfo.nombre}` : 'Plan gratuito MediProtect Básico'
+    await enviarCorreo(
+      paciente.email,
+      'Confirma tu correo en MediProtect',
+      `<h2>Bienvenido, ${paciente.nombre} ${paciente.apellido}!</h2>
+       <p>Tu cuenta de paciente ha sido registrada exitosamente en <strong>MediProtect</strong>.</p>
+       <p><strong>${planText}</strong></p>
+       <p>Para completar tu registro, confirma tu correo electrónico:</p>
+       <p><a href="${confirmUrl}" style="display:inline-block;background:#00b894;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">Confirmar mi correo</a></p>
+       <p>Si no puedes hacer clic, copia y pega esta URL en tu navegador:</p>
+       <p style="word-break:break-all;font-size:0.85rem;color:#636e72;">${confirmUrl}</p>
+       <p>Este enlace expira en 24 horas.</p>
+       <p>Saludos,<br>Equipo MediProtect</p>`
+    )
+  } catch (e: any) {
+    console.error('Error enviando correo de confirmación:', e.message)
+  }
 
   setResponseStatus(event, 201)
   return { usuario: paciente, token, pago_id: pagoId }

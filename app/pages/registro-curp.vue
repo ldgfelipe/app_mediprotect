@@ -15,6 +15,15 @@ const curpInput = ref('')
 const curpValidando = ref(false)
 const curpError = ref('')
 const curpDatos = ref<any>(null)
+let curpTimeout: ReturnType<typeof setTimeout> | null = null
+
+watch(curpInput, () => {
+  if (curpError.value) curpError.value = ''
+  if (curpDatos.value && curpDatos.value.Solicitante?.Curp !== curpInput.value.toUpperCase().trim()) {
+    curpDatos.value = null
+  }
+  if (curpTimeout) clearTimeout(curpTimeout)
+})
 
 // PASO 2: CURP data confirmed (no extra state needed)
 
@@ -22,8 +31,13 @@ const curpDatos = ref<any>(null)
 const formContacto = reactive({
   email: '', password: '', password2: '',
   telefono: '', direccion: '', ciudad: '',
-  estado: '', municipio: '', codigo_postal: ''
+  estado: '', municipio: '', codigo_postal: '', colonia: ''
 })
+
+// Sepomex: Colonias por CP
+const colonias = ref<any[]>([])
+const coloniasLoading = ref(false)
+const coloniaManual = ref(false)
 
 // PASO 4: Plan
 const paquetes = ref<any[]>([])
@@ -34,6 +48,32 @@ const showPagoPopup = ref(false)
 const procesandoPago = ref(false)
 
 const passwordMatch = computed(() => formContacto.password === formContacto.password2 && formContacto.password2.length > 0)
+
+let cpTimeout: ReturnType<typeof setTimeout> | null = null
+watch(() => formContacto.codigo_postal, (val) => {
+  formContacto.colonia = ''
+  coloniaManual.value = false
+  colonias.value = []
+  if (cpTimeout) clearTimeout(cpTimeout)
+  if (!val || val.length !== 5 || !/^\d{5}$/.test(val)) return
+  cpTimeout = setTimeout(() => buscarColonias(val), 400)
+})
+
+async function buscarColonias(cp: string) {
+  coloniasLoading.value = true
+  colonias.value = []
+  try {
+    const data: any = await $fetch('/api/sepomex/colonias', { params: { zip_code: cp } })
+    colonias.value = data?.colonias || []
+    if (data?.municipio && !formContacto.municipio) formContacto.municipio = data.municipio
+    if (data?.ciudad && !formContacto.ciudad) formContacto.ciudad = data.ciudad
+    if (data?.estado && !formContacto.estado) formContacto.estado = data.estado
+  } catch (e) {
+    colonias.value = []
+  }
+  coloniasLoading.value = false
+}
+
 const curpTexto = computed(() => {
   if (!curpInput.value) return ''
   const c = curpInput.value.toUpperCase()
@@ -64,7 +104,10 @@ async function validarCURP() {
       return
     }
     curpDatos.value = data.response
-    setTimeout(() => { paso.value = 2 }, 800)
+    if (curpTimeout) clearTimeout(curpTimeout)
+    curpTimeout = setTimeout(() => {
+      if (curpDatos.value) paso.value = 2
+    }, 800)
   } catch (e: any) {
     curpError.value = e?.data?.message || 'Error al validar CURP'
   }
@@ -73,6 +116,11 @@ async function validarCURP() {
 
 // ========== PASO 2: CONFIRMAR DATOS CURP ==========
 function confirmarDatos() {
+  if (!curpDatos.value?.Solicitante) {
+    errorMsg.value = 'No hay datos de CURP validados, vuelve al paso 1'
+    paso.value = 1
+    return
+  }
   paso.value = 3
 }
 
@@ -148,6 +196,7 @@ async function completarRegistro(esPago = false) {
       estado: formContacto.estado || s.EntidadNacimiento || null,
       municipio: formContacto.municipio || null,
       codigo_postal: formContacto.codigo_postal || null,
+      colonia: formContacto.colonia || null,
       id_paquete: paqueteSeleccionado.value?.id || null,
       acepta_terminos: true,
       acepta_marketing: false
@@ -417,21 +466,43 @@ const esPlanPago = computed(() => paqueteSeleccionado.value && parseFloat(paquet
 
               <div class="form-section">
                 <div class="section-tag section-tag--purple">Direccion</div>
-                <div class="form-group">
-                  <label>Direccion</label>
-                  <div class="input-wrapper">
-                    <svg class="input-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1C5.24 1 3 3.24 3 6c0 3.75 5 9 5 9s5-5.25 5-9c0-2.76-2.24-5-5-5z" stroke="currentColor" stroke-width="1.2"/><circle cx="8" cy="6" r="2" stroke="currentColor" stroke-width="1.2"/></svg>
-                    <input v-model="formContacto.direccion" placeholder="Calle, numero, colonia" />
-                  </div>
-                </div>
                 <div class="form-row">
                   <div class="form-group">
-                    <label>Ciudad</label>
-                    <input v-model="formContacto.ciudad" placeholder="Ciudad" />
+                    <label>Codigo Postal</label>
+                    <input
+                      v-model="formContacto.codigo_postal"
+                      placeholder="Ej: 06600"
+                      maxlength="5"
+                      inputmode="numeric"
+                      pattern="\d*"
+                      @input="formContacto.codigo_postal = formContacto.codigo_postal.replace(/\D/g, '')"
+                    />
                   </div>
                   <div class="form-group">
-                    <label>Estado</label>
-                    <input v-model="formContacto.estado" placeholder="Estado" />
+                    <label>Colonia</label>
+                    <template v-if="colonias.length > 0 && !coloniaManual">
+                      <select v-model="formContacto.colonia">
+                        <option value="" disabled>Selecciona una colonia</option>
+                        <option v-for="c in colonias" :key="c.colonia" :value="c.colonia">
+                          {{ c.colonia }}
+                        </option>
+                      </select>
+                      <span class="field-hint link-hint" @click="coloniaManual = true; formContacto.colonia = ''">
+                        No encuentro mi colonia — agregar manualmente
+                      </span>
+                    </template>
+                    <template v-else>
+                      <input v-model="formContacto.colonia" placeholder="Colonia" />
+                      <span v-if="colonias.length > 0" class="field-hint link-hint" @click="coloniaManual = false">
+                        Volver a la lista
+                      </span>
+                      <span v-else-if="formContacto.codigo_postal && formContacto.codigo_postal.length === 5 && !coloniasLoading" class="field-hint">
+                        No se encontraron colonias para este CP, ingresa manualmente
+                      </span>
+                    </template>
+                    <span v-if="coloniasLoading" class="field-hint loading-hint">
+                      <span class="spinner-xs"></span> Buscando colonias...
+                    </span>
                   </div>
                 </div>
                 <div class="form-row">
@@ -440,8 +511,21 @@ const esPlanPago = computed(() => paqueteSeleccionado.value && parseFloat(paquet
                     <input v-model="formContacto.municipio" placeholder="Municipio" />
                   </div>
                   <div class="form-group">
-                    <label>Codigo Postal</label>
-                    <input v-model="formContacto.codigo_postal" placeholder="CP" maxlength="5" />
+                    <label>Estado</label>
+                    <input v-model="formContacto.estado" placeholder="Estado" />
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Ciudad</label>
+                    <input v-model="formContacto.ciudad" placeholder="Ciudad" />
+                  </div>
+                  <div class="form-group">
+                    <label>Direccion</label>
+                    <div class="input-wrapper">
+                      <svg class="input-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1C5.24 1 3 3.24 3 6c0 3.75 5 9 5 9s5-5.25 5-9c0-2.76-2.24-5-5-5z" stroke="currentColor" stroke-width="1.2"/><circle cx="8" cy="6" r="2" stroke="currentColor" stroke-width="1.2"/></svg>
+                      <input v-model="formContacto.direccion" placeholder="Calle, numero" />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -711,6 +795,12 @@ const esPlanPago = computed(() => paqueteSeleccionado.value && parseFloat(paquet
 .form-group > input:not(.input-wrapper input) { padding: 0.7rem 0.8rem; border: 1.5px solid #e0e0e0; border-radius: 10px; font-size: 0.9rem; transition: all 0.2s; background: #fafafa; }
 .form-group > input:not(.input-wrapper input):focus { outline: none; border-color: #00b894; background: white; box-shadow: 0 0 0 3px rgba(0,184,148,0.08); }
 .field-hint { font-size: 0.72rem; color: #b2bec3; margin-top: 0.2rem; }
+.link-hint { cursor: pointer; color: #0984e3; transition: color 0.2s; }
+.link-hint:hover { color: #00b894; text-decoration: underline; }
+.loading-hint { display: flex; align-items: center; gap: 0.35rem; }
+.spinner-xs { width: 12px; height: 12px; border: 1.5px solid #b2bec3; border-top-color: #0984e3; border-radius: 50%; animation: spin 0.6s linear infinite; display: inline-block; }
+select { width: 100%; padding: 0.7rem 0.8rem; border: 1.5px solid #e0e0e0; border-radius: 10px; font-size: 0.9rem; transition: all 0.2s; background: #fafafa; color: #2d3436; appearance: auto; cursor: pointer; }
+select:focus { outline: none; border-color: #00b894; background: white; box-shadow: 0 0 0 3px rgba(0,184,148,0.08); }
 .field-status { font-size: 0.72rem; margin-top: 0.2rem; }
 .field-status.ok { color: #00b894; }
 .field-status.error { color: #d63031; }

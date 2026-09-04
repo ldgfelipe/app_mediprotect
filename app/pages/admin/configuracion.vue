@@ -198,6 +198,127 @@
           </div>
         </div>
 
+        <!-- Configuración SMS / Confirmación Telefono -->
+        <div class="config-section">
+          <div class="section-header">
+            <div class="section-title">
+              <span class="provider-icon-lg">📱</span>
+              <div>
+                <h3>SMS - Confirmación de Teléfono</h3>
+                <p class="section-desc">Proveedor SMS para envío de códigos de verificación de teléfono</p>
+              </div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" v-model="sms.enabled" @change="markDirty">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="section-body" v-if="sms.enabled">
+            <!-- Proveedor SMS -->
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label>Proveedor SMS</label>
+                <select v-model="sms.provider" @change="markDirty">
+                  <option value="twilio">Twilio</option>
+                  <option value="vonage" disabled>Vonage (próximamente)</option>
+                  <option value="aws_sns" disabled>AWS SNS (próximamente)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Twilio Config -->
+            <div v-if="sms.provider === 'twilio'" class="twilio-config">
+              <div class="form-row">
+                <div class="form-group flex-1">
+                  <label>Account SID</label>
+                  <div class="input-with-action">
+                    <input
+                      :type="sms.showSid ? 'text' : 'password'"
+                      v-model="sms.twilioAccountSid"
+                      placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                      @input="markDirty"
+                    >
+                    <button class="btn-icon" @click="sms.showSid = !sms.showSid">
+                      {{ sms.showSid ? '🙈' : '👁️' }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group flex-1">
+                  <label>Auth Token</label>
+                  <div class="input-with-action">
+                    <input
+                      :type="sms.showToken ? 'text' : 'password'"
+                      v-model="sms.twilioAuthToken"
+                      placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                      @input="markDirty"
+                    >
+                    <button class="btn-icon" @click="sms.showToken = !sms.showToken">
+                      {{ sms.showToken ? '🙈' : '👁️' }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group flex-1">
+                  <label>Numero de Twilio</label>
+                  <input
+                    type="text"
+                    v-model="sms.twilioFromNumber"
+                    placeholder="+1234567890"
+                    @input="markDirty"
+                  >
+                </div>
+              </div>
+            </div>
+
+            <!-- Modo -->
+            <div class="mode-switcher" style="margin-top: 1rem;">
+              <div class="mode-option" :class="{ active: sms.modo === 'produccion' }" @click="sms.modo = 'produccion'; markDirty()">
+                <div class="mode-icon mode-icon--prod">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M8 12l3 3 5-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <div class="mode-info">
+                  <strong>Producción</strong>
+                  <span>SMS reales a números verificados</span>
+                </div>
+                <div class="mode-radio" :class="{ checked: sms.modo === 'produccion' }"></div>
+              </div>
+
+              <div class="mode-option" :class="{ active: sms.modo === 'sandbox' }" @click="sms.modo = 'sandbox'; markDirty()">
+                <div class="mode-icon mode-icon--test">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                </div>
+                <div class="mode-info">
+                  <strong>Sandbox</strong>
+                  <span>Solo envía al número verificado en Twilio Console</span>
+                </div>
+                <div class="mode-radio" :class="{ checked: sms.modo === 'sandbox' }"></div>
+              </div>
+            </div>
+
+            <div class="provider-info">
+              <p>Crea una cuenta gratuita en <a href="https://www.twilio.com" target="_blank">twilio.com</a> para obtener tus credenciales.
+              En sandbox, solo se envían SMS al número verificado en tu consola de Twilio.</p>
+            </div>
+
+            <div class="curp-status" :class="sms.modo === 'produccion' ? 'status-prod' : 'status-test'">
+              <span class="status-badge" :class="sms.modo === 'produccion' ? 'badge-prod' : 'badge-test'">
+                {{ sms.modo === 'produccion' ? 'Producción' : 'Sandbox' }}
+              </span>
+              <span class="status-detail">
+                {{ sms.twilioAccountSid && sms.twilioAuthToken
+                  ? (sms.modo === 'produccion' ? 'Configurado - SMS reales' : 'Sandbox activo - SMS de prueba')
+                  : 'Configura las credenciales para activar' }}
+              </span>
+            </div>
+          </div>
+        </div>
+
         <!-- Configuración general de IA -->
         <div class="config-section">
           <div class="section-header">
@@ -360,6 +481,17 @@ const curp = ref({
   showKey: false,
 })
 
+const sms = ref({
+  enabled: true,
+  provider: 'twilio',
+  twilioAccountSid: '',
+  twilioAuthToken: '',
+  twilioFromNumber: '',
+  modo: 'sandbox',
+  showSid: false,
+  showToken: false,
+})
+
 const loadConfig = async () => {
   try {
     const { data } = await useFetch('/api/admin/configuracion', {
@@ -393,6 +525,14 @@ const loadConfig = async () => {
     curp.value.apiKey = configMap['curp_api_key'] || ''
     curp.value.testToken = configMap['curp_test_token'] || 'pruebas'
 
+    // SMS config
+    sms.value.enabled = configMap['sms_enabled'] !== 'false'
+    sms.value.provider = configMap['sms_provider'] || 'twilio'
+    sms.value.twilioAccountSid = configMap['sms_twilio_account_sid'] || ''
+    sms.value.twilioAuthToken = configMap['sms_twilio_auth_token'] || ''
+    sms.value.twilioFromNumber = configMap['sms_twilio_from_number'] || ''
+    sms.value.modo = configMap['sms_modo'] || 'sandbox'
+
     isDirty.value = false
   } catch (err) {
     console.error('Error cargando configuración:', err)
@@ -422,6 +562,14 @@ const saveConfig = async () => {
     configuraciones.push({ clave: 'curp_modo', valor: curp.value.modo })
     configuraciones.push({ clave: 'curp_api_key', valor: curp.value.apiKey || '' })
     configuraciones.push({ clave: 'curp_test_token', valor: curp.value.testToken || 'pruebas' })
+
+    // SMS config
+    configuraciones.push({ clave: 'sms_enabled', valor: sms.value.enabled ? 'true' : 'false' })
+    configuraciones.push({ clave: 'sms_provider', valor: sms.value.provider })
+    configuraciones.push({ clave: 'sms_twilio_account_sid', valor: sms.value.twilioAccountSid || '' })
+    configuraciones.push({ clave: 'sms_twilio_auth_token', valor: sms.value.twilioAuthToken || '' })
+    configuraciones.push({ clave: 'sms_twilio_from_number', valor: sms.value.twilioFromNumber || '' })
+    configuraciones.push({ clave: 'sms_modo', valor: sms.value.modo })
 
     await $fetch('/api/admin/configuracion', {
       method: 'POST',

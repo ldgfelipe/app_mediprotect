@@ -4,20 +4,29 @@ import bcrypt from 'bcryptjs'
 export default defineEventHandler(async (event) => {
   const token = getHeader(event, 'authorization')?.replace('Bearer ', '') || getCookie(event, 'admin_token')
   if (!token) throw createError({ statusCode: 401, message: 'No autorizado' })
-  try { jwt.verify(token, process.env.JWT_SECRET || 'default_secret') }
+  try { jwt.verify(token, process.env.JWT_SECRET || 'mediprotect_jwt_secret_key_2026') }
   catch { throw createError({ statusCode: 401, message: 'Token inválido' }) }
 
   const id = getRouterParam(event, 'id')
   const body = await readBody(event)
   const { nombre, apellido, email, telefono, fecha_nacimiento, genero, ciudad, password,
     apellido_paterno, apellido_materno, codigo_postal, estado, municipio, telefono2, hospital_consultorio,
-    curp, estado_civil, ocupacion, id_paquete, beneficiarios } = body
+    curp, estado_civil, ocupacion, id_paquete, beneficiarios, colonia } = body
 
   const pool = getPool()
 
   const existing = await pool.query('SELECT id FROM pacientes WHERE id = $1', [id])
   if (existing.rowCount === 0) {
     throw createError({ statusCode: 404, message: 'Paciente no encontrado' })
+  }
+
+  const curpUpper = (curp || '').toUpperCase().trim()
+  if (curpUpper && !/^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/.test(curpUpper)) {
+    throw createError({ statusCode: 400, message: 'El formato de CURP no es válido' })
+  }
+
+  if (codigo_postal && !/^\d{5}$/.test(codigo_postal)) {
+    throw createError({ statusCode: 400, message: 'El código postal debe tener 5 dígitos' })
   }
 
   if (email) {
@@ -51,9 +60,10 @@ export default defineEventHandler(async (event) => {
   if (municipio !== undefined) { sets.push(`municipio = $${idx++}`); params.push(municipio || null) }
   if (telefono2 !== undefined) { sets.push(`telefono2 = $${idx++}`); params.push(telefono2 || null) }
   if (hospital_consultorio !== undefined) { sets.push(`hospital_consultorio = $${idx++}`); params.push(hospital_consultorio || null) }
-  if (curp !== undefined) { sets.push(`curp = $${idx++}`); params.push(curp || null) }
+  if (curp !== undefined) { sets.push(`curp = $${idx++}`); params.push(curpUpper || null) }
   if (estado_civil !== undefined) { sets.push(`estado_civil = $${idx++}`); params.push(estado_civil || null) }
   if (ocupacion !== undefined) { sets.push(`ocupacion = $${idx++}`); params.push(ocupacion || null) }
+  if (colonia !== undefined) { sets.push(`colonia = $${idx++}`); params.push(colonia || null) }
 
   if (sets.length === 0) {
     throw createError({ statusCode: 400, message: 'No hay datos para actualizar' })
@@ -62,8 +72,8 @@ export default defineEventHandler(async (event) => {
   params.push(id)
   const result = await pool.query(
     `UPDATE pacientes SET ${sets.join(', ')} WHERE id = $${idx}
-     RETURNING id, nombre, apellido, apellido_paterno, apellido_materno, email, telefono, fecha_nacimiento, genero, ciudad,
-       codigo_postal, estado, municipio, telefono2, hospital_consultorio, created_at`,
+     RETURNING id, nombre, apellido, apellido_paterno, apellido_materno, email, email_confirmado, telefono, fecha_nacimiento, genero, ciudad,
+       codigo_postal, estado, municipio, telefono2, hospital_consultorio, curp, colonia, created_at`,
     params
   )
 

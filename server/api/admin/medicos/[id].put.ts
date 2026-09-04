@@ -14,7 +14,8 @@ export default defineEventHandler(async (event) => {
     titulo, especialidad, consultorio_ciudad, consultorio_estado,
     consultorio_direccion, bio, activo, password,
     precio_regular, precio_miembro, usuario,
-    apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta
+    apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta,
+    curp, codigo_postal, colonia
   } = body
 
   const pool = getPool()
@@ -22,6 +23,15 @@ export default defineEventHandler(async (event) => {
   const existing = await pool.query('SELECT id FROM medicos WHERE id = $1', [id])
   if (existing.rowCount === 0) {
     throw createError({ statusCode: 404, message: 'Médico no encontrado' })
+  }
+
+  const curpUpper = (curp || '').toUpperCase().trim()
+  if (curpUpper && !/^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/.test(curpUpper)) {
+    throw createError({ statusCode: 400, message: 'El formato de CURP no es válido' })
+  }
+
+  if (codigo_postal && !/^\d{5}$/.test(codigo_postal)) {
+    throw createError({ statusCode: 400, message: 'El código postal debe tener 5 dígitos' })
   }
 
   if (email) {
@@ -88,6 +98,9 @@ export default defineEventHandler(async (event) => {
   if (rfc !== undefined) { sets.push(`rfc = $${idx++}`); params.push(rfc || null) }
   if (hospital_consultorio !== undefined) { sets.push(`hospital_consultorio = $${idx++}`); params.push(hospital_consultorio || null) }
   if (tipo_consulta !== undefined) { sets.push(`tipo_consulta = $${idx++}`); params.push(tipo_consulta || null) }
+  if (curp !== undefined) { sets.push(`curp = $${idx++}`); params.push(curpUpper || null) }
+  if (codigo_postal !== undefined) { sets.push(`codigo_postal = $${idx++}`); params.push(codigo_postal || null) }
+  if (colonia !== undefined) { sets.push(`colonia = $${idx++}`); params.push(colonia || null) }
 
   if (sets.length === 0) {
     throw createError({ statusCode: 400, message: 'No hay datos para actualizar' })
@@ -96,8 +109,9 @@ export default defineEventHandler(async (event) => {
   params.push(id)
   const result = await pool.query(
     `UPDATE medicos SET ${sets.join(', ')} WHERE id = $${idx}
-     RETURNING id, nombre, apellido, email, telefono, cedula_profesional, titulo, activo, precio_regular, precio_miembro, created_at,
-              apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta`,
+     RETURNING id, nombre, apellido, email, email_confirmado, telefono, cedula_profesional, titulo, activo, precio_regular, precio_miembro, created_at,
+              apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta,
+              curp, codigo_postal, colonia`,
     params
   )
 
