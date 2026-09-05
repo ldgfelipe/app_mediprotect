@@ -1,10 +1,14 @@
 <script setup lang="ts">
 const token = useCookie('token')
 const usuario = useCookie('usuario')
+const { config: verifConfig, loadConfig: loadVerifConfig } = useVerificacionConfig()
 
 const emailConfirmado = computed(() => usuario.value?.email_confirmado === true)
+const shouldShow = computed(() => verifConfig.value.requireEmail && !emailConfirmado.value)
 const estado = ref<'pendiente' | 'enviando' | 'enviado' | 'error'>('pendiente')
 const errorEnvio = ref('')
+
+onMounted(() => { loadVerifConfig() })
 
 async function enviarConfirmacion() {
   if (!usuario.value?.email || !usuario.value?.tipo) return
@@ -25,7 +29,7 @@ async function enviarConfirmacion() {
 </script>
 
 <template>
-  <div v-if="!emailConfirmado" class="email-banner">
+  <div v-if="shouldShow" class="email-banner">
     <div class="email-banner-inner">
       <div class="email-banner-icon">✉</div>
       <div class="email-banner-text">

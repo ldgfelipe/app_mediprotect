@@ -65,14 +65,27 @@ async function enviarSmsTwilio(
   }
 }
 
+export function normalizarTelefonoMX(telefono: string): string {
+  let limpio = telefono.replace(/[^0-9]/g, '')
+  if (limpio.startsWith('52') && limpio.length >= 12) {
+    return '+' + limpio
+  }
+  if (limpio.length === 10) {
+    return '+52' + limpio
+  }
+  if (telefono.startsWith('+')) return telefono
+  return '+' + limpio
+}
+
 export async function enviarSms(telefono: string, mensaje: string): Promise<{ success: boolean; sid?: string; error?: string }> {
   const config = await getSmsConfig()
+  const telefonoNormalizado = normalizarTelefonoMX(telefono)
 
   let result: { success: boolean; sid?: string; error?: string }
 
   switch (config.provider) {
     case 'twilio':
-      result = await enviarSmsTwilio(config, telefono, mensaje)
+      result = await enviarSmsTwilio(config, telefonoNormalizado, mensaje)
       break
     default:
       result = { success: false, error: `Proveedor SMS '${config.provider}' no soportado` }

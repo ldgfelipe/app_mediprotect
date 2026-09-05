@@ -3,11 +3,29 @@ definePageMeta({ middleware: 'auth' })
 
 const token = useCookie('token')
 const usuario = useCookie('usuario')
+const { config: verifConfig, loadConfig: loadVerifConfig } = useVerificacionConfig()
 const loading = ref(false)
 const uploadingPhoto = ref(false)
 const success = ref('')
 const error = ref('')
 const photoPreview = ref<string | null>(null)
+
+const smsStep = ref<'phone' | 'code'>('phone')
+const smsCodigo = ref('')
+const smsLoading = ref(false)
+const smsError = ref('')
+const smsSuccess = ref(false)
+const smsCountdown = ref(0)
+const smsCanResend = ref(true)
+const showSmsVerification = ref(false)
+
+const phoneConfirmed = computed(() => usuario.value?.telefono_confirmado === true)
+const phoneExists = computed(() => !!form.value.telefono)
+const emailConfirmed = computed(() => usuario.value?.email_confirmado === true)
+const showPhoneVerification = computed(() => verifConfig.value.requirePhone && phoneExists.value && !phoneConfirmed.value && !smsSuccess.value)
+const showEmailVerification = computed(() => verifConfig.value.requireEmail && !emailConfirmed.value)
+const emailSending = ref(false)
+const emailSent = ref(false)
 
 const form = ref({
   nombre: usuario.value?.nombre || '',
@@ -69,6 +87,7 @@ async function buscarColoniasPerfil(cp: string) {
 }
 
 onMounted(async () => {
+  loadVerifConfig()
   try {
     const { data } = await useFetch('/api/auth/perfil', {
       headers: { Authorization: `Bearer ${token.value}` },
@@ -228,6 +247,72 @@ async function deletePhoto() {
 function cerrarSesion() {
   token.value = null; usuario.value = null; navigateTo('/')
 }
+
+async function enviarCodigoSms() {
+  if (!form.value.telefono) return
+  smsLoading.value = true
+  smsError.value = ''
+  try {
+    const res: any = await $fetch('/api/auth/enviar-sms-confirmacion', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token.value}` },
+      body: { telefono: form.value.telefono }
+    })
+    if (res?.autoConfirmado) {
+      smsSuccess.value = true
+      usuario.value = { ...usuario.value, telefono_confirmado: true }
+      showSmsVerification.value = false
+      return
+    }
+    smsStep.value = 'code'
+    smsCanResend.value = false
+    smsCountdown.value = 60
+    const timer = setInterval(() => {
+      smsCountdown.value--
+      if (smsCountdown.value <= 0) { smsCanResend.value = true; clearInterval(timer) }
+    }, 1000)
+  } catch (e: any) {
+    smsError.value = e?.data?.message || 'Error enviando codigo'
+  } finally {
+    smsLoading.value = false
+  }
+}
+
+async function verificarCodigoSms() {
+  if (!smsCodigo.value || smsCodigo.value.length !== 6) { smsError.value = 'Ingresa el codigo de 6 digitos'; return }
+  smsLoading.value = true
+  smsError.value = ''
+  try {
+    await $fetch('/api/auth/confirmar-telefono', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token.value}` },
+      body: { codigo: smsCodigo.value, telefono: form.value.telefono }
+    })
+    smsSuccess.value = true
+    usuario.value = { ...usuario.value, telefono_confirmado: true }
+    showSmsVerification.value = false
+  } catch (e: any) {
+    smsError.value = e?.data?.message || 'Error verificando codigo'
+  } finally {
+    smsLoading.value = false
+  }
+}
+
+async function enviarConfirmacionEmail() {
+  emailSending.value = true
+  try {
+    await $fetch('/api/auth/enviar-confirmacion', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token.value}` },
+      body: { email: form.value.email, tipo: usuario.value?.tipo }
+    })
+    emailSent.value = true
+  } catch (e: any) {
+    error.value = e?.data?.message || 'Error enviando confirmacion'
+  } finally {
+    emailSending.value = false
+  }
+}
 </script>
 
 <template>
@@ -276,8 +361,64 @@ function cerrarSesion() {
           <div class="form-group"><label>Apellido</label><input v-model="form.apellido" /></div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label>Telefono</label><input v-model="form.telefono" type="tel" placeholder="+52 55 1234 5678" /></div>
+          <div class="form-group">
+            <label>Telefono</label>
+            <input v-model="form.telefono" type="tel" placeholder="+52 55 1234 5678" />
+          </div>
           <div class="form-group"><label>Email</label><input v-model="form.email" type="email" disabled style="background:#f5f5f5" /></div>
+        </div>
+
+        <div v-if="verifConfig.requireEmail && emailConfirmed" class="email-verified-badge">
+          <span>✅</span> Correo verificado
+        </div>
+        <div v-else-if="verifConfig.requireEmail && emailSent" class="email-sent-badge">
+          <span>📩</span> Correo de verificacion enviado. Revisa tu bandeja de entrada.
+        </div>
+        <div v-else-if="showEmailVerification" class="email-unverified-section">
+          <div class="email-verify-header">
+            <span class="email-verify-icon">✉️</span>
+            <div class="email-verify-text">
+              <strong>Tu correo no esta verificado</strong>
+              <span>Confirma tu email para recibir notificaciones importantes</span>
+            </div>
+            <button type="button" class="btn-verify btn-email" @click="enviarConfirmacionEmail" :disabled="emailSending">
+              {{ emailSending ? '...' : 'Enviar confirmacion' }}
+            </button>
+          </div>
+        </div>
+
+        <div v-if="showPhoneVerification" class="phone-verify-section">
+          <div class="phone-verify-header">
+            <span class="phone-verify-icon">📱</span>
+            <div class="phone-verify-text">
+              <strong>Tu numero no esta verificado</strong>
+              <span>Confirma tu telefono para recibir notificaciones SMS</span>
+            </div>
+            <button v-if="!showSmsVerification" type="button" class="btn-verify" @click="showSmsVerification = true; smsStep = 'phone'">Verificar</button>
+            <button v-else type="button" class="btn-close-verify" @click="showSmsVerification = false">&times;</button>
+          </div>
+
+          <div v-if="showSmsVerification" class="phone-verify-form">
+            <div v-if="smsStep === 'phone'" class="phone-verify-row">
+              <input :value="form.telefono" type="tel" disabled class="phone-verify-input" />
+              <button type="button" class="btn-verify-send" @click="enviarCodigoSms" :disabled="smsLoading">
+                {{ smsLoading ? '...' : 'Enviar codigo' }}
+              </button>
+            </div>
+            <div v-if="smsStep === 'code'" class="phone-verify-row">
+              <input v-model="smsCodigo" type="text" placeholder="000000" maxlength="6" class="phone-verify-input code" @input="smsCodigo = smsCodigo.replace(/[^0-9]/g, '')" />
+              <button type="button" class="btn-verify-send" @click="verificarCodigoSms" :disabled="smsLoading">
+                {{ smsLoading ? '...' : 'Verificar' }}
+              </button>
+            </div>
+            <p v-if="smsError" class="phone-verify-error">{{ smsError }}</p>
+            <p v-if="smsStep === 'code' && !smsCanResend" class="phone-verify-timer">Reenviar en {{ smsCountdown }}s</p>
+            <button v-if="smsStep === 'code' && smsCanResend" type="button" class="phone-verify-link" @click="enviarCodigoSms">Reenviar codigo</button>
+          </div>
+        </div>
+
+        <div v-if="verifConfig.requirePhone && phoneExists && (phoneConfirmed || smsSuccess)" class="phone-verified-badge">
+          <span>✅</span> Telefono verificado
         </div>
 
         <template v-if="esPaciente">
@@ -486,6 +627,37 @@ function cerrarSesion() {
 .btn-delete { background: none; border: none; color: #d63031; cursor: pointer; font-size: 0.8rem; }
 .btn-delete:hover { text-decoration: underline; }
 .empty-state { text-align: center; color: #b2bec3; padding: 1.5rem; font-size: 0.9rem; }
+.phone-verify-section { background: linear-gradient(135deg, #fff3e0, #ffe0b2); border: 1px solid #ffcc02; border-radius: 10px; padding: 0.75rem 1rem; margin: 0.5rem 0; }
+.phone-verify-header { display: flex; align-items: center; gap: 0.75rem; }
+.phone-verify-icon { font-size: 1.5rem; }
+.phone-verify-text { flex: 1; display: flex; flex-direction: column; }
+.phone-verify-text strong { font-size: 0.9rem; color: #e65100; }
+.phone-verify-text span { font-size: 0.8rem; color: #bf360c; }
+.btn-verify { background: #e65100; color: white; border: none; padding: 0.4rem 1rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.btn-verify:hover { background: #bf360c; }
+.btn-close-verify { background: none; border: none; font-size: 1.2rem; color: #bf360c; cursor: pointer; padding: 0 0.5rem; }
+.phone-verify-form { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid rgba(0,0,0,0.1); }
+.phone-verify-row { display: flex; gap: 0.5rem; }
+.phone-verify-input { flex: 1; padding: 0.5rem 0.75rem; border: 1px solid #ffcc02; border-radius: 6px; font-size: 0.9rem; background: white; }
+.phone-verify-input.code { text-align: center; letter-spacing: 0.3rem; font-weight: 700; }
+.phone-verify-input:focus { outline: none; border-color: #e65100; }
+.btn-verify-send { background: #e65100; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+.btn-verify-send:hover { background: #bf360c; }
+.btn-verify-send:disabled { opacity: 0.5; cursor: not-allowed; }
+.phone-verify-error { color: #c62828; font-size: 0.8rem; margin-top: 0.5rem; }
+.phone-verify-timer { color: #bf360c; font-size: 0.8rem; margin-top: 0.5rem; }
+.phone-verify-link { background: none; border: none; color: #e65100; font-size: 0.8rem; cursor: pointer; text-decoration: underline; padding: 0; margin-top: 0.5rem; }
+.phone-verified-badge { display: flex; align-items: center; gap: 0.5rem; color: #00b894; font-size: 0.9rem; font-weight: 600; margin: 0.5rem 0; }
+.email-verified-badge { display: flex; align-items: center; gap: 0.5rem; color: #00b894; font-size: 0.9rem; font-weight: 600; margin: 0.5rem 0; }
+.email-sent-badge { display: flex; align-items: center; gap: 0.5rem; color: #0984e3; font-size: 0.9rem; margin: 0.5rem 0; background: #e3f2fd; padding: 0.5rem 0.75rem; border-radius: 8px; }
+.email-unverified-section { background: linear-gradient(135deg, #e3f2fd, #bbdefb); border: 1px solid #90caf9; border-radius: 10px; padding: 0.75rem 1rem; margin: 0.5rem 0; }
+.email-verify-header { display: flex; align-items: center; gap: 0.75rem; }
+.email-verify-icon { font-size: 1.5rem; }
+.email-verify-text { flex: 1; display: flex; flex-direction: column; }
+.email-verify-text strong { font-size: 0.9rem; color: #1565c0; }
+.email-verify-text span { font-size: 0.8rem; color: #1976d2; }
+.btn-email { background: #1976d2; }
+.btn-email:hover { background: #1565c0; }
 .beneficiarios-list { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.8rem; }
 .beneficiario-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; border: 1px solid #f0f0f0; border-radius: 8px; }
 .beneficiario-info { display: flex; flex-direction: column; gap: 0.15rem; }

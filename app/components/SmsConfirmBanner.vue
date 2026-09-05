@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const usuario = useCookie('usuario')
+const { config: verifConfig, loadConfig: loadVerifConfig } = useVerificacionConfig()
 const showForm = ref(false)
 const telefono = ref('')
 const codigo = ref('')
@@ -11,8 +12,10 @@ const countdown = ref(0)
 const canResend = ref(true)
 
 const needsConfirmation = computed(() => {
-  return usuario.value && !usuario.value.telefono_confirmado && usuario.value.telefono
+  return verifConfig.value.requirePhone && usuario.value && !usuario.value.telefono_confirmado && usuario.value.telefono
 })
+
+onMounted(() => { loadVerifConfig() })
 
 function formatPhone(value: string) {
   return value.replace(/[^0-9]/g, '').substring(0, 10)
@@ -28,10 +31,15 @@ async function enviarCodigo() {
   error.value = ''
 
   try {
-    await $fetch('/api/auth/enviar-sms-confirmacion', {
+    const res: any = await $fetch('/api/auth/enviar-sms-confirmacion', {
       method: 'POST',
       body: { telefono: telefono.value }
     })
+    if (res?.autoConfirmado) {
+      success.value = true
+      usuario.value = { ...usuario.value, telefono_confirmado: true }
+      return
+    }
     step.value = 'code'
     canResend.value = false
     countdown.value = 60

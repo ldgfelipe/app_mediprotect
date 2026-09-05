@@ -111,7 +111,7 @@
         <div class="config-section">
           <div class="section-header">
             <div class="section-title">
-              <span class="provider-icon-lg">🪪</span>
+              <span class="provider-icon-lg">ID</span>
               <div>
                 <h3>Validación CURP</h3>
                 <p class="section-desc">API para consulta de datos oficiales del Registro Nacional de Población</p>
@@ -316,6 +316,145 @@
                   : 'Configura las credenciales para activar' }}
               </span>
             </div>
+
+            <!-- Zona de pruebas SMS -->
+            <div class="sms-test-zone">
+              <div class="test-header">
+                <span class="test-icon">🧪</span>
+                <div>
+                  <h4>Enviar SMS de prueba</h4>
+                  <p class="test-desc">Verifica que la configuración funciona enviando un SMS de prueba</p>
+                </div>
+              </div>
+
+              <div class="test-form">
+                <div class="form-row">
+                  <div class="form-group flex-1">
+                    <label>Numero destino</label>
+                    <input
+                      v-model="sms.testPhone"
+                      type="tel"
+                      placeholder="+521234567890"
+                      maxlength="14"
+                    >
+                  </div>
+                  <div class="form-group">
+                    <label>Mensaje</label>
+                    <input
+                      v-model="sms.testMessage"
+                      type="text"
+                      placeholder="MediProtect: SMS de prueba"
+                      maxlength="160"
+                    >
+                  </div>
+                </div>
+                <div class="test-actions">
+                  <button
+                    @click="enviarSmsPrueba"
+                    class="btn-test"
+                    :disabled="sms.sendingTest || !sms.testPhone"
+                  >
+                    {{ sms.sendingTest ? 'Enviando...' : 'Enviar SMS de prueba' }}
+                  </button>
+                  <span v-if="sms.testResult === 'success'" class="test-success">✅ SMS enviado correctamente</span>
+                  <span v-if="sms.testResult === 'error'" class="test-error">❌ {{ sms.testError }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Configuración de Verificaciones -->
+        <div class="config-section">
+          <div class="section-header">
+            <div class="section-title">
+              <span class="provider-icon-lg">🔒</span>
+              <div>
+                <h3>Verificaciones de Usuarios</h3>
+                <p class="section-desc">Controla si médicos y pacientes deben confirmar su correo y teléfono</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-body">
+            <div class="form-row">
+              <label class="toggle-label">
+                <label class="toggle-switch">
+                  <input type="checkbox" v-model="verificacion.requirePhone" @change="markDirty">
+                  <span class="toggle-slider"></span>
+                </label>
+                <div class="toggle-info">
+                  <strong>Requerir confirmación de teléfono</strong>
+                  <span>Activa: muestra banner SMS en dashboard hasta que el usuario verifique su número</span>
+                </div>
+              </label>
+            </div>
+            <div class="form-row">
+              <label class="toggle-label">
+                <label class="toggle-switch">
+                  <input type="checkbox" v-model="verificacion.requireEmail" @change="markDirty">
+                  <span class="toggle-slider"></span>
+                </label>
+                <div class="toggle-info">
+                  <strong>Requerir confirmación de correo</strong>
+                  <span>Activa: muestra banner de email en dashboard hasta que el usuario confirme su correo</span>
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Numeros de telefono verificados (pruebas) -->
+        <div class="config-section">
+          <div class="section-header">
+            <div class="section-title">
+              <span class="provider-icon-lg">📞</span>
+              <div>
+                <h3>Numeros Verificados (Pruebas)</h3>
+                <p class="section-desc">Numeros que pueden recibir SMS sin necesidad de verificar en Twilio</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-body">
+            <div class="verified-phones-list" v-if="telefonosVerificados.length > 0">
+              <div v-for="tel in telefonosVerificados" :key="tel.id" class="verified-phone-item">
+                <div class="phone-info">
+                  <strong>{{ tel.telefono }}</strong>
+                  <span v-if="tel.descripcion">{{ tel.descripcion }}</span>
+                  <span class="phone-date">{{ new Date(tel.created_at).toLocaleDateString() }}</span>
+                </div>
+                <button class="btn-delete-sm" @click="eliminarTelefonoVerificado(tel.id)">Eliminar</button>
+              </div>
+            </div>
+            <div v-else class="empty-phones">No hay numeros verificados agregados</div>
+
+            <div class="add-phone-form">
+              <div class="form-row">
+                <div class="form-group flex-1">
+                  <label>Numero de telefono</label>
+                  <input
+                    v-model="nuevoTelefonoVerificado.telefono"
+                    type="tel"
+                    placeholder="2221234567"
+                    maxlength="15"
+                  >
+                </div>
+                <div class="form-group flex-1">
+                  <label>Descripcion (opcional)</label>
+                  <input
+                    v-model="nuevoTelefonoVerificado.descripcion"
+                    type="text"
+                    placeholder="Ej: Telefono de pruebas"
+                  >
+                </div>
+                <div class="form-group" style="justify-content: flex-end">
+                  <button class="btn-add-phone" @click="agregarTelefonoVerificado" :disabled="!nuevoTelefonoVerificado.telefono">
+                    Agregar
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -490,7 +629,21 @@ const sms = ref({
   modo: 'sandbox',
   showSid: false,
   showToken: false,
+  testPhone: '',
+  testMessage: 'MediProtect: SMS de prueba - config OK',
+  sendingTest: false,
+  testResult: '',
+  testError: '',
 })
+
+const verificacion = ref({
+  requirePhone: true,
+  requireEmail: true,
+})
+
+const telefonosVerificados = ref([])
+const nuevoTelefonoVerificado = ref({ telefono: '', descripcion: '' })
+const cargandoTelefonos = ref(false)
 
 const loadConfig = async () => {
   try {
@@ -533,6 +686,10 @@ const loadConfig = async () => {
     sms.value.twilioFromNumber = configMap['sms_twilio_from_number'] || ''
     sms.value.modo = configMap['sms_modo'] || 'sandbox'
 
+    // Verification config
+    verificacion.value.requirePhone = configMap['require_phone_verification'] !== 'false'
+    verificacion.value.requireEmail = configMap['require_email_verification'] !== 'false'
+
     isDirty.value = false
   } catch (err) {
     console.error('Error cargando configuración:', err)
@@ -563,17 +720,33 @@ const saveConfig = async () => {
     configuraciones.push({ clave: 'curp_api_key', valor: curp.value.apiKey || '' })
     configuraciones.push({ clave: 'curp_test_token', valor: curp.value.testToken || 'pruebas' })
 
-    // SMS config
-    configuraciones.push({ clave: 'sms_enabled', valor: sms.value.enabled ? 'true' : 'false' })
-    configuraciones.push({ clave: 'sms_provider', valor: sms.value.provider })
-    configuraciones.push({ clave: 'sms_twilio_account_sid', valor: sms.value.twilioAccountSid || '' })
-    configuraciones.push({ clave: 'sms_twilio_auth_token', valor: sms.value.twilioAuthToken || '' })
-    configuraciones.push({ clave: 'sms_twilio_from_number', valor: sms.value.twilioFromNumber || '' })
-    configuraciones.push({ clave: 'sms_modo', valor: sms.value.modo })
-
     await $fetch('/api/admin/configuracion', {
       method: 'POST',
       body: { configuraciones }
+    })
+
+    // Guardar config SMS en categoria 'sms'
+    const smsConfig = [
+      { clave: 'sms_enabled', valor: sms.value.enabled ? 'true' : 'false' },
+      { clave: 'sms_provider', valor: sms.value.provider },
+      { clave: 'sms_twilio_account_sid', valor: sms.value.twilioAccountSid || '' },
+      { clave: 'sms_twilio_auth_token', valor: sms.value.twilioAuthToken || '' },
+      { clave: 'sms_twilio_from_number', valor: sms.value.twilioFromNumber || '' },
+      { clave: 'sms_modo', valor: sms.value.modo },
+    ]
+    await $fetch('/api/admin/configuracion-sms', {
+      method: 'POST',
+      body: { configuraciones: smsConfig }
+    })
+
+    // Guardar config verificacion
+    const verifConfig = [
+      { clave: 'require_phone_verification', valor: verificacion.value.requirePhone ? 'true' : 'false' },
+      { clave: 'require_email_verification', valor: verificacion.value.requireEmail ? 'true' : 'false' },
+    ]
+    await $fetch('/api/admin/configuracion', {
+      method: 'POST',
+      body: { configuraciones: verifConfig }
     })
 
     // Actualizar estado de keys
@@ -592,15 +765,80 @@ const saveConfig = async () => {
   }
 }
 
+const enviarSmsPrueba = async () => {
+  if (!sms.value.testPhone) return
+
+  sms.value.sendingTest = true
+  sms.value.testResult = ''
+  sms.value.testError = ''
+
+  try {
+    await $fetch('/api/admin/sms-test', {
+      method: 'POST',
+      body: {
+        telefono: sms.value.testPhone,
+        mensaje: sms.value.testMessage || 'MediProtect: SMS de prueba - config OK'
+      }
+    })
+    sms.value.testResult = 'success'
+  } catch (e) {
+    sms.value.testResult = 'error'
+    sms.value.testError = e?.data?.message || 'Error enviando SMS'
+  } finally {
+    sms.value.sendingTest = false
+  }
+}
+
 const logout = () => {
   adminUsuario.value = null
   const token = useCookie('admin_token')
   token.value = null
-  router.push('/admin/login')
+  navigateTo('/admin/login')
+}
+
+const cargarTelefonosVerificados = async () => {
+  cargandoTelefonos.value = true
+  try {
+    const data = await $fetch('/api/admin/telefonos-verificados')
+    telefonosVerificados.value = data?.telefonos || []
+  } catch (e) {
+    console.error('Error cargando telefonos verificados:', e)
+  } finally {
+    cargandoTelefonos.value = false
+  }
+}
+
+const agregarTelefonoVerificado = async () => {
+  const tel = nuevoTelefonoVerificado.value
+  if (!tel.telefono) return
+  try {
+    await $fetch('/api/admin/telefonos-verificados', {
+      method: 'POST',
+      body: { telefono: tel.telefono, descripcion: tel.descripcion }
+    })
+    nuevoTelefonoVerificado.value = { telefono: '', descripcion: '' }
+    await cargarTelefonosVerificados()
+  } catch (e) {
+    alert(e?.data?.message || 'Error agregando telefono')
+  }
+}
+
+const eliminarTelefonoVerificado = async (id) => {
+  if (!confirm('Eliminar este numero de la lista verificada?')) return
+  try {
+    await $fetch('/api/admin/telefonos-verificados', {
+      method: 'DELETE',
+      query: { id }
+    })
+    await cargarTelefonosVerificados()
+  } catch (e) {
+    alert(e?.data?.message || 'Error eliminando telefono')
+  }
 }
 
 onMounted(() => {
   loadConfig()
+cargarTelefonosVerificados()
 })
 </script>
 
@@ -1116,6 +1354,79 @@ nav {
   animation: slideIn 0.3s ease;
 }
 
+/* Verification toggles */
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  cursor: pointer;
+}
+.toggle-info {
+  display: flex;
+  flex-direction: column;
+}
+.toggle-info strong { font-size: 0.9rem; color: #2d3436; }
+.toggle-info span { font-size: 0.8rem; color: #636e72; }
+
+/* Verified phones */
+.verified-phones-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.verified-phone-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0.8rem;
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+}
+.phone-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.phone-info strong { font-family: monospace; font-size: 0.9rem; }
+.phone-info span { font-size: 0.8rem; color: #636e72; }
+.phone-date { font-size: 0.75rem; color: #b2bec3; }
+.btn-delete-sm {
+  background: none;
+  border: none;
+  color: #d63031;
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0.3rem 0.5rem;
+}
+.btn-delete-sm:hover { text-decoration: underline; }
+.empty-phones {
+  text-align: center;
+  color: #b2bec3;
+  padding: 1rem;
+  font-size: 0.85rem;
+  border: 1px dashed #e0e0e0;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+.add-phone-form {
+  border-top: 1px solid #eee;
+  padding-top: 1rem;
+}
+.btn-add-phone {
+  background: #0984e3;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-add-phone:hover { background: #0773c5; }
+.btn-add-phone:disabled { opacity: 0.5; cursor: not-allowed; }
+
 @keyframes slideIn {
   from { transform: translateY(1rem); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
@@ -1134,5 +1445,83 @@ nav {
   .providers-status {
     flex-direction: column;
   }
+}
+
+/* SMS Test Zone */
+.sms-test-zone {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 2px dashed #e0e0e0;
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1.25rem;
+}
+
+.test-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.test-icon {
+  font-size: 1.5rem;
+}
+
+.test-header h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #2d3436;
+}
+
+.test-desc {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #636e72;
+}
+
+.test-form .form-row {
+  gap: 1rem;
+}
+
+.test-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+.btn-test {
+  background: #6c5ce7;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.25rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.btn-test:hover:not(:disabled) {
+  background: #5a4bd1;
+}
+
+.btn-test:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.test-success {
+  color: #2e7d32;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.test-error {
+  color: #c62828;
+  font-size: 0.85rem;
+  font-weight: 500;
 }
 </style>

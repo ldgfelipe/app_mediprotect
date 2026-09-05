@@ -20,23 +20,21 @@ export default defineEventHandler(async (event) => {
     const { clave, valor } = config
     if (!clave) continue
 
+    // Primero intentar actualizar (incluye claves que esten en cualquier categoria)
     const result = await pool.query(
-      `UPDATE configuracion_sistema SET valor = $1, updated_at = NOW()
-       WHERE clave = $2 AND categoria = 'sms'
+      `UPDATE configuracion_sistema SET valor = $1, categoria = 'sms', updated_at = NOW()
+       WHERE clave = $2
        RETURNING id`,
       [valor || '', clave]
     )
 
     if (result.rowCount === 0) {
+      // No existe, insertar
+      const tipo = clave.includes('token') || clave.includes('auth') || clave.includes('secret') ? 'password' : 'texto'
       await pool.query(
-        `INSERT INTO configuracion_sistema (clave, valor, categoria, tipo, descripcion)
-         VALUES ($1, $2, 'sms', $3, $4)`,
-        [
-          clave,
-          valor || '',
-          clave.includes('token') || clave.includes('auth') || clave.includes('secret') ? 'password' : 'texto',
-          ''
-        ]
+        `INSERT INTO configuracion_sistema (clave, valor, categoria, tipo)
+         VALUES ($1, $2, 'sms', $3)`,
+        [clave, valor || '', tipo]
       )
     }
     actualizados++

@@ -33,6 +33,7 @@ function cerrarSesion() {
     </header>
     <main class="dashboard-content">
       <EmailConfirmBanner />
+      <SmsConfirmBanner />
       <h1>Bienvenido, Dr. {{ usuario?.nombre }}</h1>
       <p class="subtitle">Panel del Médico — MediProtect</p>
       <div class="cards">

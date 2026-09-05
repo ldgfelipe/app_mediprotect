@@ -8,6 +8,7 @@ export default defineEventHandler(async (event) => {
   if (decoded.tipo === 'medico') {
     const { nombre, apellido, telefono, cedula_profesional, consultorio_direccion, consultorio_ciudad, consultorio_estado, bio, foto_url, apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta, curp, codigo_postal, colonia } = body
     const curpUpper = (curp || '').toUpperCase().trim()
+    const resetPhone = telefono ? ', telefono_confirmado = false' : ''
     const result = await pool.query(
       `UPDATE medicos SET nombre = COALESCE($1, nombre), apellido = COALESCE($2, apellido),
        telefono = COALESCE($3, telefono), cedula_profesional = COALESCE($4, cedula_profesional),
@@ -24,7 +25,8 @@ export default defineEventHandler(async (event) => {
        codigo_postal = COALESCE($16, codigo_postal),
        colonia = COALESCE($17, colonia),
        updated_at = NOW()
-       WHERE id = $18 RETURNING id, nombre, apellido, email, email_confirmado, telefono, cedula_profesional, consultorio_direccion, consultorio_ciudad, consultorio_estado, bio, foto_url, created_at,
+       ${resetPhone}
+       WHERE id = $18 RETURNING id, nombre, apellido, email, email_confirmado, telefono, telefono_confirmado, cedula_profesional, consultorio_direccion, consultorio_ciudad, consultorio_estado, bio, foto_url, created_at,
                apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta, curp, codigo_postal, colonia`,
       [nombre, apellido, telefono, cedula_profesional, consultorio_direccion, consultorio_ciudad, consultorio_estado, bio, foto_url, apellido_paterno || apellido || null, apellido_materno || null, rfc || null, hospital_consultorio || null, tipo_consulta || null, curpUpper || null, codigo_postal || null, colonia || null, decoded.id]
     )
@@ -34,6 +36,7 @@ export default defineEventHandler(async (event) => {
 
   const { nombre, apellido, telefono, fecha_nacimiento, genero, direccion, ciudad, beneficiario_nombre, beneficiario_parentesco, beneficiario_telefono, estudios,
     estado_civil, ocupacion, beneficiarios } = body
+  const resetPhone = telefono ? ', telefono_confirmado = false' : ''
   const result = await pool.query(
     `UPDATE pacientes SET nombre = COALESCE($1, nombre), apellido = COALESCE($2, apellido),
      telefono = COALESCE($3, telefono), fecha_nacimiento = COALESCE($4, fecha_nacimiento),
@@ -45,7 +48,8 @@ export default defineEventHandler(async (event) => {
      estado_civil = COALESCE($11, estado_civil),
      ocupacion = COALESCE($12, ocupacion),
      updated_at = NOW()
-     WHERE id = $13 RETURNING id, nombre, apellido, email, email_confirmado, telefono, fecha_nacimiento, genero, direccion, ciudad,
+     ${resetPhone}
+     WHERE id = $13 RETURNING id, nombre, apellido, email, email_confirmado, telefono, telefono_confirmado, fecha_nacimiento, genero, direccion, ciudad,
      curp, estado_civil, ocupacion, como_nos_conociste,
      beneficiario_nombre, beneficiario_parentesco, beneficiario_telefono,
      identificacion_tipo, identificacion_numero, acepta_seguro, plan_contratado, created_at`,

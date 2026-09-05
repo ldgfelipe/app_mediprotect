@@ -30,12 +30,38 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Tipo invalido' })
   }
 
+  const pool = getPool()
+
+  // Verificar si el telefono esta en la lista de verificados por admin
+  const telVerificado = await pool.query(
+    'SELECT id FROM telefonos_verificados WHERE telefono LIKE $1 OR telefono = $2',
+    ['%' + telefonoLimpio.slice(-10), telefonoLimpio]
+  )
+
+  if (telVerificado.rowCount > 0) {
+    // Telefono verificado por admin: auto-confirmar sin SMS
+    const table = tipoUsuario === 'medico' ? 'medicos' : 'pacientes'
+    await pool.query(`UPDATE ${table} SET telefono_confirmado = true WHERE id = $1`, [user.id])
+
+    // Log sin enviar SMS
+    await pool.query(
+      'INSERT INTO sms_log (telefono, mensaje, proveedor, estado, error_mensaje) VALUES ($1, $2, $3, $4, $5)',
+      [telefonoLimpio, 'Auto-verificado (lista admin)', 'admin', 'auto-verificado', null]
+    )
+
+    return {
+      success: true,
+      mensaje: 'Telefono verificado automaticamente (numero en lista de prueba)',
+      autoConfirmado: true,
+      telefono: telefonoLimpio.replace(/(\d{4})$/, '****'),
+    }
+  }
+
+  // Flujo normal: verificar SMS configurado
   const config = await getSmsConfig()
   if (!config.account_sid || !config.auth_token || !config.from_number) {
     throw createError({ statusCode: 503, message: 'El servicio SMS no esta configurado. Contacta al administrador.' })
   }
-
-  const pool = getPool()
 
   // Verificar rate limiting: max 3 codigos por telefono en 10 minutos
   const recientes = await pool.query(
@@ -59,7 +85,6 @@ export default defineEventHandler(async (event) => {
   )
 
   // Enviar SMS
-  const smsConfig = await getSmsConfig()
   const mensaje = `MediProtect: Tu codigo de verificacion es ${codigo}. Expira en 10 minutos.`
   const result = await enviarSms(telefonoLimpio, mensaje)
 
