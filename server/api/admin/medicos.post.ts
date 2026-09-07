@@ -15,10 +15,10 @@ export default defineEventHandler(async (event) => {
     titulo, especialidad, ciudad, hospital, bio, servicios,
     universidad, horario_atencion, idiomas, usuario, password,
     apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta,
-    curp, codigo_postal, colonia
+    curp, codigo_postal, colonia, consultorio_ciudad, consultorio_estado, consultorio_direccion
   } = body
 
-  if (!nombre || !apellido) {
+  if (!nombre || (!apellido && !apellido_paterno)) {
     throw createError({ statusCode: 400, message: 'Nombre y apellido son requeridos' })
   }
 
@@ -64,7 +64,7 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  const slug = `${nombre} ${apellido}`
+  const slug = `${nombre} ${apellido || apellido_paterno}`
     .toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9 ]/g, '')
@@ -85,18 +85,19 @@ export default defineEventHandler(async (event) => {
         nombre, apellido, email, telefono, cedula_profesional,
         titulo, id_especialidad, slug, activo, usuario, password_hash,
         apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta,
-        curp, codigo_postal, colonia, email_confirmado
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, false)
+        curp, codigo_postal, colonia, consultorio_ciudad, consultorio_estado, consultorio_direccion, email_confirmado
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, false)
       RETURNING id, nombre, apellido, email, email_confirmado, telefono, cedula_profesional,
                 titulo, slug, activo, usuario, created_at,
                 apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta,
-                curp, codigo_postal, colonia
+                curp, codigo_postal, colonia, consultorio_ciudad, consultorio_estado, consultorio_direccion
     `, [
-      nombre, apellido, email || null, telefono || null, cedula_profesional || null,
+      nombre, apellido || apellido_paterno, email || null, telefono || null, cedula_profesional || null,
       titulo || null, idEspecialidad, slug, usuario || null, passwordHash,
       apellido_paterno || apellido || null, apellido_materno || null, rfc || null,
       hospital_consultorio || null, tipo_consulta || null,
-      curpUpper || null, codigo_postal || null, colonia || null
+      curpUpper || null, codigo_postal || null, colonia || null,
+      consultorio_ciudad || ciudad || null, consultorio_estado || null, consultorio_direccion || null
     ])
 
     const medico = result.rows[0]

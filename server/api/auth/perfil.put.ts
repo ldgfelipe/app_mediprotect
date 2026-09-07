@@ -5,10 +5,19 @@ export default defineEventHandler(async (event) => {
   const pool = getPool()
   const body = await readBody(event)
 
+  // Obtener telefono actual para comparar
+  const currentResult = await pool.query(
+    `SELECT telefono FROM ${decoded.tipo === 'medico' ? 'medicos' : 'pacientes'} WHERE id = $1`,
+    [decoded.id]
+  )
+  const currentPhone = currentResult.rows[0]?.telefono || ''
+  const normalize = (t: string) => (t || '').replace(/[^0-9]/g, '').slice(-10)
+
   if (decoded.tipo === 'medico') {
-    const { nombre, apellido, telefono, cedula_profesional, consultorio_direccion, consultorio_ciudad, consultorio_estado, bio, foto_url, apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta, curp, codigo_postal, colonia } = body
+    const { nombre, apellido, telefono, cedula_profesional, consultorio_direccion, consultorio_ciudad, consultorio_estado, bio, foto_url, apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta, curp, codigo_postal, colonia, estudios } = body
     const curpUpper = (curp || '').toUpperCase().trim()
-    const resetPhone = telefono ? ', telefono_confirmado = false' : ''
+    const phoneChanged = telefono && normalize(telefono) !== normalize(currentPhone)
+    const resetPhone = phoneChanged ? ', telefono_confirmado = false' : ''
     const result = await pool.query(
       `UPDATE medicos SET nombre = COALESCE($1, nombre), apellido = COALESCE($2, apellido),
        telefono = COALESCE($3, telefono), cedula_profesional = COALESCE($4, cedula_profesional),
@@ -31,12 +40,19 @@ export default defineEventHandler(async (event) => {
       [nombre, apellido, telefono, cedula_profesional, consultorio_direccion, consultorio_ciudad, consultorio_estado, bio, foto_url, apellido_paterno || apellido || null, apellido_materno || null, rfc || null, hospital_consultorio || null, tipo_consulta || null, curpUpper || null, codigo_postal || null, colonia || null, decoded.id]
     )
     if (result.rows.length === 0) throw createError({ statusCode: 404, message: 'No encontrado' })
-    return { usuario: result.rows[0] }
+
+    if (estudios !== undefined) {
+      await pool.query('UPDATE medicos SET estudios = $1 WHERE id = $2', [JSON.stringify(estudios), decoded.id])
+      result.rows[0].estudios = estudios
+    }
+
+    return { usuario: { ...result.rows[0], tipo: 'medico' } }
   }
 
   const { nombre, apellido, telefono, fecha_nacimiento, genero, direccion, ciudad, beneficiario_nombre, beneficiario_parentesco, beneficiario_telefono, estudios,
     estado_civil, ocupacion, beneficiarios } = body
-  const resetPhone = telefono ? ', telefono_confirmado = false' : ''
+  const phoneChanged = telefono && normalize(telefono) !== normalize(currentPhone)
+  const resetPhone = phoneChanged ? ', telefono_confirmado = false' : ''
   const result = await pool.query(
     `UPDATE pacientes SET nombre = COALESCE($1, nombre), apellido = COALESCE($2, apellido),
      telefono = COALESCE($3, telefono), fecha_nacimiento = COALESCE($4, fecha_nacimiento),
@@ -79,7 +95,7 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  const usuario = result.rows[0]
+  const usuario = { ...result.rows[0], tipo: 'paciente' }
   if (estudios !== undefined) usuario.estudios = estudios
 
   return { usuario }

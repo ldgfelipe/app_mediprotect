@@ -8,15 +8,9 @@ export function useVerificacionConfig() {
   async function loadConfig() {
     if (config.value.loaded) return
     try {
-      const data = await $fetch('/api/admin/configuracion', {
-        query: { categoria: 'general' }
-      })
-      const items = data?.configuracion || []
-      const map: Record<string, string> = {}
-      for (const c of items) map[c.clave] = c.valor
-
-      config.value.requirePhone = map['require_phone_verification'] !== 'false'
-      config.value.requireEmail = map['require_email_verification'] !== 'false'
+      const data = await $fetch('/api/config/verificacion')
+      config.value.requirePhone = data?.requirePhoneVerification !== false
+      config.value.requireEmail = data?.requireEmailVerification !== false
       config.value.loaded = true
     } catch {
       config.value.loaded = true

@@ -18,7 +18,8 @@ const newMedico = ref({
   cedula_profesional: '', titulo: '', especialidad: '',
   ciudad: '', hospital_consultorio: '', rfc: '', tipo_consulta: '',
   bio: '', servicios: '', universidad: '', horario_atencion: '', idiomas: 'Espanol',
-  precio_regular: '', precio_miembro: '', usuario: '', password: ''
+  precio_regular: '', precio_miembro: '', usuario: '', password: '',
+  curp: '', codigo_postal: '', colonia: '', consultorio_estado: ''
 })
 
 const searchingAI = ref(false)
@@ -113,9 +114,16 @@ async function loadEspecialidades() {
 }
 
 function openNewModal() {
-  newMedico.value = { nombre: '', apellido_paterno: '', apellido_materno: '', email: '', telefono: '', cedula_profesional: '', titulo: '', especialidad: '', ciudad: '', hospital_consultorio: '', rfc: '', tipo_consulta: '', bio: '', servicios: '', universidad: '', horario_atencion: '', idiomas: 'Espanol', precio_regular: '', precio_miembro: '', usuario: '', password: '' }
+  newMedico.value = { nombre: '', apellido_paterno: '', apellido_materno: '', email: '', telefono: '', cedula_profesional: '', titulo: '', especialidad: '', ciudad: '', hospital_consultorio: '', rfc: '', tipo_consulta: '', bio: '', servicios: '', universidad: '', horario_atencion: '', idiomas: 'Espanol', precio_regular: '', precio_miembro: '', usuario: '', password: '', curp: '', codigo_postal: '', colonia: '', consultorio_estado: '' }
   formText.value = ''; perfilUrl.value = ''; importMode.value = 'url'
   aiResult.value = null; aiError.value = ''; showAiPreview.value = false
+  curpErrorNuevo.value = ''
+  curpDatosNuevo.value = null
+  coloniasNuevo.value = []
+  cpNuevoError.value = ''
+  cpNuevoResult.value = null
+  coloniaSelNuevo.value = ''
+  if (cpNuevoTimeout) { clearTimeout(cpNuevoTimeout); cpNuevoTimeout = null }
   showModal.value = true
 }
 
@@ -172,6 +180,93 @@ async function saveNewMedico() {
   finally { savingNew.value = false }
 }
 
+// ========== CURP VALIDATION (NUEVO) ==========
+const curpValidandoNuevo = ref(false)
+const curpErrorNuevo = ref('')
+const curpDatosNuevo = ref<any>(null)
+
+async function validarCURPNuevo() {
+  curpErrorNuevo.value = ''
+  curpDatosNuevo.value = null
+  const curp = (newMedico.value.curp || '').toUpperCase().trim()
+  if (!curp || curp.length !== 18) { curpErrorNuevo.value = 'La CURP debe tener 18 caracteres'; return }
+  curpValidandoNuevo.value = true
+  try {
+    const data: any = await $fetch('/api/curp/validar', { params: { curp } })
+    if (data.error) { curpErrorNuevo.value = data.error_msg || 'No se pudieron obtener datos'; return }
+    curpDatosNuevo.value = data.response
+    const s = data.response?.Solicitante || {}
+    newMedico.value.nombre = s.Nombres || newMedico.value.nombre
+    newMedico.value.apellido_paterno = s.ApellidoPaterno || newMedico.value.apellido_paterno
+    newMedico.value.apellido_materno = s.ApellidoMaterno || newMedico.value.apellido_materno
+    if (s.FechaNacimiento) {
+      const parts = s.FechaNacimiento.split('/')
+      if (parts.length === 3) newMedico.value.fecha_nacimiento = `${parts[2]}-${parts[1]}-${parts[0]}`
+    }
+  } catch (e: any) {
+    curpErrorNuevo.value = e?.data?.message || e?.message || 'Error al validar CURP'
+  }
+  curpValidandoNuevo.value = false
+}
+
+// ========== CODIGO POSTAL / COLONIAS (NUEVO) ==========
+const coloniasNuevo = ref<any[]>([])
+const cpNuevoLoading = ref(false)
+const cpNuevoError = ref('')
+const cpNuevoResult = ref<any>(null)
+const coloniaSelNuevo = ref('')
+let cpNuevoTimeout: ReturnType<typeof setTimeout> | null = null
+
+watch(() => newMedico.value.codigo_postal, (val) => {
+  if (cpNuevoTimeout) clearTimeout(cpNuevoTimeout)
+  cpNuevoTimeout = setTimeout(() => buscarColoniasNuevo(), 400)
+})
+
+async function buscarColoniasNuevo() {
+  const cp = (newMedico.value.codigo_postal || '').replace(/[^0-9]/g, '')
+  if (!cp || cp.length !== 5) {
+    coloniasNuevo.value = []
+    cpNuevoResult.value = null
+    cpNuevoError.value = ''
+    return
+  }
+  cpNuevoLoading.value = true
+  cpNuevoError.value = ''
+  cpNuevoResult.value = null
+  try {
+    const data: any = await $fetch('/api/sepomex/colonias', { params: { codigo_postal: cp } })
+    if (data?.colonias && data.colonias.length > 0) {
+      coloniasNuevo.value = data.colonias
+      cpNuevoResult.value = {
+        municipios: data.municipio || data.colonias[0]?.municipio,
+        ciudades: data.ciudad || data.colonias[0]?.ciudad,
+        estados: data.estado || data.colonias[0]?.estado,
+      }
+    } else {
+      coloniasNuevo.value = []
+      cpNuevoResult.value = null
+      cpNuevoError.value = 'No se encontraron colonias para este código postal'
+    }
+  } catch (e: any) {
+    coloniasNuevo.value = []
+    cpNuevoResult.value = null
+    cpNuevoError.value = e?.data?.message || 'Error al consultar colonias'
+  } finally {
+    cpNuevoLoading.value = false
+  }
+}
+
+function seleccionarColoniaNuevo() {
+  const colonia = coloniaSelNuevo.value
+  if (!colonia) return
+  const selected = coloniasNuevo.value.find(c => c.colonia === colonia)
+  if (selected) {
+    newMedico.value.colonia = selected.colonia || ''
+    newMedico.value.ciudad = selected.ciudad || newMedico.value.ciudad
+    newMedico.value.consultorio_estado = selected.estado || ''
+  }
+}
+
 function abrirEditar(m: any) {
   editForm.value = {
     id: m.id, nombre: m.nombre, apellido_paterno: m.apellido_paterno || m.apellido || '', apellido_materno: m.apellido_materno || '',
@@ -180,13 +275,195 @@ function abrirEditar(m: any) {
     consultorio_ciudad: m.consultorio_ciudad || '', bio: m.bio || '',
     activo: m.activo, password: '', usuario: m.usuario || '',
     precio_regular: m.precio_regular || '', precio_miembro: m.precio_miembro || '',
-    rfc: m.rfc || '', hospital_consultorio: m.hospital_consultorio || '', tipo_consulta: m.tipo_consulta || ''
+    rfc: m.rfc || '', hospital_consultorio: m.hospital_consultorio || '', tipo_consulta: m.tipo_consulta || '',
+    curp: m.curp || '', codigo_postal: m.codigo_postal || '', colonia: m.colonia || '',
+    consultorio_estado: m.consultorio_estado || '', consultorio_direccion: m.consultorio_direccion || ''
   }
+  editPhoto.value = null
+  editPhotoPreview.value = m.foto_url || ''
+  editPhotoError.value = ''
+  editPhotoOk.value = ''
   editError.value = ''; editOk.value = ''
+  curpErrorEdit.value = ''
+  curpDatosEdit.value = null
+  coloniasEdit.value = []
+  cpEditError.value = ''
+  cpEditResult.value = null
+  coloniaSelEdit.value = ''
   editando.value = true
 }
 
-function cerrarEditar() { editando.value = false; editError.value = ''; editOk.value = '' }
+function cerrarEditar() {
+  editando.value = false; editError.value = ''; editOk.value = ''
+  if (cpEditTimeout) { clearTimeout(cpEditTimeout); cpEditTimeout = null }
+}
+
+// ========== CURP VALIDATION (EDITAR) ==========
+const curpValidandoEdit = ref(false)
+const curpErrorEdit = ref('')
+const curpDatosEdit = ref<any>(null)
+
+async function validarCURPEdit() {
+  curpErrorEdit.value = ''
+  curpDatosEdit.value = null
+  const curp = (editForm.value.curp || '').toUpperCase().trim()
+  if (!curp || curp.length !== 18) { curpErrorEdit.value = 'La CURP debe tener 18 caracteres'; return }
+  curpValidandoEdit.value = true
+  try {
+    const data: any = await $fetch('/api/curp/validar', { params: { curp } })
+    if (data.error) { curpErrorEdit.value = data.error_msg || 'No se pudieron obtener datos'; return }
+    curpDatosEdit.value = data.response
+    const s = data.response?.Solicitante || {}
+    editForm.value.nombre = s.Nombres || editForm.value.nombre
+    editForm.value.apellido_paterno = s.ApellidoPaterno || editForm.value.apellido_paterno
+    editForm.value.apellido_materno = s.ApellidoMaterno || editForm.value.apellido_materno
+  } catch (e: any) {
+    curpErrorEdit.value = e?.data?.message || e?.message || 'Error al validar CURP'
+  }
+  curpValidandoEdit.value = false
+}
+
+// ========== CODIGO POSTAL / COLONIAS (EDITAR) ==========
+const coloniasEdit = ref<any[]>([])
+const cpEditLoading = ref(false)
+const cpEditError = ref('')
+const cpEditResult = ref<any>(null)
+const coloniaSelEdit = ref('')
+let cpEditTimeout: ReturnType<typeof setTimeout> | null = null
+
+watch(() => editForm.value?.codigo_postal, (val) => {
+  if (cpEditTimeout) clearTimeout(cpEditTimeout)
+  cpEditTimeout = setTimeout(() => buscarColoniasEdit(), 400)
+})
+
+async function buscarColoniasEdit() {
+  const cp = (editForm.value.codigo_postal || '').replace(/[^0-9]/g, '')
+  if (!cp || cp.length !== 5) {
+    coloniasEdit.value = []
+    cpEditResult.value = null
+    cpEditError.value = ''
+    return
+  }
+  cpEditLoading.value = true
+  cpEditError.value = ''
+  cpEditResult.value = null
+  try {
+    const data: any = await $fetch('/api/sepomex/colonias', { params: { codigo_postal: cp } })
+    if (data?.colonias && data.colonias.length > 0) {
+      coloniasEdit.value = data.colonias
+      cpEditResult.value = {
+        municipios: data.municipio || data.colonias[0]?.municipio,
+        ciudades: data.ciudad || data.colonias[0]?.ciudad,
+        estados: data.estado || data.colonias[0]?.estado,
+      }
+    } else {
+      coloniasEdit.value = []
+      cpEditResult.value = null
+      cpEditError.value = 'No se encontraron colonias para este código postal'
+    }
+  } catch (e: any) {
+    coloniasEdit.value = []
+    cpEditResult.value = null
+    cpEditError.value = e?.data?.message || 'Error al consultar colonias'
+  } finally {
+    cpEditLoading.value = false
+  }
+}
+
+function seleccionarColoniaEdit() {
+  const colonia = coloniaSelEdit.value
+  if (!colonia) return
+  const selected = coloniasEdit.value.find(c => c.colonia === colonia)
+  if (selected) {
+    editForm.value.colonia = selected.colonia || ''
+    editForm.value.consultorio_ciudad = selected.ciudad || editForm.value.consultorio_ciudad
+    editForm.value.consultorio_estado = selected.estado || ''
+  }
+}
+
+const editPhoto = ref<File | null>(null)
+const editPhotoPreview = ref('')
+const editPhotoError = ref('')
+const editPhotoOk = ref('')
+const editPhotoSaving = ref(false)
+
+function onEditPhotoSelected(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  editPhotoError.value = ''
+  editPhotoOk.value = ''
+
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
+  if (!allowedTypes.includes(file.type)) {
+    editPhotoError.value = 'Formato no valido. Se permiten archivos JPG, PNG o WebP.'
+    input.value = ''
+    return
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    editPhotoError.value = `El archivo pesa ${(file.size / 1024 / 1024).toFixed(1)}MB. El maximo permitido es 2MB.`
+    input.value = ''
+    return
+  }
+  if (file.size < 10240) {
+    editPhotoError.value = `El archivo pesa ${(file.size / 1024).toFixed(1)}KB. La imagen debe pesar al menos 10KB. Verifica que la imagen tenga buena resolucion.`
+    input.value = ''
+    return
+  }
+
+  editPhoto.value = file
+  editPhotoPreview.value = URL.createObjectURL(file)
+}
+
+async function saveEditPhoto() {
+  if (!editPhoto.value || !editForm.value.id) return
+  editPhotoSaving.value = true
+  editPhotoError.value = ''
+  editPhotoOk.value = ''
+  try {
+    const formData = new FormData()
+    formData.append('foto', editPhoto.value)
+    formData.append('medico_id', editForm.value.id)
+    const data: any = await $fetch('/api/upload/foto-medico', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token.value}` },
+      body: formData,
+    })
+    if (data.foto_url) {
+      editPhotoPreview.value = data.foto_url
+      editPhoto.value = null
+      editPhotoOk.value = 'Foto actualizada correctamente'
+      const idx = medicos.value.findIndex(m => m.id === editForm.value.id)
+      if (idx !== -1) medicos.value[idx].foto_url = data.foto_url
+    }
+  } catch (e: any) {
+    editPhotoError.value = e.data?.message || 'Error al subir la foto'
+  } finally {
+    editPhotoSaving.value = false
+  }
+}
+
+async function deleteEditPhoto() {
+  if (!editForm.value.id) return
+  if (!confirm('Eliminar la foto de perfil?')) return
+  editPhotoError.value = ''
+  editPhotoOk.value = ''
+  try {
+    await $fetch('/api/upload/delete-foto', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token.value}` },
+      body: { medico_id: editForm.value.id },
+    })
+    editPhotoPreview.value = ''
+    editPhoto.value = null
+    editPhotoOk.value = 'Foto eliminada'
+    const idx = medicos.value.findIndex(m => m.id === editForm.value.id)
+    if (idx !== -1) medicos.value[idx].foto_url = null
+  } catch (e: any) {
+    editPhotoError.value = e.data?.message || 'Error al eliminar foto'
+  }
+}
 
 async function guardarEdicion() {
   editError.value = ''; editOk.value = ''
@@ -301,7 +578,7 @@ async function confirmarEliminar(medico: any) {
       </div>
 
       <!-- Modal Nuevo Medico -->
-      <div class="modal-overlay" v-if="showModal" @click.self="showModal = false">
+      <div class="modal-overlay" v-if="showModal">
         <div class="modal modal-lg">
           <div class="modal-header">
             <h2>Registrar Nuevo Medico</h2>
@@ -355,6 +632,23 @@ async function confirmarEliminar(medico: any) {
                 <div class="form-group"><label>RFC</label><input v-model="newMedico.rfc" placeholder="XXXX000000XXX" /></div>
               </div>
               <div class="form-row">
+                <div class="form-group">
+                  <label>CURP</label>
+                  <div class="curp-row">
+                    <input v-model="newMedico.curp" maxlength="18" placeholder="AAAA000000HAAAAAA00" style="text-transform:uppercase;" />
+                    <button type="button" class="btn-validate" @click="validarCURPNuevo" :disabled="curpValidandoNuevo">
+                      {{ curpValidandoNuevo ? 'Validando...' : 'Validar CURP' }}
+                    </button>
+                  </div>
+                  <span v-if="curpDatosNuevo" class="curp-success">
+                    <span class="success-icon">✓</span>
+                    {{ curpDatosNuevo.Solicitante?.Nombres }} {{ curpDatosNuevo.Solicitante?.ApellidoPaterno }}
+                  </span>
+                  <span v-if="curpErrorNuevo" class="msg-error" style="margin-top:0.4rem;display:block;">{{ curpErrorNuevo }}</span>
+                </div>
+                <div class="form-group"><label>Telefono 2</label><input v-model="newMedico.telefono_2" /></div>
+              </div>
+              <div class="form-row">
                 <div class="form-group"><label>Email</label><input v-model="newMedico.email" type="email" /></div>
                 <div class="form-group"><label>Telefono</label><input v-model="newMedico.telefono" /></div>
               </div>
@@ -372,7 +666,32 @@ async function confirmarEliminar(medico: any) {
                 <div class="form-group"><label>Ciudad</label><input v-model="newMedico.ciudad" /></div>
               </div>
               <div class="form-row">
+                <div class="form-group"><label>Codigo Postal</label>
+                  <input v-model="newMedico.codigo_postal" maxlength="5" @focus="buscarColoniasNuevo" style="text-transform:uppercase;" />
+                  <span v-if="cpNuevoError" class="cp-error" style="color:#d22; font-size:0.8rem; margin-top:0.3rem;">{{ cpNuevoError }}</span>
+                  <span v-if="cpNuevoLoading" class="cp-loading" style="color:#636e72; font-size:0.8rem; margin-top:0.3rem;">Buscando...</span>
+                </div>
+                <div class="form-group"><label>Estado</label><input v-model="newMedico.consultorio_estado" placeholder="Ej: Puebla" /></div>
+              </div>
+              <div v-if="coloniasNuevo.length > 0" class="colonias-dropdown">
+                <div class="colonias-header">
+                  <span>Colonias encontradas</span>
+                  <span v-if="cpNuevoResult" class="colonias-resumen">
+                    {{ cpNuevoResult.ciudades }}, {{ cpNuevoResult.municipios }}, {{ cpNuevoResult.estados }}
+                  </span>
+                </div>
+                <select v-model="coloniaSelNuevo" @change="seleccionarColoniaNuevo">
+                  <option value="">Seleccionar colonia...</option>
+                  <option v-for="col in coloniasNuevo" :key="col.colonia" :value="col.colonia">{{ col.colonia }} {{ col.tipo_colonia || '' }}</option>
+                </select>
+                <span v-if="!coloniaSelNuevo" class="colonias-manual">O escribe manualmente</span>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Colonia</label><input v-model="newMedico.colonia" placeholder="Nombre de la colonia" /></div>
                 <div class="form-group"><label>Hospital o Consultorio</label><input v-model="newMedico.hospital_consultorio" placeholder="Ej: Hospital Angeles" /></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Precio Regular ($)</label><input v-model="newMedico.precio_regular" type="number" step="0.01" min="0" placeholder="Ej: 500" /></div>
                 <div class="form-group"><label>Tipo de Consulta</label>
                   <select v-model="newMedico.tipo_consulta">
                     <option value="">Seleccionar...</option>
@@ -383,8 +702,8 @@ async function confirmarEliminar(medico: any) {
                 </div>
               </div>
               <div class="form-row">
-                <div class="form-group"><label>Precio Regular ($)</label><input v-model="newMedico.precio_regular" type="number" step="0.01" min="0" placeholder="Ej: 500" /></div>
                 <div class="form-group"><label>Precio Miembro ($)</label><input v-model="newMedico.precio_miembro" type="number" step="0.01" min="0" placeholder="Ej: 400" /></div>
+                <div class="form-group"><label>Universidad</label><input v-model="newMedico.universidad" placeholder="Ej: BUAP" /></div>
               </div>
               <div class="form-row">
                 <div class="form-group"><label>Usuario (para login como medico)</label><input v-model="newMedico.usuario" placeholder="Ej: dr.lopez" /></div>
@@ -401,7 +720,7 @@ async function confirmarEliminar(medico: any) {
       </div>
 
       <!-- Modal Editar Medico -->
-      <div class="modal-overlay" v-if="editando" @click.self="cerrarEditar">
+      <div class="modal-overlay" v-if="editando">
         <div class="modal">
           <div class="modal-header">
             <h2>Editar Medico</h2>
@@ -410,6 +729,33 @@ async function confirmarEliminar(medico: any) {
           <div class="modal-body">
             <div v-if="editError" class="msg-error">{{ editError }}</div>
             <div v-if="editOk" class="msg-ok">{{ editOk }}</div>
+
+            <!-- Foto de perfil -->
+            <div class="edit-photo-section">
+              <label class="section-label">Foto de perfil</label>
+              <div class="edit-photo-row">
+                <div class="edit-photo-preview">
+                  <img v-if="editPhotoPreview" :src="editPhotoPreview" alt="Foto">
+                  <div v-else class="edit-photo-placeholder">
+                    <span>{{ editForm.nombre?.charAt(0) }}{{ editForm.apellido_paterno?.charAt(0) }}</span>
+                  </div>
+                </div>
+                <div class="edit-photo-actions">
+                  <label class="btn-photo-upload">
+                    <input type="file" accept="image/jpeg,image/png,image/webp" @change="onEditPhotoSelected" style="display:none">
+                    {{ editPhotoPreview ? 'Cambiar foto' : 'Subir foto' }}
+                  </label>
+                  <button v-if="editPhotoPreview" class="btn-photo-delete" @click="deleteEditPhoto" type="button">Eliminar foto</button>
+                  <button v-if="editPhoto" class="btn-photo-save" @click="saveEditPhoto" :disabled="editPhotoSaving" type="button">
+                    {{ editPhotoSaving ? 'Subiendo...' : 'Guardar foto' }}
+                  </button>
+                  <p class="photo-restrictions">JPG, PNG o WebP. Maximo 2MB. Minimo 10KB.</p>
+                </div>
+              </div>
+              <div v-if="editPhotoError" class="msg-error" style="margin-top:0.5rem">{{ editPhotoError }}</div>
+              <div v-if="editPhotoOk" class="msg-ok" style="margin-top:0.5rem">{{ editPhotoOk }}</div>
+            </div>
+
             <div class="form-row">
               <div class="form-group"><label>Nombre *</label><input v-model="editForm.nombre" /></div>
               <div class="form-group"><label>Apellido Paterno *</label><input v-model="editForm.apellido_paterno" /></div>
@@ -421,6 +767,47 @@ async function confirmarEliminar(medico: any) {
             <div class="form-row">
               <div class="form-group"><label>Email</label><input v-model="editForm.email" type="email" /></div>
               <div class="form-group"><label>Telefono</label><input v-model="editForm.telefono" /></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>CURP</label>
+                <div class="curp-row">
+                  <input v-model="editForm.curp" maxlength="18" placeholder="AAAA000000HAAAAAA00" style="text-transform:uppercase;" />
+                  <button type="button" class="btn-validate" @click="validarCURPEdit" :disabled="curpValidandoEdit">
+                    {{ curpValidandoEdit ? 'Validando...' : 'Validar CURP' }}
+                  </button>
+                </div>
+                <span v-if="curpDatosEdit" class="curp-success">
+                  <span class="success-icon">✓</span>
+                  {{ curpDatosEdit.Solicitante?.Nombres }} {{ curpDatosEdit.Solicitante?.ApellidoPaterno }}
+                </span>
+                <span v-if="curpErrorEdit" class="msg-error" style="margin-top:0.4rem;display:block;">{{ curpErrorEdit }}</span>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Codigo Postal</label>
+                <input v-model="editForm.codigo_postal" maxlength="5" @focus="buscarColoniasEdit" style="text-transform:uppercase;" />
+                <span v-if="cpEditError" class="cp-error" style="color:#d22; font-size:0.8rem; margin-top:0.3rem;">{{ cpEditError }}</span>
+                <span v-if="cpEditLoading" class="cp-loading" style="color:#636e72; font-size:0.8rem; margin-top:0.3rem;">Buscando...</span>
+              </div>
+              <div class="form-group"><label>Estado</label><input v-model="editForm.consultorio_estado" placeholder="Ej: Puebla" /></div>
+            </div>
+            <div v-if="coloniasEdit.length > 0" class="colonias-dropdown">
+              <div class="colonias-header">
+                <span>Colonias encontradas</span>
+                <span v-if="cpEditResult" class="colonias-resumen">
+                  {{ cpEditResult.ciudades }}, {{ cpEditResult.municipios }}, {{ cpEditResult.estados }}
+                </span>
+              </div>
+              <select v-model="coloniaSelEdit" @change="seleccionarColoniaEdit">
+                <option value="">Seleccionar colonia...</option>
+                <option v-for="col in coloniasEdit" :key="col.colonia" :value="col.colonia">{{ col.colonia }} {{ col.tipo_colonia || '' }}</option>
+              </select>
+              <span v-if="!coloniaSelEdit" class="colonias-manual">O escribe manualmente</span>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Colonia</label><input v-model="editForm.colonia" placeholder="Nombre de la colonia" /></div>
+              <div class="form-group"><label>Direccion del consultorio</label><input v-model="editForm.consultorio_direccion" placeholder="Calle y numero" /></div>
             </div>
             <div class="form-row">
               <div class="form-group"><label>Cedula Profesional</label><input v-model="editForm.cedula_profesional" /></div>
@@ -471,7 +858,7 @@ async function confirmarEliminar(medico: any) {
       </div>
 
       <!-- Modal Ver Perfil -->
-      <div class="modal-overlay" v-if="showViewModal" @click.self="cerrarVer">
+      <div class="modal-overlay" v-if="showViewModal">
         <div class="modal modal-lg">
           <div class="modal-header">
             <h2>Perfil Médico</h2>
@@ -658,4 +1045,33 @@ async function confirmarEliminar(medico: any) {
 .estado { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.8rem; font-weight: 600; }
 .estado.activo { background: #e8f5e9; color: #2e7d32; }
 .estado.inactivo { background: #ffebee; color: #c62828; }
+
+/* Edit Photo Section */
+.edit-photo-section { margin-bottom: 1.25rem; padding-bottom: 1.25rem; border-bottom: 1px solid #e0e0e0; }
+.section-label { font-size: 0.8rem; font-weight: 600; color: #636e72; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 0.75rem; }
+.edit-photo-row { display: flex; gap: 1.25rem; align-items: flex-start; }
+.edit-photo-preview { width: 100px; height: 100px; border-radius: 50%; overflow: hidden; background: #f5f6fa; border: 2px solid #e0e0e0; flex-shrink: 0; }
+.edit-photo-preview img { width: 100%; height: 100%; object-fit: cover; }
+.edit-photo-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 700; color: #b2bec3; }
+.edit-photo-actions { display: flex; flex-direction: column; gap: 0.5rem; }
+.btn-photo-upload { display: inline-block; padding: 0.4rem 0.8rem; background: #0984e3; color: white; border-radius: 6px; font-size: 0.8rem; cursor: pointer; text-align: center; }
+.btn-photo-upload:hover { background: #0652DD; }
+.btn-photo-delete { padding: 0.4rem 0.8rem; background: none; border: 1px solid #d63031; color: #d63031; border-radius: 6px; font-size: 0.8rem; cursor: pointer; }
+.btn-photo-delete:hover { background: #ffebee; }
+.btn-photo-save { padding: 0.4rem 0.8rem; background: #00b894; color: white; border: none; border-radius: 6px; font-size: 0.8rem; cursor: pointer; }
+.btn-photo-save:hover { background: #00a884; }
+.photo-restrictions { font-size: 0.75rem; color: #b2bec3; margin: 0; }
+
+/* CURP + Colonias */
+.curp-row { display: flex; gap: 0.5rem; align-items: center; }
+.btn-validate { background: #0984e3; color: white; border: none; padding: 0.55rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.82rem; font-weight: 600; white-space: nowrap; }
+.btn-validate:hover:not(:disabled) { background: #0773c5; }
+.btn-validate:disabled { opacity: 0.5; cursor: not-allowed; }
+.curp-success { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.5rem; font-size: 0.82rem; color: #2e7d32; background: #e8f5e9; padding: 0.4rem 0.75rem; border-radius: 6px; }
+.success-icon { width: 20px; height: 20px; background: #2e7d32; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; }
+.colonias-dropdown { margin-bottom: 0.75rem; padding: 0.75rem; background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; }
+.colonias-header { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.8rem; color: #2d3436; font-weight: 600; }
+.colonias-resumen { font-weight: 400; color: #636e72; font-size: 0.78rem; }
+.colonias-dropdown select { width: 100%; padding: 0.55rem 0.75rem; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 0.85rem; }
+.colonias-manual { display: inline-block; margin-top: 0.4rem; font-size: 0.75rem; color: #0984e3; cursor: pointer; }
 </style>

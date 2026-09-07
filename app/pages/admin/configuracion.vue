@@ -204,8 +204,8 @@
             <div class="section-title">
               <span class="provider-icon-lg">📱</span>
               <div>
-                <h3>SMS - Confirmación de Teléfono</h3>
-                <p class="section-desc">Proveedor SMS para envío de códigos de verificación de teléfono</p>
+                <h3>SMS - Conexiones multiples</h3>
+                <p class="section-desc">Gestiona múltiples conexiones SMS con failover automático</p>
               </div>
             </div>
             <label class="toggle-switch">
@@ -215,49 +215,99 @@
           </div>
 
           <div class="section-body" v-if="sms.enabled">
-            <!-- Proveedor SMS -->
-            <div class="form-row">
-              <div class="form-group flex-1">
-                <label>Proveedor SMS</label>
-                <select v-model="sms.provider" @change="markDirty">
-                  <option value="twilio">Twilio</option>
-                  <option value="vonage" disabled>Vonage (próximamente)</option>
-                  <option value="aws_sns" disabled>AWS SNS (próximamente)</option>
-                </select>
+            <!-- Lista de conexiones -->
+            <div class="conexiones-header">
+              <h4>Conexiones SMS</h4>
+              <button class="btn-primary btn-sm" @click="abrirFormConexion()">
+                + Nueva conexion
+              </button>
+            </div>
+
+            <!-- Sin conexiones -->
+            <div v-if="sms.conexiones.length === 0 && !sms.showForm" class="empty-state">
+              <p>No hay conexiones SMS configuradas. Agrega una para comenzar.</p>
+            </div>
+
+            <!-- Tabla de conexiones -->
+            <div v-if="sms.conexiones.length > 0" class="conexiones-table">
+              <div class="conexion-row conexion-header-row">
+                <span class="col-status">Estado</span>
+                <span class="col-name">Nombre</span>
+                <span class="col-provider">Proveedor</span>
+                <span class="col-phone">Numero</span>
+                <span class="col-mode">Modo</span>
+                <span class="col-priority">Prioridad</span>
+                <span class="col-actions">Acciones</span>
+              </div>
+              <div
+                v-for="conn in sms.conexiones"
+                :key="conn.id"
+                class="conexion-row"
+                :class="{ 'conexion-preferida': conn.preferida }"
+              >
+                <span class="col-status">
+                  <span class="status-dot" :class="conn.activa ? 'active' : 'inactive'"></span>
+                  {{ conn.preferida ? 'Preferida' : (conn.activa ? 'Activa' : 'Inactiva') }}
+                </span>
+                <span class="col-name">
+                  {{ conn.nombre }}
+                  <span v-if="conn.preferida" class="preferida-badge">⭐</span>
+                </span>
+                <span class="col-provider">{{ conn.proveedor }}</span>
+                <span class="col-phone">{{ conn.from_number || '—' }}</span>
+                <span class="col-mode">
+                  <span class="mode-badge" :class="conn.modo === 'produccion' ? 'badge-prod' : 'badge-test'">
+                    {{ conn.modo === 'produccion' ? 'Producción' : 'Sandbox' }}
+                  </span>
+                </span>
+                <span class="col-priority">{{ conn.prioridad }}</span>
+                <span class="col-actions">
+                  <button class="btn-icon-sm" @click="editarConexion(conn)" title="Editar">✏️</button>
+                  <button class="btn-icon-sm" @click="togglePreferida(conn)" :title="conn.preferida ? 'Quitar preferida' : 'Marcar preferida'">
+                    {{ conn.preferida ? '⭐' : '☆' }}
+                  </button>
+                  <button class="btn-icon-sm" @click="toggleActiva(conn)" :title="conn.activa ? 'Desactivar' : 'Activar'">
+                    {{ conn.activa ? '🟢' : '🔴' }}
+                  </button>
+                  <button class="btn-icon-sm" @click="eliminarConexion(conn)" title="Eliminar">🗑️</button>
+                </span>
               </div>
             </div>
 
-            <!-- Twilio Config -->
-            <div v-if="sms.provider === 'twilio'" class="twilio-config">
+            <!-- Formulario nueva/editar conexion -->
+            <div v-if="sms.showForm" class="conexion-form">
+              <h4>{{ sms.editandoId ? 'Editar conexion' : 'Nueva conexion' }}</h4>
+              <div class="form-row">
+                <div class="form-group flex-1">
+                  <label>Nombre *</label>
+                  <input v-model="sms.form.nombre" type="text" placeholder="Ej: Twilio Principal">
+                </div>
+                <div class="form-group">
+                  <label>Proveedor</label>
+                  <select v-model="sms.form.proveedor">
+                    <option value="twilio">Twilio</option>
+                    <option value="vonage">Vonage</option>
+                    <option value="aws_sns">AWS SNS</option>
+                  </select>
+                </div>
+              </div>
+
               <div class="form-row">
                 <div class="form-group flex-1">
                   <label>Account SID</label>
                   <div class="input-with-action">
-                    <input
-                      :type="sms.showSid ? 'text' : 'password'"
-                      v-model="sms.twilioAccountSid"
-                      placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                      @input="markDirty"
-                    >
-                    <button class="btn-icon" @click="sms.showSid = !sms.showSid">
-                      {{ sms.showSid ? '🙈' : '👁️' }}
+                    <input :type="sms.form.showSid ? 'text' : 'password'" v-model="sms.form.account_sid" placeholder="ACxxxx">
+                    <button class="btn-icon" @click="sms.form.showSid = !sms.form.showSid">
+                      {{ sms.form.showSid ? '🙈' : '👁️' }}
                     </button>
                   </div>
                 </div>
-              </div>
-
-              <div class="form-row">
                 <div class="form-group flex-1">
                   <label>Auth Token</label>
                   <div class="input-with-action">
-                    <input
-                      :type="sms.showToken ? 'text' : 'password'"
-                      v-model="sms.twilioAuthToken"
-                      placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                      @input="markDirty"
-                    >
-                    <button class="btn-icon" @click="sms.showToken = !sms.showToken">
-                      {{ sms.showToken ? '🙈' : '👁️' }}
+                    <input :type="sms.form.showToken ? 'text' : 'password'" v-model="sms.form.auth_token" placeholder="xxxx">
+                    <button class="btn-icon" @click="sms.form.showToken = !sms.form.showToken">
+                      {{ sms.form.showToken ? '🙈' : '👁️' }}
                     </button>
                   </div>
                 </div>
@@ -265,56 +315,44 @@
 
               <div class="form-row">
                 <div class="form-group flex-1">
-                  <label>Numero de Twilio</label>
-                  <input
-                    type="text"
-                    v-model="sms.twilioFromNumber"
-                    placeholder="+1234567890"
-                    @input="markDirty"
-                  >
+                  <label>Numero de envio</label>
+                  <input v-model="sms.form.from_number" type="text" placeholder="+1234567890">
+                </div>
+                <div class="form-group">
+                  <label>Prioridad</label>
+                  <input v-model.number="sms.form.prioridad" type="number" min="0" placeholder="0">
                 </div>
               </div>
-            </div>
 
-            <!-- Modo -->
-            <div class="mode-switcher" style="margin-top: 1rem;">
-              <div class="mode-option" :class="{ active: sms.modo === 'produccion' }" @click="sms.modo = 'produccion'; markDirty()">
-                <div class="mode-icon mode-icon--prod">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M8 12l3 3 5-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Modo</label>
+                  <select v-model="sms.form.modo">
+                    <option value="sandbox">Sandbox</option>
+                    <option value="produccion">Produccion</option>
+                  </select>
                 </div>
-                <div class="mode-info">
-                  <strong>Producción</strong>
-                  <span>SMS reales a números verificados</span>
+                <div class="form-group flex-1">
+                  <label>Descripcion</label>
+                  <input v-model="sms.form.descripcion" type="text" placeholder="Descripcion opcional">
                 </div>
-                <div class="mode-radio" :class="{ checked: sms.modo === 'produccion' }"></div>
               </div>
 
-              <div class="mode-option" :class="{ active: sms.modo === 'sandbox' }" @click="sms.modo = 'sandbox'; markDirty()">
-                <div class="mode-icon mode-icon--test">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                </div>
-                <div class="mode-info">
-                  <strong>Sandbox</strong>
-                  <span>Solo envía al número verificado en Twilio Console</span>
-                </div>
-                <div class="mode-radio" :class="{ checked: sms.modo === 'sandbox' }"></div>
+              <div class="form-row">
+                <label class="checkbox-label">
+                  <input type="checkbox" v-model="sms.form.activa"> Activa
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" v-model="sms.form.preferida"> Preferida (se usa primero)
+                </label>
               </div>
-            </div>
 
-            <div class="provider-info">
-              <p>Crea una cuenta gratuita en <a href="https://www.twilio.com" target="_blank">twilio.com</a> para obtener tus credenciales.
-              En sandbox, solo se envían SMS al número verificado en tu consola de Twilio.</p>
-            </div>
-
-            <div class="curp-status" :class="sms.modo === 'produccion' ? 'status-prod' : 'status-test'">
-              <span class="status-badge" :class="sms.modo === 'produccion' ? 'badge-prod' : 'badge-test'">
-                {{ sms.modo === 'produccion' ? 'Producción' : 'Sandbox' }}
-              </span>
-              <span class="status-detail">
-                {{ sms.twilioAccountSid && sms.twilioAuthToken
-                  ? (sms.modo === 'produccion' ? 'Configurado - SMS reales' : 'Sandbox activo - SMS de prueba')
-                  : 'Configura las credenciales para activar' }}
-              </span>
+              <div class="form-actions">
+                <button class="btn-secondary" @click="sms.showForm = false">Cancelar</button>
+                <button class="btn-primary" @click="guardarConexion" :disabled="sms.saving || !sms.form.nombre">
+                  {{ sms.saving ? 'Guardando...' : (sms.editandoId ? 'Actualizar' : 'Crear') }}
+                </button>
+              </div>
             </div>
 
             <!-- Zona de pruebas SMS -->
@@ -323,43 +361,42 @@
                 <span class="test-icon">🧪</span>
                 <div>
                   <h4>Enviar SMS de prueba</h4>
-                  <p class="test-desc">Verifica que la configuración funciona enviando un SMS de prueba</p>
+                  <p class="test-desc">Selecciona una conexion para probar</p>
                 </div>
               </div>
 
               <div class="test-form">
                 <div class="form-row">
+                  <div class="form-group">
+                    <label>Conexion</label>
+                    <select v-model="sms.testConexionId">
+                      <option :value="null">Todas (failover)</option>
+                      <option v-for="conn in sms.conexiones.filter(c => c.activa)" :key="conn.id" :value="conn.id">
+                        {{ conn.nombre }} ({{ conn.proveedor }})
+                      </option>
+                    </select>
+                  </div>
                   <div class="form-group flex-1">
                     <label>Numero destino</label>
-                    <input
-                      v-model="sms.testPhone"
-                      type="tel"
-                      placeholder="+521234567890"
-                      maxlength="14"
-                    >
+                    <input v-model="sms.testPhone" type="tel" placeholder="+521234567890" maxlength="14">
                   </div>
-                  <div class="form-group">
+                  <div class="form-group flex-1">
                     <label>Mensaje</label>
-                    <input
-                      v-model="sms.testMessage"
-                      type="text"
-                      placeholder="MediProtect: SMS de prueba"
-                      maxlength="160"
-                    >
+                    <input v-model="sms.testMessage" type="text" placeholder="MediProtect: SMS de prueba" maxlength="160">
                   </div>
                 </div>
                 <div class="test-actions">
-                  <button
-                    @click="enviarSmsPrueba"
-                    class="btn-test"
-                    :disabled="sms.sendingTest || !sms.testPhone"
-                  >
+                  <button @click="enviarSmsPrueba" class="btn-test" :disabled="sms.sendingTest || !sms.testPhone">
                     {{ sms.sendingTest ? 'Enviando...' : 'Enviar SMS de prueba' }}
                   </button>
-                  <span v-if="sms.testResult === 'success'" class="test-success">✅ SMS enviado correctamente</span>
-                  <span v-if="sms.testResult === 'error'" class="test-error">❌ {{ sms.testError }}</span>
+                  <span v-if="sms.testResult === 'success'" class="test-success">SMS enviado correctamente</span>
+                  <span v-if="sms.testResult === 'error'" class="test-error">{{ sms.testError }}</span>
                 </div>
               </div>
+            </div>
+
+            <div class="provider-info">
+              <p>El sistema intenta enviar con la conexion preferida primero. Si falla, prueba con las siguientes en orden de prioridad (failover automatico).</p>
             </div>
           </div>
         </div>
@@ -518,7 +555,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 definePageMeta({ middleware: 'admin-auth' })
 
 const router = useRouter()
@@ -622,15 +659,27 @@ const curp = ref({
 
 const sms = ref({
   enabled: true,
-  provider: 'twilio',
-  twilioAccountSid: '',
-  twilioAuthToken: '',
-  twilioFromNumber: '',
-  modo: 'sandbox',
-  showSid: false,
-  showToken: false,
+  conexiones: [] as any[],
+  showForm: false,
+  editandoId: null as number | null,
+  saving: false,
+  form: {
+    nombre: '',
+    proveedor: 'twilio',
+    account_sid: '',
+    auth_token: '',
+    from_number: '',
+    modo: 'sandbox',
+    activa: true,
+    preferida: false,
+    prioridad: 0,
+    descripcion: '',
+    showSid: false,
+    showToken: false,
+  },
   testPhone: '',
   testMessage: 'MediProtect: SMS de prueba - config OK',
+  testConexionId: null as number | null,
   sendingTest: false,
   testResult: '',
   testError: '',
@@ -647,13 +696,27 @@ const cargandoTelefonos = ref(false)
 
 const loadConfig = async () => {
   try {
-    const { data } = await useFetch('/api/admin/configuracion', {
-      query: { categoria: 'ia' }
-    })
+    const [iaRes, smsRes, verifRes] = await Promise.all([
+      $fetch('/api/admin/configuracion', { params: { categoria: 'ia' } }),
+      $fetch('/api/admin/configuracion-sms'),
+      $fetch('/api/admin/configuracion', { params: { categoria: 'general' } }),
+    ])
 
-    const config = data.value?.configuracion || []
+    const config = iaRes?.configuracion || []
     const configMap = {}
     for (const c of config) {
+      configMap[c.clave] = c.valor
+    }
+
+    // SMS config desde categoria sms
+    const smsConfig = smsRes?.configuracion || []
+    for (const c of smsConfig) {
+      configMap[c.clave] = c.valor
+    }
+
+    // Verification config desde categoria general
+    const verifConfig = verifRes?.configuracion || []
+    for (const c of verifConfig) {
       configMap[c.clave] = c.valor
     }
 
@@ -678,13 +741,14 @@ const loadConfig = async () => {
     curp.value.apiKey = configMap['curp_api_key'] || ''
     curp.value.testToken = configMap['curp_test_token'] || 'pruebas'
 
-    // SMS config
+    // SMS config - load from new connections table
     sms.value.enabled = configMap['sms_enabled'] !== 'false'
-    sms.value.provider = configMap['sms_provider'] || 'twilio'
-    sms.value.twilioAccountSid = configMap['sms_twilio_account_sid'] || ''
-    sms.value.twilioAuthToken = configMap['sms_twilio_auth_token'] || ''
-    sms.value.twilioFromNumber = configMap['sms_twilio_from_number'] || ''
-    sms.value.modo = configMap['sms_modo'] || 'sandbox'
+    try {
+      const connRes: any = await $fetch('/api/admin/sms-conexiones')
+      sms.value.conexiones = connRes?.conexiones || []
+    } catch {
+      sms.value.conexiones = []
+    }
 
     // Verification config
     verificacion.value.requirePhone = configMap['require_phone_verification'] !== 'false'
@@ -725,14 +789,9 @@ const saveConfig = async () => {
       body: { configuraciones }
     })
 
-    // Guardar config SMS en categoria 'sms'
+    // Guardar config SMS enabled flag
     const smsConfig = [
       { clave: 'sms_enabled', valor: sms.value.enabled ? 'true' : 'false' },
-      { clave: 'sms_provider', valor: sms.value.provider },
-      { clave: 'sms_twilio_account_sid', valor: sms.value.twilioAccountSid || '' },
-      { clave: 'sms_twilio_auth_token', valor: sms.value.twilioAuthToken || '' },
-      { clave: 'sms_twilio_from_number', valor: sms.value.twilioFromNumber || '' },
-      { clave: 'sms_modo', valor: sms.value.modo },
     ]
     await $fetch('/api/admin/configuracion-sms', {
       method: 'POST',
@@ -765,6 +824,92 @@ const saveConfig = async () => {
   }
 }
 
+const abrirFormConexion = (conexion?: any) => {
+  if (conexion) {
+    sms.value.editandoId = conexion.id
+    sms.value.form = {
+      nombre: conexion.nombre,
+      proveedor: conexion.proveedor,
+      account_sid: conexion.account_sid,
+      auth_token: '',
+      from_number: conexion.from_number,
+      modo: conexion.modo,
+      activa: conexion.activa,
+      preferida: conexion.preferida,
+      prioridad: conexion.prioridad,
+      descripcion: conexion.descripcion || '',
+      showSid: false,
+      showToken: false,
+    }
+  } else {
+    sms.value.editandoId = null
+    sms.value.form = {
+      nombre: '', proveedor: 'twilio', account_sid: '', auth_token: '',
+      from_number: '', modo: 'sandbox', activa: true, preferida: false,
+      prioridad: 0, descripcion: '', showSid: false, showToken: false,
+    }
+  }
+  sms.value.showForm = true
+}
+
+const editarConexion = (conn: any) => abrirFormConexion(conn)
+
+const guardarConexion = async () => {
+  sms.value.saving = true
+  try {
+    const payload: any = { ...sms.value.form }
+    if (sms.value.editandoId) {
+      payload.id = sms.value.editandoId
+      if (!payload.auth_token) delete payload.auth_token
+    }
+    await $fetch('/api/admin/sms-conexiones', { method: 'POST', body: payload })
+    await cargarConexiones()
+    sms.value.showForm = false
+    isDirty.value = false
+  } catch (e: any) {
+    alert(e?.data?.message || 'Error guardando conexion')
+  } finally {
+    sms.value.saving = false
+  }
+}
+
+const eliminarConexion = async (conn: any) => {
+  if (!confirm(`Eliminar conexion "${conn.nombre}"?`)) return
+  try {
+    await $fetch('/api/admin/sms-conexiones', { method: 'DELETE', body: { id: conn.id } })
+    await cargarConexiones()
+  } catch (e: any) {
+    alert(e?.data?.message || 'Error eliminando')
+  }
+}
+
+const togglePreferida = async (conn: any) => {
+  try {
+    await $fetch('/api/admin/sms-conexiones', {
+      method: 'POST',
+      body: { id: conn.id, preferida: !conn.preferida }
+    })
+    await cargarConexiones()
+  } catch {}
+}
+
+const toggleActiva = async (conn: any) => {
+  try {
+    await $fetch('/api/admin/sms-conexiones', {
+      method: 'POST',
+      body: { id: conn.id, activa: !conn.activa }
+    })
+    await cargarConexiones()
+  } catch {}
+}
+
+const cargarConexiones = async () => {
+  try {
+    const data: any = await $fetch('/api/admin/sms-conexiones')
+    sms.value.conexiones = data?.conexiones || []
+  } catch {}
+}
+
 const enviarSmsPrueba = async () => {
   if (!sms.value.testPhone) return
 
@@ -777,13 +922,14 @@ const enviarSmsPrueba = async () => {
       method: 'POST',
       body: {
         telefono: sms.value.testPhone,
-        mensaje: sms.value.testMessage || 'MediProtect: SMS de prueba - config OK'
+        mensaje: sms.value.testMessage || 'MediProtect: SMS de prueba - config OK',
+        conexion_id: sms.value.testConexionId
       }
     })
     sms.value.testResult = 'success'
   } catch (e) {
     sms.value.testResult = 'error'
-    sms.value.testError = e?.data?.message || 'Error enviando SMS'
+    sms.value.testError = (e as any)?.data?.message || 'Error enviando SMS'
   } finally {
     sms.value.sendingTest = false
   }
@@ -1295,6 +1441,146 @@ nav {
 .status-detail {
   font-size: 0.8rem;
   color: #636e72;
+}
+
+/* SMS Conexiones */
+.conexiones-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.conexiones-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  color: #2d3436;
+}
+
+.btn-sm {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: #636e72;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px dashed #dfe6e9;
+}
+
+.conexiones-table {
+  margin-bottom: 1.5rem;
+}
+
+.conexion-row {
+  display: grid;
+  grid-template-columns: 100px 1fr 100px 130px 100px 60px 120px;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 0.85rem;
+}
+
+.conexion-header-row {
+  font-weight: 600;
+  color: #636e72;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.conexion-preferida {
+  background: #fffde7;
+}
+
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 4px;
+}
+
+.status-dot.active { background: #00b894; }
+.status-dot.inactive { background: #b2bec3; }
+
+.preferida-badge {
+  margin-left: 4px;
+}
+
+.mode-badge {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+.col-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.btn-icon-sm {
+  background: none;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 0.2rem 0.4rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
+.btn-icon-sm:hover {
+  background: #f0f0f0;
+}
+
+/* Conexion Form */
+.conexion-form {
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.conexion-form h4 {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  color: #2d3436;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.btn-secondary {
+  background: #dfe6e9;
+  color: #2d3436;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.btn-secondary:hover {
+  background: #b2bec3;
 }
 
 /* Action Bar */

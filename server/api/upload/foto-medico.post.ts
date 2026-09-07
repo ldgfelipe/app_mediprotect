@@ -44,14 +44,14 @@ export default defineEventHandler(async (event) => {
   // Validar tamaño (máximo 2MB)
   const maxSize = 2 * 1024 * 1024
   if (file.data.length > maxSize) {
-    throw createError({ statusCode: 400, message: 'La imagen no puede superar 2MB' })
+    throw createError({ statusCode: 400, message: `La imagen pesa ${(file.data.length / 1024 / 1024).toFixed(1)}MB. El maximo permitido es 2MB. Intenta con una imagen de menor tamano o comprimela.` })
   }
 
   // Validar dimensiones mínimas (200x200)
   // Nota: para validación de dimensiones necesitaríamos sharp o similar
   // Por ahora validamos tamaño mínimo razonable
   if (file.data.length < 10000) {
-    throw createError({ statusCode: 400, message: 'La imagen es demasiado pequeña' })
+    throw createError({ statusCode: 400, message: `La imagen es demasiado pequena (${(file.data.length / 1024).toFixed(1)}KB). El minimo permitido es 10KB. Verifica que la imagen tenga buena resolucion y no este recortada excesivamente.` })
   }
 
   // Crear directorio de uploads si no existe

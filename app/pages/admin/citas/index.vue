@@ -256,7 +256,7 @@ function cerrarPerfilMedico() { medicoSeleccionadoPerfil.value = null; medicoBus
       </div>
     </main>
 
-    <div v-if="showNuevaCita" class="modal-overlay" @click.self="showNuevaCita = false">
+    <div v-if="showNuevaCita" class="modal-overlay">
       <div class="modal">
         <div class="modal-header"><h2>Nueva Cita</h2><button class="modal-close" @click="showNuevaCita = false">&times;</button></div>
         <div class="modal-body">

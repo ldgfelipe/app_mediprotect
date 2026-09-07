@@ -41,13 +41,77 @@ const filtered = computed(() => {
   )
 })
 
+// ========== SEPOMEX / CODIGO POSTAL ==========
+const codigosPostales = ref<any[]>([])
+const cpLoading = ref(false)
+const cpError = ref('')
+const cpResult = ref(null) // { colonias, municipio, ciudad, estado }
+let cpTimeout: ReturnType<typeof setTimeout> | null = null
+
+watch(() => editForm.value?.codigo_postal, (val) => {
+  if (cpTimeout) clearTimeout(cpTimeout)
+  cpTimeout = setTimeout(() => buscarColoniasPorCP(), 400)
+})
+
+async function buscarColoniasPorCP() {
+  const cp = editForm.value.codigo_postal?.replace(/[^0-9]/g, '')
+  if (!cp || cp.length !== 5) {
+    codigosPostales.value = []
+    cpResult.value = null
+    cpError.value = ''
+    return
+  }
+  
+  cpLoading.value = true
+  cpError.value = ''
+  cpResult.value = null
+  
+  try {
+    const data: any = await $fetch('/api/sepomex/colonias', { params: { codigo_postal: cp } })
+    if (data?.colonias && data.colonias.length > 0) {
+      codigosPostales.value = data.colonias
+      cpResult.value = {
+        municipios: data.municipio || data.colonias[0]?.municipio,
+        ciudades: data.ciudad || data.colonias[0]?.ciudad,
+        estados: data.estado || data.colonias[0]?.estado,
+      }
+    } else {
+      codigosPostales.value = []
+      cpResult.value = null
+      cpError.value = 'No se encontraron colonias para este código postal'
+    }
+  } catch (e: any) {
+    codigosPostales.value = []
+    cpResult.value = null
+    cpError.value = e?.data?.message || 'Error al consultar colonias'
+  } finally {
+    cpLoading.value = false
+  }
+}
+
+function seleccionarColonia() {
+  const colonia = editForm.value.colonia_seleccionada
+  if (!colonia) return
+  const selected = codigosPostales.value.find(c => c.colonia === colonia)
+  if (selected) {
+    editForm.value.estado = selected.estado || ''
+    editForm.value.municipio = selected.municipio || ''
+    editForm.value.ciudad = selected.ciudad || ''
+    editForm.value.colonia = selected.colonia || ''
+  }
+}
+
 function abrirCrear() {
   editForm.value = {
     id: null, nombre: '', apellido_paterno: '', apellido_materno: '',
     email: '', telefono: '', fecha_nacimiento: '', genero: '', curp: '',
     estado_civil: '', ocupacion: '', telefono_2: '', codigo_postal: '',
-    estado: '', municipio: '', ciudad: '', domicilio: '', id_paquete: '', password: ''
+    estado: '', municipio: '', ciudad: '', domicilio: '', colonia: '', colonia_seleccionada: '',
+    id_paquete: '', password: ''
   }
+  codigosPostales.value = []
+  cpResult.value = null
+  cpError.value = ''
   curpDatos.value = null
   curpError.value = ''
   errorMsg.value = ''
@@ -64,9 +128,13 @@ function abrirEditar(p: any) {
     estado_civil: p.estado_civil || '', ocupacion: p.ocupacion || '',
     telefono_2: p.telefono_2 || '', codigo_postal: p.codigo_postal || '',
     estado: p.estado || '', municipio: p.municipio || '',
-    ciudad: p.ciudad || '', domicilio: p.domicilio || '',
+    ciudad: p.ciudad || '', domicilio: p.domicilio || '', colonia: p.colonia || '',
+    colonia_seleccionada: p.colonia || '',
     id_paquete: p.id_paquete || '', password: ''
   }
+  codigosPostales.value = []
+  cpResult.value = null
+  cpError.value = ''
   curpDatos.value = null
   curpError.value = ''
   errorMsg.value = ''
@@ -75,11 +143,15 @@ function abrirEditar(p: any) {
 }
 
 function cerrarModal() {
+  if (cpTimeout) { clearTimeout(cpTimeout); cpTimeout = null }
   editando.value = false
   errorMsg.value = ''
   okMsg.value = ''
   curpDatos.value = null
   curpError.value = ''
+  codigosPostales.value = []
+  cpError.value = ''
+  cpResult.value = null
 }
 
 // ========== CURP VALIDATION ==========
@@ -124,6 +196,8 @@ async function guardar() {
     if (!body.password) delete body.password
     if (!body.id_paquete) delete body.id_paquete
     delete body.id
+    delete body.colonia_seleccionada
+    body.colonia = editForm.value.colonia || ''
     if (editForm.value.id) {
       await $fetch(`/api/admin/pacientes/${editForm.value.id}`, {
         method: 'PUT', headers: { Authorization: `Bearer ${token}` }, body
@@ -191,7 +265,7 @@ async function guardar() {
         </table>
       </div>
 
-      <div v-if="editando" class="modal-overlay" @click.self="cerrarModal">
+      <div v-if="editando" class="modal-overlay">
         <div class="modal modal-lg">
           <div class="modal-header">
             <h2>{{ editForm.id ? 'Editar' : 'Nuevo' }} Paciente</h2>
@@ -254,11 +328,37 @@ async function guardar() {
               </div>
               <div class="form-row">
                 <div class="form-group"><label>Telefono 2</label><input v-model="editForm.telefono_2" /></div>
-                <div class="form-group"><label>Codigo Postal</label><input v-model="editForm.codigo_postal" maxlength="5" /></div>
+                <div class="form-group"><label>Codigo Postal</label>
+                  <input v-model="editForm.codigo_postal" maxlength="5" @focus="buscarColoniasPorCP" style="text-transform:uppercase;" />
+                  <span v-if="cpError" class="cp-error" style="color:#d22; font-size:0.8rem; margin-left:0.5rem;">{{ cpError }}</span>
+                  <span v-if="cpLoading" class="cp-loading" style="color:#636e72; font-size:0.8rem; margin-left:0.5rem;">Buscando...</span>
+                </div>
               </div>
+              <div v-if="codigosPostales.length > 0" class="colonias-dropdown">
+                <div class="colonias-header">
+                  <span>Colonias encontradas</span>
+                  <span v-if="cpResult" class="colonias-resumen">
+                    {{ cpResult.ciudades }},
+                    {{ cpResult.municipios }},
+                    {{ cpResult.estados }}
+                  </span>
+                </div>
+                <select v-model="editForm.colonia_seleccionada" @change="seleccionarColonia">
+                  <option value="">Seleccionar colonia...</option>
+                  <option v-for="colonia in codigosPostales" :key="colonia.colonia" :value="colonia.colonia">
+                    {{ colonia.colonia }} {{ colonia.tipo_colonia || '' }}
+                  </option>
+                </select>
+                <span v-if="!editForm.colonia_seleccionada" class="colonias-manual">O escribe manualmente</span>
+              </div>
+              <div v-if="cpError" class="msg-error" style="margin-top:0.5rem;">{{ cpError }}</div>
               <div class="form-row">
                 <div class="form-group"><label>Estado</label><input v-model="editForm.estado" /></div>
                 <div class="form-group"><label>Municipio</label><input v-model="editForm.municipio" /></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Colonia</label><input v-model="editForm.colonia" placeholder="Nombre de la colonia" /></div>
+                <div class="form-group"><label>Ciudad</label><input v-model="editForm.ciudad" /></div>
               </div>
               <div class="form-group"><label>Domicilio</label><textarea v-model="editForm.domicilio" rows="2"></textarea></div>
             </div>
@@ -357,6 +457,14 @@ th { background: #f8f9fa; color: #636e72; font-weight: 600; }
 
 .spinner-sm { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite; display: inline-block; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+.colonias-dropdown { margin-bottom: 0.75rem; padding: 0.75rem; background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; }
+.colonias-header { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.8rem; color: #2d3436; font-weight: 600; }
+.colonias-resumen { font-weight: 400; color: #636e72; font-size: 0.78rem; }
+.colonias-dropdown select { width: 100%; padding: 0.55rem 0.75rem; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 0.85rem; }
+.colonias-manual { display: inline-block; margin-top: 0.4rem; font-size: 0.75rem; color: #0984e3; cursor: pointer; }
+.cp-loading { color: #636e72; font-size: 0.8rem; margin-top: 0.3rem; }
+.cp-error { color: #d22; font-size: 0.8rem; margin-top: 0.3rem; }
 
 @media (max-width: 640px) {
   .form-row > .form-group { flex: 1 1 100%; min-width: 0; }

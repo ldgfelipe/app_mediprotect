@@ -6,7 +6,20 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgresql://postgres:Mobiltoo111213@db.mruezojnfgkdhtgxwgmv.supabase.co:5432/postgres'
 })
 
-interface SmsConfig {
+export interface SmsConexion {
+  id: number
+  nombre: string
+  proveedor: string
+  account_sid: string
+  auth_token: string
+  from_number: string
+  modo: string
+  activa: boolean
+  preferida: boolean
+  prioridad: number
+}
+
+export interface SmsConfig {
   provider: string
   account_sid: string
   auth_token: string
@@ -14,14 +27,25 @@ interface SmsConfig {
   modo: string
 }
 
+async function getConexionesActivas(): Promise<SmsConexion[]> {
+  const result = await pool.query(
+    'SELECT id, nombre, proveedor, account_sid, auth_token, from_number, modo, activa, preferida, prioridad FROM sms_conexiones WHERE activa = true ORDER BY preferida DESC, prioridad ASC, created_at ASC'
+  )
+  return result.rows
+}
+
 async function getSmsConfig(): Promise<SmsConfig> {
+  const conexiones = await getConexionesActivas()
+  if (conexiones.length > 0) {
+    const c = conexiones[0]
+    return { provider: c.proveedor, account_sid: c.account_sid, auth_token: c.auth_token, from_number: c.from_number, modo: c.modo }
+  }
+  // Fallback a configuracion antigua
   const result = await pool.query(
     "SELECT clave, valor FROM configuracion_sistema WHERE categoria = 'sms' AND clave IN ('sms_provider', 'sms_twilio_account_sid', 'sms_twilio_auth_token', 'sms_twilio_from_number', 'sms_modo')"
   )
   const configMap: Record<string, string> = {}
-  for (const row of result.rows) {
-    configMap[row.clave] = row.valor
-  }
+  for (const row of result.rows) { configMap[row.clave] = row.valor }
   return {
     provider: configMap.sms_provider || 'twilio',
     account_sid: configMap.sms_twilio_account_sid || '',
@@ -45,7 +69,7 @@ async function enviarSmsTwilio(
   mensaje: string
 ): Promise<{ success: boolean; sid?: string; error?: string }> {
   if (!config.account_sid || !config.auth_token || !config.from_number) {
-    return { success: false, error: 'Twilio no esta configurado. Configura Account SID, Auth Token y numero en Administrador > Configuracion.' }
+    return { success: false, error: 'Twilio no esta configurado. Configura Account SID, Auth Token y numero.' }
   }
 
   try {
@@ -77,21 +101,61 @@ export function normalizarTelefonoMX(telefono: string): string {
   return '+' + limpio
 }
 
-export async function enviarSms(telefono: string, mensaje: string): Promise<{ success: boolean; sid?: string; error?: string }> {
-  const config = await getSmsConfig()
-  const telefonoNormalizado = normalizarTelefonoMX(telefono)
-
-  let result: { success: boolean; sid?: string; error?: string }
+async function enviarSmsConConexion(
+  conexion: SmsConexion | SmsConfig,
+  telefono: string,
+  mensaje: string
+): Promise<{ success: boolean; sid?: string; error?: string }> {
+  const config: SmsConfig = {
+    provider: conexion.proveedor || (conexion as SmsConfig).provider || 'twilio',
+    account_sid: conexion.account_sid,
+    auth_token: conexion.auth_token,
+    from_number: conexion.from_number,
+    modo: conexion.modo || 'sandbox'
+  }
 
   switch (config.provider) {
     case 'twilio':
-      result = await enviarSmsTwilio(config, telefonoNormalizado, mensaje)
-      break
+      return await enviarSmsTwilio(config, telefono, mensaje)
     default:
-      result = { success: false, error: `Proveedor SMS '${config.provider}' no soportado` }
+      return { success: false, error: `Proveedor '${config.provider}' no soportado` }
+  }
+}
+
+export async function enviarSms(telefono: string, mensaje: string): Promise<{ success: boolean; sid?: string; error?: string }> {
+  const telefonoNormalizado = normalizarTelefonoMX(telefono)
+  const conexiones = await getConexionesActivas()
+
+  if (conexiones.length > 0) {
+    // Failover: intentar con cada conexion activa en orden de prioridad
+    for (const conexion of conexiones) {
+      const result = await enviarSmsConConexion(conexion, telefonoNormalizado, mensaje)
+
+      // Log cada intento
+      try {
+        await pool.query(
+          'INSERT INTO sms_log (telefono, mensaje, proveedor, estado, error_mensaje) VALUES ($1, $2, $3, $4, $5)',
+          [telefono, mensaje, `${conexion.proveedor} (${conexion.nombre})`, result.success ? 'enviado' : 'error', result.error || null]
+        )
+      } catch (e) {
+        console.error('Error guardando log SMS:', e)
+      }
+
+      if (result.success) {
+        return result
+      }
+
+      console.error(`Conexion "${conexion.nombre}" fallo: ${result.error}. Intentando siguiente...`)
+    }
+
+    // Todas las conexiones fallaron
+    return { success: false, error: `Todas las conexiones SMS fallaron. Ultimo error:Intento con ${conexiones.length} proveedor(es)` }
   }
 
-  // Log the SMS
+  // Fallback: config antigua
+  const config = await getSmsConfig()
+  const result = await enviarSmsConConexion(config as any, telefonoNormalizado, mensaje)
+
   try {
     await pool.query(
       'INSERT INTO sms_log (telefono, mensaje, proveedor, estado, error_mensaje) VALUES ($1, $2, $3, $4, $5)',
@@ -104,8 +168,30 @@ export async function enviarSms(telefono: string, mensaje: string): Promise<{ su
   return result
 }
 
+export async function enviarSmsConId(conexionId: number, telefono: string, mensaje: string): Promise<{ success: boolean; sid?: string; error?: string }> {
+  const result = await pool.query('SELECT * FROM sms_conexiones WHERE id = $1 AND activa = true', [conexionId])
+  if (result.rows.length === 0) {
+    return { success: false, error: 'Conexion no encontrada o inactiva' }
+  }
+  const conexion = result.rows[0]
+  const telefonoNormalizado = normalizarTelefonoMX(telefono)
+
+  const sendResult = await enviarSmsConConexion(conexion, telefonoNormalizado, mensaje)
+
+  try {
+    await pool.query(
+      'INSERT INTO sms_log (telefono, mensaje, proveedor, estado, error_mensaje) VALUES ($1, $2, $3, $4, $5)',
+      [telefono, mensaje, `${conexion.proveedor} (${conexion.nombre})`, sendResult.success ? 'enviado' : 'error', sendResult.error || null]
+    )
+  } catch (e) {
+    console.error('Error guardando log SMS:', e)
+  }
+
+  return sendResult
+}
+
 export function generarCodigoVerificacion(longitud: number = 6): string {
   return generarCodigo(longitud)
 }
 
-export { getSmsConfig }
+export { getSmsConfig, getConexionesActivas }

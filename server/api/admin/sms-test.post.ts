@@ -1,6 +1,5 @@
 import jwt from 'jsonwebtoken'
-import { enviarSms } from '../../utils/sms.js'
-import { getSmsConfig } from '../../utils/sms.js'
+import { enviarSms, enviarSmsConId } from '../../utils/sms.js'
 
 export default defineEventHandler(async (event) => {
   const token = getHeader(event, 'authorization')?.replace('Bearer ', '') || getCookie(event, 'admin_token')
@@ -18,7 +17,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event)
-  const { telefono, mensaje } = body
+  const { telefono, mensaje, conexion_id } = body
 
   if (!telefono) {
     throw createError({ statusCode: 400, message: 'El telefono es requerido' })
@@ -29,13 +28,14 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'El telefono debe tener al menos 10 digitos' })
   }
 
-  const config = await getSmsConfig()
-  if (!config.account_sid || !config.auth_token || !config.from_number) {
-    throw createError({ statusCode: 503, message: 'SMS no configurado. Completa Account SID, Auth Token y numero en la configuracion.' })
-  }
-
   const mensajeFinal = mensaje || 'MediProtect: SMS de prueba - configuracion correcta'
-  const result = await enviarSms(telefonoLimpio, mensajeFinal)
+
+  let result
+  if (conexion_id) {
+    result = await enviarSmsConId(conexion_id, telefonoLimpio, mensajeFinal)
+  } else {
+    result = await enviarSms(telefonoLimpio, mensajeFinal)
+  }
 
   if (!result.success) {
     throw createError({ statusCode: 500, message: result.error || 'Error enviando SMS' })

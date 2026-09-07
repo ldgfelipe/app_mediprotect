@@ -42,6 +42,16 @@ const form = ref({
   beneficiario_nombre: usuario.value?.beneficiario_nombre || '',
   beneficiario_parentesco: usuario.value?.beneficiario_parentesco || '',
   beneficiario_telefono: usuario.value?.beneficiario_telefono || '',
+  codigo_postal: usuario.value?.codigo_postal || '',
+  colonia: usuario.value?.colonia || '',
+  cedula_profesional: usuario.value?.cedula_profesional || '',
+  consultorio_direccion: usuario.value?.consultorio_direccion || '',
+  consultorio_ciudad: usuario.value?.consultorio_ciudad || '',
+  consultorio_estado: usuario.value?.consultorio_estado || '',
+  bio: usuario.value?.bio || '',
+  rfc: usuario.value?.rfc || '',
+  hospital_consultorio: usuario.value?.hospital_consultorio || '',
+  tipo_consulta: usuario.value?.tipo_consulta || '',
 })
 
 const planContratado = ref(usuario.value?.plan_contratado || null)
@@ -434,7 +444,7 @@ async function enviarConfirmacionEmail() {
             </div>
           </div>
           <div class="form-row">
-            <div class="form-group"><label>Estado Civil</label><input v-model="form.estado_civil" disabled style="background:#f5f5f5" /></div>
+            <div class="form-group"><label>Estado Civil</label><select v-model="form.estado_civil"><option value="">Seleccionar</option><option value="soltero">Soltero/a</option><option value="casado">Casado/a</option><option value="divorciado">Divorciado/a</option><option value="viudo">Viudo/a</option><option value="union_libre">Union libre</option></select></div>
             <div class="form-group"><label>Ocupacion</label><input v-model="form.ocupacion" /></div>
           </div>
 
@@ -536,9 +546,9 @@ async function enviarConfirmacionEmail() {
         </div>
       </div>
 
-      <div v-if="esPaciente" class="section-divider"></div>
+      <div v-if="esMedico" class="section-divider"></div>
 
-      <div v-if="esPaciente" class="section-card">
+      <div v-if="esMedico" class="section-card">
         <div class="section-header">
           <h2>Estudios / Formacion</h2>
           <button class="btn-add" @click="showFormEstudio = !showFormEstudio">{{ showFormEstudio ? 'Cancelar' : '+ Agregar Estudio' }}</button>

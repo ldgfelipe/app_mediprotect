@@ -319,7 +319,7 @@ async function validarCURP() {
       </div>
     </main>
 
-    <div v-if="showNuevoMedico" class="modal-overlay" @click.self="showNuevoMedico = false">
+    <div v-if="showNuevoMedico" class="modal-overlay">
       <div class="modal"><div class="modal-header"><h2>Nuevo Medico</h2><button class="modal-close" @click="showNuevoMedico = false">&times;</button></div>
         <div class="modal-body">
           <div class="form-row"><div class="form-group"><label>Nombre *</label><input v-model="formMedico.nombre" /></div><div class="form-group"><label>Apellido *</label><input v-model="formMedico.apellido" /></div></div>
@@ -332,7 +332,7 @@ async function validarCURP() {
       </div>
     </div>
 
-    <div v-if="showNuevoPaciente" class="modal-overlay" @click.self="showNuevoPaciente = false">
+    <div v-if="showNuevoPaciente" class="modal-overlay">
       <div class="modal"><div class="modal-header"><h2>Nuevo Paciente</h2><button class="modal-close" @click="showNuevoPaciente = false">&times;</button></div>
         <div class="modal-body">
           <div class="form-row"><div class="form-group"><label>Nombre *</label><input v-model="formPaciente.nombre" /></div><div class="form-group"><label>Apellido</label><input v-model="formPaciente.apellido" /></div></div>
@@ -345,7 +345,7 @@ async function validarCURP() {
       </div>
     </div>
 
-    <div v-if="showNuevaEmpresa" class="modal-overlay" @click.self="showNuevaEmpresa = false">
+    <div v-if="showNuevaEmpresa" class="modal-overlay">
       <div class="modal"><div class="modal-header"><h2>Nueva Empresa</h2><button class="modal-close" @click="showNuevaEmpresa = false">&times;</button></div>
         <div class="modal-body">
           <div class="form-row"><div class="form-group"><label>Nombre *</label><input v-model="formEmpresa.nombre" /></div><div class="form-group"><label>RFC</label><input v-model="formEmpresa.rfc" /></div></div>

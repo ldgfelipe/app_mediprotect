@@ -164,7 +164,7 @@ const pacientesAsociados = computed(() => new Set(pacientesEmpresa.value.map((p:
         </table>
       </div>
 
-      <div v-if="showForm" class="modal-overlay" @click.self="showForm = false">
+      <div v-if="showForm" class="modal-overlay">
         <div class="modal">
           <div class="modal-header"><h2>{{ editando ? 'Editar' : 'Nueva' }} Empresa</h2><button class="modal-close" @click="showForm = false">&times;</button></div>
           <div class="modal-body">
@@ -181,7 +181,7 @@ const pacientesAsociados = computed(() => new Set(pacientesEmpresa.value.map((p:
         </div>
       </div>
 
-      <div v-if="showPacientes" class="modal-overlay" @click.self="showPacientes = false">
+      <div v-if="showPacientes" class="modal-overlay">
         <div class="modal modal-wide">
           <div class="modal-header"><h2>Pacientes — {{ empresaSeleccionada?.nombre }}</h2><button class="modal-close" @click="showPacientes = false">&times;</button></div>
           <div class="modal-body">

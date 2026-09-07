@@ -1,12 +1,14 @@
-﻿import jwt from 'jsonwebtoken'
+import jwt from 'jsonwebtoken'
 
 export default defineEventHandler(async (event) => {
   const token = getHeader(event, 'authorization')?.replace('Bearer ', '') || getCookie(event, 'admin_token')
   if (!token) throw createError({ statusCode: 401, message: 'No autorizado' })
   try { jwt.verify(token, process.env.JWT_SECRET || 'mediprotect_jwt_secret_key_2026') }
-  catch { throw createError({ statusCode: 401, message: 'Token inválido' }) }
+  catch { throw createError({ statusCode: 401, message: 'Token invalido' }) }
 
   const pool = getPool()
-  const result = await pool.query('SELECT id, nombre, apellido, email, telefono, curp, genero, estado_civil, id_empresa, created_at FROM pacientes ORDER BY created_at DESC')
-  return { pacientes: result.rows }
+  const result = await pool.query(
+    'SELECT * FROM tareas_pendientes ORDER BY CASE prioridad WHEN \'alta\' THEN 1 WHEN \'media\' THEN 2 WHEN \'baja\' THEN 3 END, created_at DESC LIMIT 100'
+  )
+  return { tareas: result.rows }
 })

@@ -130,7 +130,7 @@ async function toggleActivo(a) {
     </main>
 
     <!-- Modal -->
-    <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
+    <div v-if="showModal" class="modal-overlay">
       <div class="modal">
         <div class="modal-header">
           <h2>{{ editando ? 'Editar Asistente' : 'Nuevo Asistente' }}</h2>
