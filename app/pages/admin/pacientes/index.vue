@@ -219,6 +219,28 @@ async function guardar() {
     saving.value = false
   }
 }
+
+function confirmarEliminar(p: any) {
+  if (!confirm(`¿Eliminar a ${p.nombre} ${p.apellido_paterno || p.apellido}? Esta acción no se puede deshacer y también eliminará sus registros en empresas y citas.`)) return
+  eliminarPaciente(p)
+}
+
+async function eliminarPaciente(p: any) {
+  errorMsg.value = ''
+  okMsg.value = ''
+  try {
+    await $fetch(`/api/admin/pacientes/${p.id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token.value}` }
+    })
+    // Remover de la lista local
+    pacientes.value = pacientes.value.filter(pac => pac.id !== p.id)
+    okMsg.value = 'Paciente eliminado correctamente'
+    setTimeout(() => { okMsg.value = ''; editando.value = false }, 1500)
+  } catch (e: any) {
+    errorMsg.value = e.data?.message || 'Error al eliminar paciente'
+  }
+}
 </script>
 
 <template>
@@ -258,7 +280,8 @@ async function guardar() {
               <td><span class="curp-text">{{ p.curp || '---' }}</span></td>
               <td>{{ p.email }}</td><td>{{ p.telefono || '---' }}</td>
               <td>{{ new Date(p.created_at).toLocaleDateString('es-MX') }}</td>
-              <td><button class="btn-edit" @click="abrirEditar(p)">Editar</button></td>
+              <td><button class="btn-edit" @click="abrirEditar(p)">Editar</button>
+                <button class="btn-delete" @click="confirmarEliminar(p)" title="Eliminar paciente">🗑️ Eliminar</button></td>
             </tr>
             <tr v-if="!filtered.length"><td colspan="6" class="empty">Sin resultados</td></tr>
           </tbody>

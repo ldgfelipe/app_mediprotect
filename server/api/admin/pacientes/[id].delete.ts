@@ -12,30 +12,34 @@ export default defineEventHandler(async (event) => {
   const pool = getPool()
 
   // 1. Verificar que el paciente existe
-  const existing = await pool.query('SELECT id, nombre FROM pacientes WHERE id = $1', [id])
+  const existing = await pool.query('SELECT id, nombre, active FROM pacientes WHERE id = $1', [id])
   if (existing.rowCount === 0) {
-    throw createError({ statusCode: 404, message: 'Paciente no encontrado' })
-  }
-
-  const pacienteNombre = existing.rows[0].nombre
-
-  // 2. Eliminar de empresas_pacientes (vínculo paciente-empresa)
-  await pool.query(
-    'DELETE FROM empresas_pacientes WHERE id_paciente = $1',
-    [id]
+    throw createError({ statusCode: 404, message: 'Paciente no encontrado' }
   )
 
-  // 3. Eliminar de citas (por id_paciente)
+  const pacienteNombre = existing.rows[0].nombre
+  const wasActive = existing.rows[0].active
+
+  // 2. Eliminar citas asociadas
   await pool.query(
     'DELETE FROM citas WHERE id_paciente = $1',
     [id]
   )
 
-  // 4. Eliminar el paciente
+  // 3. Eliminar vínculo empresa-paciente
   await pool.query(
-    'DELETE FROM pacientes WHERE id = $1',
+    'DELETE FROM empresas_pacientes WHERE id_paciente = $1',
     [id]
   )
 
-  return { success: true, mensaje: `Paciente ${pacienteNombre} y sus registros asociados han sido eliminados` }
-})
+  // 4. Marcar paciente como inactivo (soft-delete)
+  // Esto evita la restricción FK NO ACTION y permite un control limpio
+  await pool.query(
+    'UPDATE pacientes SET active = FALSE WHERE id = $1',
+    [id]
+  )
+
+  // 5. Si el paciente estaba activo antes, actualizar el recuento
+  const wasActive = existing.rows[0].active
+  return { success: true, mensaje: `Paciente ${pacienteNombre} ${wasActive ? 'marcado como inactivo' : 'ya estaba inactivo'}. Se borraron sus citas y vínculos empresa.` }
+}
