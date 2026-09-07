@@ -39,7 +39,6 @@ export default defineEventHandler(async (event) => {
     [id]
   )
 
-  // 5. Si el paciente estaba activo antes, actualizar el recuento
-  const wasActive = existing.rows[0].active
+  // 5. Retornar mensaje según si estaba activo o no
   return { success: true, mensaje: `Paciente ${pacienteNombre} ${wasActive ? 'marcado como inactivo' : 'ya estaba inactivo'}. Se borraron sus citas y vínculos empresa.` }
 }
