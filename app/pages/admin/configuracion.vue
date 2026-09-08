@@ -401,6 +401,104 @@
           </div>
         </div>
 
+        <!-- Configuración SMTP / Email -->
+        <div class="config-section">
+          <div class="section-header">
+            <div class="section-title">
+              <span class="provider-icon-lg">✉️</span>
+              <div>
+                <h3>Correo SMTP (Brevo u otro proveedor)</h3>
+                <p class="section-desc">Configura el envío de correos de confirmación y notificaciones</p>
+              </div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" v-model="smtpEmail.enabled" @change="markDirtySmtp">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="section-body" v-if="smtpEmail.enabled">
+            <!-- Estado -->
+            <div class="smtp-status" :class="smtpEmail.configurado ? 'smtp-status-ok' : 'smtp-status-warn'">
+              <strong>{{ smtpEmail.configurado ? '✓ Configuración SMTP disponible' : 'SMTP sin configurar' }}</strong>
+              <span>{{ smtpEmail.origenTexto }}</span>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label>Servidor SMTP</label>
+                <input v-model="smtpEmail.host" type="text" placeholder="smtp-relay.brevo.com" @input="markDirtySmtp">
+              </div>
+              <div class="form-group">
+                <label>Puerto</label>
+                <input v-model.number="smtpEmail.port" type="number" placeholder="465" @input="markDirtySmtp">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label>Usuario</label>
+                <input v-model="smtpEmail.user" type="text" placeholder="usuario@smtp-brevo.com" @input="markDirtySmtp">
+              </div>
+              <div class="form-group flex-1">
+                <label>Contraseña</label>
+                <div class="input-with-action">
+                  <input
+                    :type="smtpEmail.showPass ? 'text' : 'password'"
+                    v-model="smtpEmail.pass"
+                    :placeholder="smtpEmail.pass_set ? '•••••••• (deja en blanco para conservar)' : 'Contraseña de tu proveedor SMTP'"
+                    @input="markDirtySmtp"
+                  >
+                  <button class="btn-icon" @click="smtpEmail.showPass = !smtpEmail.showPass">
+                    {{ smtpEmail.showPass ? '🙈' : '👁️' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label>Correo remitente (From)</label>
+                <input v-model="smtpEmail.from" type="text" placeholder="agente@mediprotect.com.mx" @input="markDirtySmtp">
+                <small class="field-hint">Se usará como remitente en los correos de confirmación y notificación.</small>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button class="btn-primary" @click="guardarConfigSmtp" :disabled="smtpEmail.saving || !smtpEmail.dirty">
+                {{ smtpEmail.saving ? 'Guardando...' : 'Guardar configuración SMTP' }}
+              </button>
+              <span v-if="smtpEmail.savedMsg" class="test-success">{{ smtpEmail.savedMsg }}</span>
+            </div>
+
+            <!-- Zona de prueba de envío -->
+            <div class="smtp-test-zone">
+              <div class="test-header">
+                <span class="test-icon">🧪</span>
+                <div>
+                  <h4>Enviar correo de prueba</h4>
+                  <p class="test-desc">Verifica que el proveedor (Brevo) esté bien configurado</p>
+                </div>
+              </div>
+              <div class="test-form">
+                <div class="form-row">
+                  <div class="form-group flex-1">
+                    <label>Correo destino</label>
+                    <input v-model="smtpEmail.testTo" type="email" placeholder="tucorreo@ejemplo.com">
+                  </div>
+                </div>
+                <div class="test-actions">
+                  <button @click="enviarPruebaSmtp" class="btn-test" :disabled="smtpEmail.sendingTest || !smtpEmail.testTo">
+                    {{ smtpEmail.sendingTest ? 'Enviando...' : 'Enviar correo de prueba' }}
+                  </button>
+                  <span v-if="smtpEmail.testResult === 'success'" class="test-success">Correo de prueba enviado correctamente</span>
+                  <span v-if="smtpEmail.testResult === 'error'" class="test-error">{{ smtpEmail.testError }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Configuración de Verificaciones -->
         <div class="config-section">
           <div class="section-header">
@@ -694,6 +792,126 @@ const telefonosVerificados = ref([])
 const nuevoTelefonoVerificado = ref({ telefono: '', descripcion: '' })
 const cargandoTelefonos = ref(false)
 
+const smtpEmail = ref({
+  enabled: true,
+  host: '',
+  port: 465,
+  user: '',
+  pass: '',
+  from: '',
+  showPass: false,
+  pass_set: false,
+  configurado: false,
+  origenTexto: '',
+  dirty: false,
+  saving: false,
+  savedMsg: '',
+  testTo: '',
+  sendingTest: false,
+  testResult: '',
+  testError: '',
+})
+
+const markDirtySmtp = () => {
+  smtpEmail.value.dirty = true
+  smtpEmail.value.savedMsg = ''
+  smtpEmail.value.testResult = ''
+}
+
+const loadSmtpConfig = async () => {
+  try {
+    const data: any = await $fetch('/api/admin/configuracion-smtp')
+    const c = data?.configuracion
+    const fallback = data?.env_fallback || {}
+    if (!c) return
+
+    const enUso = data?.en_uso || 'env'
+    const usar = enUso === 'env' ? fallback : c
+    const passDisponible = c.pass_set || fallback.pass_set
+
+    smtpEmail.value.enabled = c.enabled !== false
+    smtpEmail.value.host = c.host || ''
+    smtpEmail.value.port = Number(c.port) || 465
+    smtpEmail.value.user = c.user || ''
+    smtpEmail.value.from = c.from || ''
+    smtpEmail.value.pass = ''
+    smtpEmail.value.pass_set = c.pass_set
+    smtpEmail.value.configurado = !!(usar.host && usar.user && passDisponible)
+    smtpEmail.value.origenTexto = enUso === 'env'
+      ? 'Usando la configuración de variables de entorno (.env). Puedes sobrescribirla aquí desde el panel.'
+      : `Configurado desde el panel${c.enabled === false ? ', pero está deshabilitado' : ''}`
+    smtpEmail.value.dirty = false
+  } catch (e) {
+    console.error('Error cargando SMTP:', e)
+  }
+}
+
+const guardarConfigSmtp = async () => {
+  smtpEmail.value.saving = true
+  smtpEmail.value.savedMsg = ''
+  try {
+    await $fetch('/api/admin/configuracion-smtp', {
+      method: 'POST',
+      body: {
+        configuracion: {
+          enabled: smtpEmail.value.enabled,
+          host: smtpEmail.value.host,
+          port: smtpEmail.value.port,
+          user: smtpEmail.value.user,
+          pass: smtpEmail.value.pass,
+          from: smtpEmail.value.from,
+        }
+      }
+    })
+    smtpEmail.value.savedMsg = 'Configuración SMTP guardada correctamente'
+    smtpEmail.value.pass = ''
+    await loadSmtpConfig()
+    setTimeout(() => { smtpEmail.value.savedMsg = '' }, 3000)
+  } catch (e: any) {
+    alert(e?.data?.message || 'Error guardando configuración SMTP')
+  } finally {
+    smtpEmail.value.saving = false
+  }
+}
+
+const enviarPruebaSmtp = async () => {
+  if (!smtpEmail.value.testTo) return
+
+  smtpEmail.value.sendingTest = true
+  smtpEmail.value.testResult = ''
+  smtpEmail.value.testError = ''
+
+  try {
+    if (smtpEmail.value.dirty) {
+      await $fetch('/api/admin/configuracion-smtp', {
+        method: 'POST',
+        body: {
+          configuracion: {
+            enabled: smtpEmail.value.enabled,
+            host: smtpEmail.value.host,
+            port: smtpEmail.value.port,
+            user: smtpEmail.value.user,
+            pass: smtpEmail.value.pass,
+            from: smtpEmail.value.from,
+          }
+        }
+      })
+      smtpEmail.value.pass = ''
+      await loadSmtpConfig()
+    }
+    await $fetch('/api/admin/configuracion-smtp-test', {
+      method: 'POST',
+      body: { to: smtpEmail.value.testTo }
+    })
+    smtpEmail.value.testResult = 'success'
+  } catch (e: any) {
+    smtpEmail.value.testResult = 'error'
+    smtpEmail.value.testError = e?.data?.message || 'Error enviando correo de prueba'
+  } finally {
+    smtpEmail.value.sendingTest = false
+  }
+}
+
 const loadConfig = async () => {
   try {
     const [iaRes, smsRes, verifRes] = await Promise.all([
@@ -984,7 +1202,8 @@ const eliminarTelefonoVerificado = async (id) => {
 
 onMounted(() => {
   loadConfig()
-cargarTelefonosVerificados()
+  cargarTelefonosVerificados()
+  loadSmtpConfig()
 })
 </script>
 
@@ -1741,6 +1960,94 @@ nav {
   background: #f8f9fa;
   border-radius: 8px;
   padding: 1.25rem;
+}
+
+/* SMTP Status */
+.smtp-status {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.25rem;
+  font-size: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.smtp-status strong {
+  font-size: 0.9rem;
+}
+
+.smtp-status span {
+  font-size: 0.8rem;
+}
+
+.smtp-status-ok {
+  background: #f0fff4;
+  border: 1px solid #c8e6c9;
+}
+
+.smtp-status-ok strong {
+  color: #2e7d32;
+}
+
+.smtp-status-ok span {
+  color: #4e7a54;
+}
+
+.smtp-status-warn {
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+}
+
+.smtp-status-warn strong {
+  color: #e65100;
+}
+
+.smtp-status-warn span {
+  color: #9a6f00;
+}
+
+.field-hint {
+  font-size: 0.75rem;
+  color: #b2bec3;
+  margin-top: 0.3rem;
+}
+
+/* SMTP Test Zone */
+.smtp-test-zone {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 2px dashed #e0e0e0;
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1.25rem;
+}
+
+.smtp-test-zone .test-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.smtp-test-zone .test-header h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #2d3436;
+}
+
+.smtp-test-zone .test-desc {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #636e72;
+}
+
+.smtp-test-zone .test-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.75rem;
 }
 
 .test-header {
