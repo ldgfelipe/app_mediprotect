@@ -1,6 +1,15 @@
 <script setup lang="ts">
 const token = useCookie('token')
 const usuario = useCookie('usuario')
+
+// Respaldar: si la cookie esta vacia, hidratar desde localStorage (flujo registro-curp)
+if (!usuario.value) {
+  try {
+    const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('usuario') : null
+    if (stored) usuario.value = JSON.parse(stored)
+  } catch {}
+}
+
 const plan = ref<any>(null)
 
 definePageMeta({

@@ -9,6 +9,7 @@ const totalPasos = 4
 const loading = ref(false)
 const errorMsg = ref('')
 const tokenCookie = useCookie('token')
+const usuarioCookie = useCookie('usuario')
 
 // PASO 1: CURP
 const curpInput = ref('')
@@ -203,6 +204,7 @@ async function completarRegistro(esPago = false) {
     }
     const res: any = await $fetch('/api/auth/registro-paciente', { method: 'POST', body })
     tokenCookie.value = res.token
+    usuarioCookie.value = res.usuario
     localStorage.setItem('usuario', JSON.stringify(res.usuario))
 
     const pagoId = res.pago_id
