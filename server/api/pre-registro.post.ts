@@ -1,5 +1,3 @@
-import { getPool } from '../../utils/db'
-
 export default defineEventHandler(async (event) => {
   const b = await readBody(event)
   const {

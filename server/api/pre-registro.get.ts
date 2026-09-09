@@ -1,5 +1,3 @@
-import { getPool } from '../../utils/db'
-
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const curp = (query.curp as string || '').toUpperCase().trim()
