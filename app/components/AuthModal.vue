@@ -1,13 +1,25 @@
 <script setup>
 const props = defineProps({
   doctorName: { type: String, default: '' },
-  show: { type: Boolean, default: false }
+  show: { type: Boolean, default: false },
+  initialCurp: { type: String, default: '' }
 })
 
 const emit = defineEmits(['close', 'logged'])
 
 const paso = ref('elegir')
 const tokenCookie = useCookie('token')
+
+// Auto-fill CURP si viene de pre-registro
+let curpInitialized = false
+watch(() => props.show, (val) => {
+  if (val && props.initialCurp && !curpInitialized) {
+    curpInitialized = true
+    curpInput.value = props.initialCurp
+    paso.value = 'curp'
+    validarCURP()
+  }
+})
 
 // Login
 const loginForm = reactive({ email: '', password: '' })
@@ -42,6 +54,7 @@ const coloniasLoading = ref(false)
 const regError = ref('')
 const regLoading = ref(false)
 const regSuccess = ref(false)
+const preRegistroId = ref(null)
 
 let cpTimeout = null
 watch(() => regForm.codigo_postal, (val) => {
@@ -90,6 +103,27 @@ async function validarCURP() {
       return
     }
     curpDatos.value = data.response
+
+    // Guardar CURP en localStorage para persistir
+    localStorage.setItem('pending_curp', curp)
+
+    // Guardar pre-registro con datos CURP
+    const s = curpDatos.value.Solicitante || {}
+    try {
+      await $fetch('/api/pre-registro', {
+        method: 'POST',
+        body: {
+          curp: curp,
+          nombre: s.Nombres || null,
+          apellido_paterno: s.ApellidoPaterno || null,
+          apellido_materno: s.AvellidoMaterno || null,
+          fecha_nacimiento: s.FechaNacimiento || null,
+          genero: s.ClaveSexo === 'H' ? 'masculino' : s.ClaveSexo === 'M' ? 'femenino' : null,
+          doctor_nombre: props.doctorName || null
+        }
+      })
+    } catch (e) { /* no bloquear por error de pre-registro */ }
+
     if (curpTimeout) clearTimeout(curpTimeout)
     curpTimeout = setTimeout(() => {
       if (curpDatos.value) paso.value = 'registro'
@@ -152,7 +186,33 @@ async function doRegister() {
       localStorage.setItem('agendar_pendiente', '1')
     }
 
+    // Actualizar pre-registro con datos de contacto
     const s = curpDatos.value.Solicitante || {}
+    try {
+      const preRes = await $fetch('/api/pre-registro', {
+        method: 'POST',
+        body: {
+          curp: curpInput.value.toUpperCase().trim(),
+          nombre: s.Nombres || null,
+          apellido_paterno: s.ApellidoPaterno || null,
+          apellido_materno: s.ApellidoMaterno || null,
+          fecha_nacimiento: s.FechaNacimiento || null,
+          genero: s.ClaveSexo === 'H' ? 'masculino' : s.ClaveSexo === 'M' ? 'femenino' : null,
+          email: regForm.email,
+          telefono: regForm.telefono,
+          password: regForm.password,
+          codigo_postal: regForm.codigo_postal || null,
+          colonia: regForm.colonia || null,
+          municipio: regForm.municipio || null,
+          estado: regForm.estado || null,
+          ciudad: regForm.ciudad || null,
+          direccion: regForm.direccion || null,
+          doctor_nombre: props.doctorName || null
+        }
+      })
+      if (preRes.pre_registro_id) preRegistroId.value = preRes.pre_registro_id
+    } catch (e) { /* no bloquear */ }
+
     const res = await $fetch('/api/auth/registro-paciente', {
       method: 'POST',
       body: {
@@ -178,6 +238,16 @@ async function doRegister() {
 
     tokenCookie.value = res.token
     localStorage.setItem('usuario', JSON.stringify(res.usuario))
+
+    // Marcar pre-registro como completado
+    if (preRegistroId.value) {
+      try {
+        await $fetch('/api/pre-registro-completar', {
+          method: 'POST',
+          body: { pre_registro_id: preRegistroId.value }
+        })
+      } catch (e) { /* no bloquear */ }
+    }
 
     if (res.pago_id) {
       closeModal()

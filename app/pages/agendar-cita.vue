@@ -5,6 +5,7 @@ const usuario = ref(null)
 const yaRedirigio = ref(false)
 const creandoCita = ref(false)
 const showModal = ref(false)
+const pendingCurp = ref('')
 
 const tokenCookie = useCookie('token')
 
@@ -16,6 +17,13 @@ onMounted(async () => {
     await crearCitaYWhatsApp()
     return
   }
+
+  // Verificar si hay CURP pendiente en localStorage
+  const savedCurp = localStorage.getItem('pending_curp')
+  if (savedCurp) {
+    pendingCurp.value = savedCurp
+  }
+
   // Mostrar modal de auth
   showModal.value = true
 })
@@ -44,6 +52,7 @@ async function crearCitaYWhatsApp() {
   }
   localStorage.removeItem('agendar_doctor')
   localStorage.removeItem('agendar_pendiente')
+  localStorage.removeItem('pending_curp')
   creandoCita.value = false
   abrirWhatsApp()
   return navigateTo('/dashboard/paciente')
@@ -52,6 +61,7 @@ async function crearCitaYWhatsApp() {
 function onLogged(user) {
   usuario.value = user
   showModal.value = false
+  localStorage.removeItem('pending_curp')
   crearCitaYWhatsApp()
 }
 </script>
@@ -73,7 +83,13 @@ function onLogged(user) {
       </div>
 
       <!-- Modal de autenticación -->
-      <AuthModal :show="showModal" :doctorName="doctorName" @close="showModal = false" @logged="onLogged" />
+      <AuthModal
+        :show="showModal"
+        :doctorName="doctorName"
+        :initialCurp="pendingCurp"
+        @close="showModal = false"
+        @logged="onLogged"
+      />
     </main>
   </div>
 </template>
