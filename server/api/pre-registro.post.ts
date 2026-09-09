@@ -11,13 +11,23 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'CURP requerida (18 caracteres)' })
   }
 
-  const pool = getPool()
+  let pool
+  try {
+    pool = getPool()
+  } catch (e) {
+    return { ok: false, error: 'DB no disponible' }
+  }
 
   // Si ya existe un pre-registro pendiente con esta CURP, actualizarlo
-  const existing = await pool.query(
-    'SELECT id FROM pre_registros WHERE curp = $1 AND estado_registro = $1',
-    [curp.toUpperCase().trim(), 'pendiente']
-  )
+  let existing
+  try {
+    existing = await pool.query(
+      'SELECT id FROM pre_registros WHERE curp = $1 AND estado_registro = $2',
+      [curp.toUpperCase().trim(), 'pendiente']
+    )
+  } catch (e) {
+    return { ok: false, error: 'Tabla pre_registros no existe. Ejecuta el SQL de creación.' }
+  }
 
   if (existing.rows.length > 0) {
     await pool.query(
