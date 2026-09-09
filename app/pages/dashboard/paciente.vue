@@ -26,12 +26,24 @@ const cambiando = ref(false)
 const cambioMsg = ref('')
 const cambioError = ref('')
 
+// Modal de cita pendiente
+const showCitaPendiente = ref(false)
+const citaPendienteDoctor = ref('')
+const creandoCitaPendiente = ref(false)
+
 onMounted(async () => {
   if (emailConfirmado.value) {
     try {
       const { data } = await useFetch('/api/paquetes/mi-plan')
       plan.value = (data.value as any)?.plan
     } catch {}
+
+    // Verificar si hay cita pendiente desde registro
+    const pendingDoctor = localStorage.getItem('agendar_doctor')
+    if (pendingDoctor) {
+      citaPendienteDoctor.value = pendingDoctor
+      showCitaPendiente.value = true
+    }
   }
 })
 
@@ -88,6 +100,54 @@ function cerrarSesion() {
   usuario.value = null
   navigateTo('/')
 }
+
+// ========== CITA PENDIENTE: AGENDAR O CERRAR ==========
+async function agendarCitaPendiente() {
+  creandoCitaPendiente.value = true
+  try {
+    // Crear la cita en la BD
+    await $fetch('/api/citas/crear', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token.value}` },
+      body: { medico_nombre: citaPendienteDoctor.value }
+    })
+
+    // Abrir WhatsApp con datos del médico y paciente
+    const nombre = usuario.value ? `${usuario.value.nombre} ${usuario.value.apellido}` : ''
+    const userId = usuario.value?.id || ''
+    const msg = `Hola, quiero una cita con el médico ${citaPendienteDoctor.value}.\n\nMi nombre es: ${nombre}\nMi ID de usuario es: ${userId}`
+    window.open(`https://wa.me/522228021933?text=${encodeURIComponent(msg)}`, '_blank')
+
+    limpiarCitaPendiente()
+  } catch (e: any) {
+    console.error('Error al agendar cita:', e)
+  }
+  creandoCitaPendiente.value = false
+}
+
+async function cerrarCitaPendiente() {
+  creandoCitaPendiente.value = true
+  try {
+    // Crear la cita como pendiente (sin WhatsApp)
+    await $fetch('/api/citas/crear', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token.value}` },
+      body: { medico_nombre: citaPendienteDoctor.value }
+    })
+    limpiarCitaPendiente()
+  } catch (e: any) {
+    console.error('Error al guardar cita:', e)
+  }
+  creandoCitaPendiente.value = false
+}
+
+function limpiarCitaPendiente() {
+  localStorage.removeItem('agendar_doctor')
+  localStorage.removeItem('agendar_pendiente')
+  localStorage.removeItem('pending_curp')
+  showCitaPendiente.value = false
+  citaPendienteDoctor.value = ''
+}
 </script>
 
 <template>
@@ -109,6 +169,40 @@ function cerrarSesion() {
     </header>
 
     <main class="dashboard-content">
+      <!-- Modal de cita pendiente -->
+      <Teleport to="body">
+        <div v-if="showCitaPendiente" class="cita-pendiente-overlay">
+          <div class="cita-pendiente-modal">
+            <div class="cita-pendiente-icon">📋</div>
+            <h2>Tienes una cita pendiente</h2>
+            <p class="cita-pendiente-text">
+              Quieres agendar tu cita con:
+            </p>
+            <div class="cita-pendiente-doctor">
+              <strong>{{ citaPendienteDoctor }}</strong>
+            </div>
+            <p class="cita-pendiente-hint">
+              Presiona <strong>"Agendar Cita"</strong> para abrir WhatsApp y coordinar tu consulta, o <strong>"Cerrar"</strong> para guardar la cita y continuar después.
+            </p>
+            <div class="cita-pendiente-actions">
+              <button
+                class="btn-agendar-wa"
+                @click="agendarCitaPendiente"
+                :disabled="creandoCitaPendiente"
+              >
+                {{ creandoCitaPendiente ? 'Procesando...' : '📱 Agendar Cita (WhatsApp)' }}
+              </button>
+              <button
+                class="btn-cerrar-modal"
+                @click="cerrarCitaPendiente"
+                :disabled="creandoCitaPendiente"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      </Teleport>
       <!-- Panel bloqueado hasta confirmar el correo -->
       <div v-if="!emailConfirmado" class="confirm-panel">
         <div class="confirm-card">
@@ -343,5 +437,110 @@ function cerrarSesion() {
   color: #b2bec3;
   margin: 0.6rem 0 0;
   line-height: 1.4;
+}
+
+/* ========== MODAL CITA PENDIENTE ========== */
+.cita-pendiente-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 1rem;
+}
+
+.cita-pendiente-modal {
+  background: white;
+  border-radius: 16px;
+  padding: 2.5rem 2rem;
+  max-width: 440px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.cita-pendiente-icon {
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+}
+
+.cita-pendiente-modal h2 {
+  font-size: 1.3rem;
+  color: #2d3436;
+  margin: 0 0 0.5rem;
+}
+
+.cita-pendiente-text {
+  color: #636e72;
+  font-size: 0.95rem;
+  margin: 0 0 0.75rem;
+}
+
+.cita-pendiente-doctor {
+  background: #f0fff4;
+  border: 1px solid #00b894;
+  border-radius: 10px;
+  padding: 0.8rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  color: #2d3436;
+}
+
+.cita-pendiente-hint {
+  font-size: 0.85rem;
+  color: #636e72;
+  line-height: 1.5;
+  margin: 0 0 1.5rem;
+}
+
+.cita-pendiente-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.btn-agendar-wa {
+  background: #25d366;
+  color: white;
+  border: none;
+  padding: 0.85rem 1.5rem;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-agendar-wa:hover:not(:disabled) {
+  background: #1da851;
+}
+
+.btn-agendar-wa:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-cerrar-modal {
+  background: white;
+  color: #636e72;
+  border: 1px solid #dfe6e9;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-cerrar-modal:hover:not(:disabled) {
+  background: #f5f6fa;
+  border-color: #b2bec3;
+}
+
+.btn-cerrar-modal:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 </style>

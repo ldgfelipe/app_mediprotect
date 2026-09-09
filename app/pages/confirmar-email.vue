@@ -31,13 +31,12 @@ onMounted(async () => {
     }
     mensaje.value = data.mensaje
 
-    // Auto-redirect if pending booking intent
+    // Auto-redirect al panel del paciente si hay cita pendiente
     if (tipo === 'paciente') {
       const pendingDoctor = localStorage.getItem('agendar_doctor')
       if (pendingDoctor) {
         setTimeout(() => {
-          localStorage.removeItem('agendar_pendiente')
-          navigateTo({ path: '/agendar-cita', query: { doctor: pendingDoctor } })
+          navigateTo('/dashboard/paciente')
         }, 2000)
       }
     }
@@ -48,11 +47,9 @@ onMounted(async () => {
 })
 
 function irADashboard() {
-  // Check for pending booking intent
   const pendingDoctor = localStorage.getItem('agendar_doctor')
   if (pendingDoctor && tipo === 'paciente') {
-    localStorage.removeItem('agendar_pendiente')
-    return navigateTo({ path: '/agendar-cita', query: { doctor: pendingDoctor } })
+    return navigateTo('/dashboard/paciente')
   }
   if (tipo === 'medico') navigateTo('/dashboard/medico')
   else if (tipo === 'paciente') navigateTo('/dashboard/paciente')
@@ -79,10 +76,10 @@ function irALogin() {
         <h2>¡Correo confirmado!</h2>
         <p>{{ mensaje }}</p>
         <p v-if="tipo === 'paciente' && localStorage.getItem('agendar_doctor')" class="pending-msg">
-          📋 Redirigiendo a tu cita...
+          📋 Tienes una cita pendiente. Te llevaremos a tu panel...
         </p>
         <button @click="irADashboard" class="btn-primary">
-          {{ tipo === 'paciente' && localStorage.getItem('agendar_doctor') ? 'Agendar mi cita' : 'Ir a mi panel' }}
+          Ir a mi panel
         </button>
       </div>
 
@@ -91,7 +88,7 @@ function irALogin() {
         <h2>Ya confirmado</h2>
         <p>{{ mensaje }}</p>
         <button @click="irADashboard" class="btn-primary">
-          {{ tipo === 'paciente' && localStorage.getItem('agendar_doctor') ? 'Agendar mi cita' : 'Ir a mi panel' }}
+          Ir a mi panel
         </button>
       </div>
 

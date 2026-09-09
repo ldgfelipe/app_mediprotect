@@ -1,20 +1,22 @@
 <script setup>
 const route = useRoute()
 const doctorName = ref(route.query.doctor || '')
-const usuario = ref(null)
-const yaRedirigio = ref(false)
-const creandoCita = ref(false)
 const showModal = ref(false)
 const pendingCurp = ref('')
 
 const tokenCookie = useCookie('token')
 
-onMounted(async () => {
+onMounted(() => {
   const token = tokenCookie.value
   const saved = localStorage.getItem('usuario')
+
+  if (doctorName.value) {
+    localStorage.setItem('agendar_doctor', doctorName.value)
+    localStorage.setItem('agendar_pendiente', '1')
+  }
+
   if (token && saved) {
-    usuario.value = JSON.parse(saved)
-    await crearCitaYWhatsApp()
+    navigateTo('/dashboard/paciente')
     return
   }
 
@@ -28,41 +30,9 @@ onMounted(async () => {
   showModal.value = true
 })
 
-function abrirWhatsApp() {
-  if (yaRedirigio.value || !doctorName.value) return
-  yaRedirigio.value = true
-  const nombre = usuario.value ? `${usuario.value.nombre} ${usuario.value.apellido}` : ''
-  const userId = usuario.value?.id || ''
-  const msg = `Hola, quiero una cita con el médico ${doctorName.value}.\n\nMi nombre es: ${nombre}\nMi ID de usuario es: ${userId}`
-  const whatsappNum = '522228021933'
-  window.open(`https://wa.me/${whatsappNum}?text=${encodeURIComponent(msg)}`, '_blank')
-}
-
-async function crearCitaYWhatsApp() {
-  creandoCita.value = true
-  try {
-    const token = tokenCookie.value
-    await $fetch('/api/citas/crear', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: { medico_nombre: doctorName.value }
-    })
-  } catch (e) {
-    console.error('Error creando cita:', e)
-  }
-  localStorage.removeItem('agendar_doctor')
-  localStorage.removeItem('agendar_pendiente')
-  localStorage.removeItem('pending_curp')
-  creandoCita.value = false
-  abrirWhatsApp()
-  return navigateTo('/dashboard/paciente')
-}
-
-function onLogged(user) {
-  usuario.value = user
+function onLogged() {
   showModal.value = false
-  localStorage.removeItem('pending_curp')
-  crearCitaYWhatsApp()
+  navigateTo('/dashboard/paciente')
 }
 </script>
 
@@ -76,10 +46,9 @@ function onLogged(user) {
       <h1>Agendar Cita</h1>
       <p class="doctor-name" v-if="doctorName">Médico: <strong>{{ doctorName }}</strong></p>
 
-      <!-- Ya logueado - procesando -->
-      <div v-if="usuario && !yaRedirigio" class="redirect-section">
+      <div class="redirect-section">
         <div class="spinner"></div>
-        <p>{{ creandoCita ? 'Creando tu cita...' : 'Abriendo WhatsApp...' }}</p>
+        <p>Redirigiendo a tu panel...</p>
       </div>
 
       <!-- Modal de autenticación -->
