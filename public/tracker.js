@@ -138,6 +138,9 @@
       e.stopPropagation();
       menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
     });
+    menu.addEventListener('click', function(e) {
+      e.stopPropagation();
+    });
     document.addEventListener('click', function() {
       menu.style.display = 'none';
     });
@@ -159,8 +162,14 @@
         '<div style="padding:0.75rem 1rem;border-bottom:1px solid #f0f0f0;">' +
           '<div style="font-weight:600;color:#2d3436;font-size:0.95rem;">Hola, ' + nombre + '</div>' +
         '</div>' +
-        '<a href="' + API_BASE + '/dashboard" style="display:block;padding:0.75rem 1rem;color:#333;text-decoration:none;font-size:0.9rem;border-bottom:1px solid #f5f5f5;">Mi Panel</a>' +
-        '<a href="#" id="mp-session-logout" style="display:block;padding:0.75rem 1rem;color:#c62828;text-decoration:none;font-size:0.9rem;">Cerrar Sesión</a>';
+        '<a href="' + API_BASE + '/dashboard" class="mp-menu-link" style="display:block;padding:0.75rem 1rem;color:#333;text-decoration:none;font-size:0.9rem;border-bottom:1px solid #f5f5f5;">Mi Panel</a>' +
+        '<a href="#" id="mp-session-logout" class="mp-menu-link" style="display:block;padding:0.75rem 1rem;color:#c62828;text-decoration:none;font-size:0.9rem;">Cerrar Sesión</a>';
+
+      menu.querySelectorAll('.mp-menu-link').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+          e.stopPropagation();
+        });
+      });
 
       var logoutLink = document.getElementById('mp-session-logout');
       if (logoutLink) {
@@ -177,9 +186,15 @@
       menu.innerHTML =
         '<div style="padding:0.75rem 1rem;text-align:center;">' +
           '<p style="margin:0 0 0.5rem;color:#636e72;font-size:0.85rem;">Inicia sesión para agendar citas</p>' +
-          '<a href="' + LOGIN_URL + '" style="display:block;background:#00b894;color:white;padding:0.6rem;border-radius:8px;text-decoration:none;font-weight:600;font-size:0.9rem;">Entrar</a>' +
-          '<a href="' + LOGIN_URL + '" style="display:block;margin-top:0.5rem;color:#0984e3;font-size:0.8rem;text-decoration:none;">Crear cuenta</a>' +
+          '<a href="' + LOGIN_URL + '" class="mp-menu-link" style="display:block;background:#00b894;color:white;padding:0.6rem;border-radius:8px;text-decoration:none;font-weight:600;font-size:0.9rem;">Entrar</a>' +
+          '<a href="' + LOGIN_URL + '" class="mp-menu-link" style="display:block;margin-top:0.5rem;color:#0984e3;font-size:0.8rem;text-decoration:none;">Crear cuenta</a>' +
         '</div>';
+
+      menu.querySelectorAll('.mp-menu-link').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+          e.stopPropagation();
+        });
+      });
     }
   }
 
