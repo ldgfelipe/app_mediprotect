@@ -9,11 +9,16 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Token y tipo son requeridos' })
   }
 
-  if (!['medico', 'paciente'].includes(tipo)) {
+  if (!['medico', 'paciente', 'empresa'].includes(tipo)) {
     throw createError({ statusCode: 400, message: 'Tipo inválido' })
   }
 
   const pool = getPool()
+
+  const tabla = tipo === 'medico' ? 'medicos' : tipo === 'paciente' ? 'pacientes' : 'empresas'
+  const selectUsuario = tipo === 'empresa'
+    ? 'SELECT id, nombre, contacto_nombre AS apellido, email, email_confirmado FROM empresas WHERE id = $1'
+    : `SELECT id, nombre, apellido, email, email_confirmado FROM ${tabla} WHERE id = $1`
 
   const tokenResult = await pool.query(
     `SELECT id_usuario, tipo_usuario, email, expira_en, used
@@ -29,9 +34,9 @@ export default defineEventHandler(async (event) => {
   const tokenData = tokenResult.rows[0]
 
   if (tokenData.used) {
-    const table = tipo === 'medico' ? 'medicos' : 'pacientes'
+    const table = tabla
     const userResult = await pool.query(
-      `SELECT id, nombre, apellido, email, email_confirmado FROM ${table} WHERE id = $1`,
+      selectUsuario,
       [tokenData.id_usuario]
     )
     const userToken = jwt.sign(
@@ -58,14 +63,14 @@ export default defineEventHandler(async (event) => {
     [token]
   )
 
-  const table = tipo === 'medico' ? 'medicos' : 'pacientes'
+  const table = tabla
   await pool.query(
     `UPDATE ${table} SET email_confirmado = true WHERE id = $1`,
     [tokenData.id_usuario]
   )
 
   const userResult = await pool.query(
-    `SELECT id, nombre, apellido, email, email_confirmado FROM ${table} WHERE id = $1`,
+    selectUsuario,
     [tokenData.id_usuario]
   )
 

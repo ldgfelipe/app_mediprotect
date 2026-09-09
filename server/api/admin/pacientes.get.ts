@@ -7,6 +7,6 @@ export default defineEventHandler(async (event) => {
   catch { throw createError({ statusCode: 401, message: 'Token inválido' }) }
 
   const pool = getPool()
-  const result = await pool.query('SELECT id, nombre, apellido, email, telefono, curp, genero, estado_civil, id_empresa, created_at FROM pacientes ORDER BY created_at DESC')
+  const result = await pool.query('SELECT id, nombre, apellido, email, telefono, curp, genero, estado_civil, id_empresa, email_confirmado, telefono_confirmado, created_at FROM pacientes ORDER BY created_at DESC')
   return { pacientes: result.rows }
 })

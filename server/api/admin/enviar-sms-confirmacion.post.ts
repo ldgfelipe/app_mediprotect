@@ -3,7 +3,7 @@ import crypto from 'crypto'
 import { enviarSms, generarCodigoVerificacion, getConexionesActivas } from '../../utils/sms.js'
 
 export default defineEventHandler(async (event) => {
-  const token = getHeader(event, 'authorization')?.replace('Bearer ', '') || getCookie(event, 'token') || getCookie(event, 'admin_token')
+  const token = getHeader(event, 'authorization')?.replace('Bearer ', '') || getCookie(event, 'admin_token')
   if (!token) throw createError({ statusCode: 401, message: 'No autorizado' })
 
   let user: any
@@ -13,24 +13,38 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, message: 'Token invalido' })
   }
 
+  if (user.tipo !== 'admin' && user.rol !== 'admin' && user.tipo !== 'asistente') {
+    throw createError({ statusCode: 403, message: 'Solo administradores y asistentes pueden enviar SMS de confirmacion' })
+  }
+
   const body = await readBody(event)
-  const { telefono, tipo } = body
+  const { id, tipo, telefono } = body
 
-  if (!telefono) {
-    throw createError({ statusCode: 400, message: 'El telefono es requerido' })
+  if (!id || !tipo) {
+    throw createError({ statusCode: 400, message: 'id y tipo son requeridos' })
   }
 
-  const telefonoLimpio = telefono.replace(/[^0-9+]/g, '')
-  if (telefonoLimpio.length < 10) {
-    throw createError({ statusCode: 400, message: 'El telefono debe tener al menos 10 digitos' })
-  }
-
-  const tipoUsuario = tipo || user.tipo
-  if (!['medico', 'paciente'].includes(tipoUsuario)) {
+  if (!['medico', 'paciente', 'empresa'].includes(tipo)) {
     throw createError({ statusCode: 400, message: 'Tipo invalido' })
   }
 
+  const table = tipo === 'medico' ? 'medicos' : tipo === 'paciente' ? 'pacientes' : 'empresas'
+
   const pool = getPool()
+
+  const result = await pool.query(
+    `SELECT id, telefono FROM ${table} WHERE id = $1`,
+    [id]
+  )
+  if (result.rows.length === 0) {
+    throw createError({ statusCode: 404, message: 'Registro no encontrado' })
+  }
+
+  const telefonoDestino = (telefono || result.rows[0].telefono || '').toString()
+  const telefonoLimpio = telefonoDestino.replace(/[^0-9+]/g, '')
+  if (telefonoLimpio.length < 10) {
+    throw createError({ statusCode: 400, message: 'El telefono debe tener al menos 10 digitos' })
+  }
 
   // Verificar si el telefono esta en la lista de verificados por admin
   const telVerificado = await pool.query(
@@ -39,16 +53,11 @@ export default defineEventHandler(async (event) => {
   )
 
   if (telVerificado.rowCount > 0) {
-    // Telefono verificado por admin: auto-confirmar sin SMS
-    const table = tipoUsuario === 'medico' ? 'medicos' : 'pacientes'
-    await pool.query(`UPDATE ${table} SET telefono_confirmado = true WHERE id = $1`, [user.id])
-
-    // Log sin enviar SMS
+    await pool.query(`UPDATE ${table} SET telefono_confirmado = true WHERE id = $1`, [id])
     await pool.query(
       'INSERT INTO sms_log (telefono, mensaje, proveedor, estado, error_mensaje) VALUES ($1, $2, $3, $4, $5)',
       [telefonoLimpio, 'Auto-verificado (lista admin)', 'admin', 'auto-verificado', null]
     )
-
     return {
       success: true,
       mensaje: 'Telefono verificado automaticamente (numero en lista de prueba)',
@@ -57,13 +66,13 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  // Flujo normal: verificar que haya al menos una conexion SMS activa (Twilio o API REST)
+  // Verificar que exista una conexion SMS activa (twilio o API REST)
   const conexiones = await getConexionesActivas()
   if (conexiones.length === 0) {
-    throw createError({ statusCode: 503, message: 'El servicio SMS no esta configurado. Contacta al administrador.' })
+    throw createError({ statusCode: 503, message: 'El servicio SMS no esta configurado. Agrega una conexion o contacta al administrador.' })
   }
 
-  // Verificar rate limiting: max 3 codigos por telefono en 10 minutos
+  // Rate limiting: max 3 codigos por telefono en 10 minutos
   const recientes = await pool.query(
     `SELECT COUNT(*) as total FROM sms_confirmacion_tokens
      WHERE telefono = $1 AND created_at > NOW() - INTERVAL '10 minutes'`,
@@ -73,23 +82,20 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 429, message: 'Demasiadas solicitudes. Espera 10 minutos antes de intentar de nuevo.' })
   }
 
-  // Generar codigo de 6 digitos
   const codigo = generarCodigoVerificacion(6)
-  const expiraEn = new Date(Date.now() + 10 * 60 * 1000) // 10 minutos
+  const expiraEn = new Date(Date.now() + 10 * 60 * 1000)
 
-  // Guardar token
   await pool.query(
     `INSERT INTO sms_confirmacion_tokens (id_usuario, tipo_usuario, telefono, codigo, expira_en)
      VALUES ($1, $2, $3, $4, $5)`,
-    [user.id, tipoUsuario, telefonoLimpio, codigo, expiraEn]
+    [id, tipo, telefonoLimpio, codigo, expiraEn]
   )
 
-  // Enviar SMS
   const mensaje = `MediProtect: Tu codigo de verificacion es ${codigo}. Expira en 10 minutos.`
-  const result = await enviarSms(telefonoLimpio, mensaje)
+  const resultSms = await enviarSms(telefonoLimpio, mensaje)
 
-  if (!result.success) {
-    throw createError({ statusCode: 500, message: `Error enviando SMS: ${result.error}` })
+  if (!resultSms.success) {
+    throw createError({ statusCode: 500, message: `Error enviando SMS: ${resultSms.error}` })
   }
 
   return {

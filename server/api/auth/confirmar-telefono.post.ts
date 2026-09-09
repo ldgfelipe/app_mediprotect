@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const tipoUsuario = tipo || user.tipo
-  if (!['medico', 'paciente'].includes(tipoUsuario)) {
+  if (!['medico', 'paciente', 'empresa'].includes(tipoUsuario)) {
     throw createError({ statusCode: 400, message: 'Tipo invalido' })
   }
 
@@ -69,7 +69,7 @@ export default defineEventHandler(async (event) => {
   )
 
   // Actualizar telefono_confirmado
-  const table = tipoUsuario === 'medico' ? 'medicos' : 'pacientes'
+  const table = tipoUsuario === 'medico' ? 'medicos' : tipoUsuario === 'paciente' ? 'pacientes' : 'empresas'
   await pool.query(
     `UPDATE ${table} SET telefono_confirmado = true WHERE id = $1`,
     [user.id]

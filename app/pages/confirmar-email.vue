@@ -38,7 +38,8 @@ onMounted(async () => {
 
 function irADashboard() {
   if (tipo === 'medico') navigateTo('/dashboard/medico')
-  else navigateTo('/dashboard/paciente')
+  else if (tipo === 'paciente') navigateTo('/dashboard/paciente')
+  else navigateTo('/')
 }
 
 function irALogin() {

@@ -402,13 +402,13 @@ const showNuevoMedico = ref(false)
 const editandoMedico = ref(false)
 const medicoEditId = ref(null)
 const especialidades = ref([])
-const formMedico = ref({ nombre: '', apellido: '', email: '', telefono: '', cedula_profesional: '', titulo: 'Dr.', especialidad: '', usuario: '', password: '' })
+const formMedico = ref({ nombre: '', apellido: '', email: '', telefono: '', cedula_profesional: '', titulo: 'Dr.', especialidad: '', usuario: '', password: '', curp: '', codigo_postal: '', colonia: '', consultorio_ciudad: '', consultorio_estado: '' })
 const savingMedico = ref(false)
 const errorMsgMedico = ref('')
 const okMsgMedico = ref('')
 
 function abrirEditarMedico(m) {
-  formMedico.value = { nombre: m.nombre, apellido: m.apellido, email: m.email || '', telefono: m.telefono || '', cedula_profesional: m.cedula_profesional || '', titulo: m.titulo || 'Dr.', especialidad: m.especialidad_nombre || '', usuario: '', password: '' }
+  formMedico.value = { nombre: m.nombre, apellido: m.apellido, email: m.email || '', telefono: m.telefono || '', cedula_profesional: m.cedula_profesional || '', titulo: m.titulo || 'Dr.', especialidad: m.especialidad_nombre || '', usuario: '', password: '', curp: m.curp || '', codigo_postal: m.codigo_postal || '', colonia: m.colonia || '', consultorio_ciudad: m.consultorio_ciudad || '', consultorio_estado: m.consultorio_estado || '' }
   medicoEditId.value = m.id
   editandoMedico.value = true
   showNuevoMedico.value = true
@@ -418,7 +418,7 @@ function cerrarFormMedico() {
   showNuevoMedico.value = false
   editandoMedico.value = false
   medicoEditId.value = null
-  formMedico.value = { nombre: '', apellido: '', email: '', telefono: '', cedula_profesional: '', titulo: 'Dr.', especialidad: '', usuario: '', password: '' }
+  formMedico.value = { nombre: '', apellido: '', email: '', telefono: '', cedula_profesional: '', titulo: 'Dr.', especialidad: '', usuario: '', password: '', curp: '', codigo_postal: '', colonia: '', consultorio_ciudad: '', consultorio_estado: '' }
   errorMsgMedico.value = ''
 }
 
@@ -447,12 +447,17 @@ async function guardarMedico() {
   if (!formMedico.value.nombre || !formMedico.value.apellido) { errorMsgMedico.value = 'Nombre y apellido son requeridos'; return }
   savingMedico.value = true
   try {
+    let nuevoId = null
     if (editandoMedico.value && medicoEditId.value) {
       await $fetch(`/api/admin/medicos/${medicoEditId.value}`, { method: 'PUT', headers: { Authorization: 'Bearer ' + authToken.value }, body: formMedico.value })
       okMsgMedico.value = 'Medico actualizado correctamente'
     } else {
-      await $fetch('/api/admin/medicos', { method: 'POST', headers: { Authorization: 'Bearer ' + authToken.value }, body: formMedico.value })
+      const data = await $fetch('/api/admin/medicos', { method: 'POST', headers: { Authorization: 'Bearer ' + authToken.value }, body: formMedico.value })
+      nuevoId = data?.medico?.id || null
       okMsgMedico.value = 'Medico registrado correctamente'
+    }
+    if (nuevoId) {
+      pendienteConfirmacion.value = { id: nuevoId, nombre: `Dr. ${formMedico.value.nombre} ${formMedico.value.apellido}`.trim(), _tipo: 'medico', _tab: 'medicos' }
     }
     cerrarFormMedico()
     await buscarMedicos()
@@ -468,7 +473,7 @@ const loadingSearchPaciente = ref(false)
 const showNuevoPaciente = ref(false)
 const editandoPaciente = ref(false)
 const pacienteEditId = ref(null)
-const formPaciente = ref({ nombre: '', apellido_paterno: '', apellido_materno: '', email: '', telefono: '', fecha_nacimiento: '', genero: '', ciudad: '', curp: '', estado_civil: '', ocupacion: '', codigo_postal: '', estado: '', municipio: '', id_paquete: '', password: '' })
+const formPaciente = ref({ nombre: '', apellido_paterno: '', apellido_materno: '', email: '', telefono: '', fecha_nacimiento: '', genero: '', ciudad: '', curp: '', estado_civil: '', ocupacion: '', codigo_postal: '', estado: '', municipio: '', colonia: '', id_paquete: '', password: '' })
 const savingPaciente = ref(false)
 const errorMsgPaciente = ref('')
 const okMsgPaciente = ref('')
@@ -505,12 +510,17 @@ async function guardarPaciente() {
     const body = { ...formPaciente.value }
     if (!body.password) delete body.password
     if (!body.id_paquete) delete body.id_paquete
+    let nuevoId = null
     if (editandoPaciente.value && pacienteEditId.value) {
       await $fetch(`/api/admin/pacientes/${pacienteEditId.value}`, { method: 'PUT', headers: { Authorization: 'Bearer ' + authToken.value }, body })
       okMsgPaciente.value = 'Paciente actualizado correctamente'
     } else {
-      await $fetch('/api/admin/pacientes', { method: 'POST', headers: { Authorization: 'Bearer ' + authToken.value }, body })
+      const data = await $fetch('/api/admin/pacientes', { method: 'POST', headers: { Authorization: 'Bearer ' + authToken.value }, body })
+      nuevoId = data?.paciente?.id || null
       okMsgPaciente.value = 'Paciente registrado correctamente'
+    }
+    if (nuevoId) {
+      pendienteConfirmacion.value = { id: nuevoId, nombre: `${body.nombre || ''} ${body.apellido_paterno || ''}`.trim(), _tipo: 'paciente', _tab: 'pacientes' }
     }
     cerrarFormPaciente()
     await buscarPacientesAdmin()
@@ -520,7 +530,7 @@ async function guardarPaciente() {
 }
 
 function abrirEditarPaciente(p) {
-  formPaciente.value = { nombre: p.nombre, apellido_paterno: p.apellido_paterno || p.apellido || '', apellido_materno: p.apellido_materno || '', email: p.email || '', telefono: p.telefono || '', fecha_nacimiento: p.fecha_nacimiento ? p.fecha_nacimiento.slice(0,10) : '', genero: p.genero || '', ciudad: p.ciudad || '', curp: p.curp || '', estado_civil: p.estado_civil || '', ocupacion: p.ocupacion || '', codigo_postal: p.codigo_postal || '', estado: p.estado || '', municipio: p.municipio || '', id_paquete: '', password: '' }
+  formPaciente.value = { nombre: p.nombre, apellido_paterno: p.apellido_paterno || p.apellido || '', apellido_materno: p.apellido_materno || '', email: p.email || '', telefono: p.telefono || '', fecha_nacimiento: p.fecha_nacimiento ? p.fecha_nacimiento.slice(0,10) : '', genero: p.genero || '', ciudad: p.ciudad || '', curp: p.curp || '', estado_civil: p.estado_civil || '', ocupacion: p.ocupacion || '', codigo_postal: p.codigo_postal || '', estado: p.estado || '', municipio: p.municipio || '', colonia: p.colonia || '', id_paquete: '', password: '' }
   pacienteEditId.value = p.id
   editandoPaciente.value = true
   showNuevoPaciente.value = true
@@ -532,7 +542,7 @@ function cerrarFormPaciente() {
   showNuevoPaciente.value = false
   editandoPaciente.value = false
   pacienteEditId.value = null
-  formPaciente.value = { nombre: '', apellido_paterno: '', apellido_materno: '', email: '', telefono: '', fecha_nacimiento: '', genero: '', ciudad: '', curp: '', estado_civil: '', ocupacion: '', codigo_postal: '', estado: '', municipio: '', id_paquete: '', password: '' }
+  formPaciente.value = { nombre: '', apellido_paterno: '', apellido_materno: '', email: '', telefono: '', fecha_nacimiento: '', genero: '', ciudad: '', curp: '', estado_civil: '', ocupacion: '', codigo_postal: '', estado: '', municipio: '', colonia: '', id_paquete: '', password: '' }
   errorMsgPaciente.value = ''
   curpDatosPaciente.value = null
   curpErrorPaciente.value = ''
@@ -563,6 +573,125 @@ async function validarCURPPaciente() {
     curpErrorPaciente.value = e?.data?.message || 'Error al validar CURP'
   }
   curpValidandoPaciente.value = false
+}
+
+// ========== SEPOMEX: CODIGO POSTAL (PACIENTE) ==========
+const coloniasPaciente = ref([])
+const coloniasPacienteLoading = ref(false)
+let cpPacienteTimeout = null
+watch(() => formPaciente.value.codigo_postal, (val) => {
+  formPaciente.value.colonia = ''
+  coloniasPaciente.value = []
+  if (cpPacienteTimeout) clearTimeout(cpPacienteTimeout)
+  if (!val || val.length !== 5 || !/^\d{5}$/.test(val)) return
+  cpPacienteTimeout = setTimeout(() => buscarColoniasPaciente(val), 400)
+})
+
+async function buscarColoniasPaciente(cp) {
+  coloniasPacienteLoading.value = true
+  coloniasPaciente.value = []
+  try {
+    const data = await $fetch('/api/sepomex/colonias', { params: { zip_code: cp } })
+    coloniasPaciente.value = data?.colonias || []
+    if (data?.municipio && !formPaciente.value.municipio) formPaciente.value.municipio = data.municipio
+    if (data?.ciudad && !formPaciente.value.ciudad) formPaciente.value.ciudad = data.ciudad
+    if (data?.estado && !formPaciente.value.estado) formPaciente.value.estado = data.estado
+  } catch (e) { coloniasPaciente.value = [] }
+  coloniasPacienteLoading.value = false
+}
+
+function seleccionarColoniaPaciente(col) {
+  formPaciente.value.colonia = col
+  coloniasPaciente.value = []
+}
+
+// ========== CURP VALIDATION (MEDICO) ==========
+const curpValidandoMedico = ref(false)
+const curpErrorMedico = ref('')
+const curpDatosMedico = ref(null)
+
+async function validarCURPMedico() {
+  curpErrorMedico.value = ''
+  curpDatosMedico.value = null
+  const curp = formMedico.value.curp.toUpperCase().trim()
+  if (!curp || curp.length !== 18) { curpErrorMedico.value = 'La CURP debe tener 18 caracteres'; return }
+  curpValidandoMedico.value = true
+  try {
+    const data = await $fetch('/api/curp/validar', { params: { curp } })
+    if (data.error) { curpErrorMedico.value = data.error_msg || 'No se pudieron obtener datos'; return }
+    curpDatosMedico.value = data.response
+    const s = data.response?.Solicitante || {}
+    if (s.Nombres) formMedico.value.nombre = s.Nombres
+    if (s.ApellidoPaterno) formMedico.value.apellido = s.ApellidoPaterno + (s.ApellidoMaterno ? ' ' + s.ApellidoMaterno : '')
+    if (s.EntidadNacimiento) formMedico.value.consultorio_estado = s.EntidadNacimiento
+  } catch (e) {
+    curpErrorMedico.value = e?.data?.message || 'Error al validar CURP'
+  }
+  curpValidandoMedico.value = false
+}
+
+// ========== SEPOMEX: CODIGO POSTAL (MEDICO) ==========
+const coloniasMedico = ref([])
+const coloniasMedicoLoading = ref(false)
+let cpMedicoTimeout = null
+watch(() => formMedico.value.codigo_postal, (val) => {
+  formMedico.value.colonia = ''
+  coloniasMedico.value = []
+  if (cpMedicoTimeout) clearTimeout(cpMedicoTimeout)
+  if (!val || val.length !== 5 || !/^\d{5}$/.test(val)) return
+  cpMedicoTimeout = setTimeout(() => buscarColoniasMedico(val), 400)
+})
+
+async function buscarColoniasMedico(cp) {
+  coloniasMedicoLoading.value = true
+  coloniasMedico.value = []
+  try {
+    const data = await $fetch('/api/sepomex/colonias', { params: { zip_code: cp } })
+    coloniasMedico.value = data?.colonias || []
+    if (data?.ciudad && !formMedico.value.consultorio_ciudad) formMedico.value.consultorio_ciudad = data.ciudad
+    if (data?.estado && !formMedico.value.consultorio_estado) formMedico.value.consultorio_estado = data.estado
+  } catch (e) { coloniasMedico.value = [] }
+  coloniasMedicoLoading.value = false
+}
+
+function seleccionarColoniaMedico(col) {
+  formMedico.value.colonia = col
+  coloniasMedico.value = []
+}
+
+// ========== CONFIRMACIONES (correo + SMS) ==========
+const pendienteConfirmacion = ref<any>(null)
+const confirmandoEmail = ref<any>({})
+const confirmandoSms = ref<any>({})
+
+async function enviarConfirmacionEmail(registro) {
+  const key = `${registro._tipo}:${registro.id}`
+  confirmandoEmail.value[key] = true
+  try {
+    const data = await $fetch('/api/admin/enviar-confirmacion', {
+      method: 'POST', headers: { Authorization: 'Bearer ' + authToken.value }, body: { id: registro.id, tipo: registro._tipo }
+    })
+    alert(data?.mensaje || 'Correo de confirmacion enviado')
+  } catch (e) {
+    alert(e?.data?.message || 'Error al enviar el correo')
+  } finally {
+    confirmandoEmail.value[key] = false
+  }
+}
+
+async function enviarConfirmacionSms(registro) {
+  const key = `${registro._tipo}:${registro.id}`
+  confirmandoSms.value[key] = true
+  try {
+    const data = await $fetch('/api/admin/enviar-sms-confirmacion', {
+      method: 'POST', headers: { Authorization: 'Bearer ' + authToken.value }, body: { id: registro.id, tipo: registro._tipo }
+    })
+    alert(data?.mensaje || 'SMS de confirmacion enviado')
+  } catch (e) {
+    alert(e?.data?.message || 'Error al enviar el SMS')
+  } finally {
+    confirmandoSms.value[key] = false
+  }
 }
 
 // ========== SECCION: EMPRESAS (crear/buscar/editar/asociar) ==========
@@ -610,12 +739,17 @@ async function guardarEmpresa() {
   if (!formEmpresa.value.nombre || !formEmpresa.value.email) { errorMsgEmpresa.value = 'Nombre y email son requeridos'; return }
   savingEmpresa.value = true
   try {
+    let nuevoId = null
     if (editandoEmpresa.value && empresaEditId.value) {
       await $fetch(`/api/admin/empresas/${empresaEditId.value}`, { method: 'PUT', headers: { Authorization: 'Bearer ' + authToken.value }, body: formEmpresa.value })
       okMsgEmpresa.value = 'Empresa actualizada correctamente'
     } else {
-      await $fetch('/api/admin/empresas', { method: 'POST', headers: { Authorization: 'Bearer ' + authToken.value }, body: formEmpresa.value })
+      const data = await $fetch('/api/admin/empresas', { method: 'POST', headers: { Authorization: 'Bearer ' + authToken.value }, body: formEmpresa.value })
+      nuevoId = data?.empresa?.id || null
       okMsgEmpresa.value = 'Empresa registrada correctamente'
+    }
+    if (nuevoId) {
+      pendienteConfirmacion.value = { id: nuevoId, nombre: formEmpresa.value.nombre, _tipo: 'empresa', _tab: 'empresas' }
     }
     cerrarFormEmpresa()
     await buscarEmpresasAdmin()
@@ -695,7 +829,7 @@ async function crearPacienteParaEmpresa() {
       body: { ...formPaciente.value, id_empresa: empresaSeleccionada.value.id }
     })
     okMsgPaciente.value = 'Paciente creado y asociado a la empresa'
-    formPaciente.value = { nombre: '', apellido: '', email: '', telefono: '', fecha_nacimiento: '', genero: '', ciudad: '', curp: '', password: '' }
+    formPaciente.value = { nombre: '', apellido: '', email: '', telefono: '', fecha_nacimiento: '', genero: '', ciudad: '', curp: '', codigo_postal: '', colonia: '', password: '' }
     showNuevoPaciente.value = false
     await abrirEmpresaPacientes(empresaSeleccionada.value)
     setTimeout(() => { okMsgPaciente.value = '' }, 3000)
@@ -797,6 +931,18 @@ async function crearPacienteParaEmpresa() {
         </div>
         <div v-if="okMsgMedico" class="success-msg">{{ okMsgMedico }}</div>
         <div v-if="errorMsgMedico" class="error-msg">{{ errorMsgMedico }}</div>
+        <div v-if="pendienteConfirmacion && pendienteConfirmacion._tab === 'medicos'" class="confirm-banner">
+          <span class="confirm-banner-label">Nuevo medico registrado: <strong>{{ pendienteConfirmacion.nombre }}</strong></span>
+          <div class="confirm-banner-actions">
+            <button class="btn-confirm" @click="enviarConfirmacionEmail(pendienteConfirmacion)" :disabled="confirmandoEmail[pendienteConfirmacion._tipo + ':' + pendienteConfirmacion.id]">
+              {{ confirmandoEmail[pendienteConfirmacion._tipo + ':' + pendienteConfirmacion.id] ? 'Enviando...' : '✉️ Enviar confirmacion de correo' }}
+            </button>
+            <button class="btn-confirm sms" @click="enviarConfirmacionSms(pendienteConfirmacion)" :disabled="confirmandoSms[pendienteConfirmacion._tipo + ':' + pendienteConfirmacion.id]">
+              {{ confirmandoSms[pendienteConfirmacion._tipo + ':' + pendienteConfirmacion.id] ? 'Enviando...' : '📱 Enviar SMS (opcional)' }}
+            </button>
+            <button class="btn-confirm-close" @click="pendienteConfirmacion = null">&times;</button>
+          </div>
+        </div>
 
         <!-- Buscador -->
         <div class="medico-search-box">
@@ -831,6 +977,8 @@ async function crearPacienteParaEmpresa() {
             </div>
             <div class="medico-card-actions">
               <div class="medico-card-stat"><span class="stat-num">{{ medico.citas?.length || 0 }}</span><span class="stat-text">citas</span></div>
+              <button v-if="!medico.email_confirmado" class="btn-sm" title="Enviar confirmacion de correo" @click.stop="enviarConfirmacionEmail({ ...medico, _tipo: 'medico' })">✉️</button>
+              <button v-if="!medico.telefono_confirmado && medico.telefono" class="btn-sm" title="Enviar confirmacion SMS" @click.stop="enviarConfirmacionSms({ ...medico, _tipo: 'medico' })">📱</button>
               <button class="btn-card-edit" @click.stop="abrirEditarMedico(medico)" title="Editar">Editar</button>
               <button class="btn-card-view" @click.stop="seleccionarPerfilMedico(medico)" title="Ver perfil">Ver</button>
             </div>
@@ -968,6 +1116,18 @@ async function crearPacienteParaEmpresa() {
         </div>
         <div v-if="okMsgPaciente" class="success-msg">{{ okMsgPaciente }}</div>
         <div v-if="errorMsgPaciente" class="error-msg">{{ errorMsgPaciente }}</div>
+        <div v-if="pendienteConfirmacion && pendienteConfirmacion._tab === 'pacientes'" class="confirm-banner">
+          <span class="confirm-banner-label">Nuevo paciente registrado: <strong>{{ pendienteConfirmacion.nombre }}</strong></span>
+          <div class="confirm-banner-actions">
+            <button class="btn-confirm" @click="enviarConfirmacionEmail(pendienteConfirmacion)" :disabled="confirmandoEmail[pendienteConfirmacion._tipo + ':' + pendienteConfirmacion.id]">
+              {{ confirmandoEmail[pendienteConfirmacion._tipo + ':' + pendienteConfirmacion.id] ? 'Enviando...' : '✉️ Enviar confirmacion de correo' }}
+            </button>
+            <button class="btn-confirm sms" @click="enviarConfirmacionSms(pendienteConfirmacion)" :disabled="confirmandoSms[pendienteConfirmacion._tipo + ':' + pendienteConfirmacion.id]">
+              {{ confirmandoSms[pendienteConfirmacion._tipo + ':' + pendienteConfirmacion.id] ? 'Enviando...' : '📱 Enviar SMS (opcional)' }}
+            </button>
+            <button class="btn-confirm-close" @click="pendienteConfirmacion = null">&times;</button>
+          </div>
+        </div>
 
         <div class="search-box"><input v-model="searchPacienteAdmin" @input="buscarPacientesAdmin" placeholder="Buscar por nombre, email o telefono..." /></div>
         <p v-if="loadingSearchPaciente" class="loading">Buscando...</p>
@@ -978,6 +1138,9 @@ async function crearPacienteParaEmpresa() {
             <div class="result-info"><strong>{{ p.nombre }} {{ p.apellido }}</strong><span>{{ p.email }}</span><span>{{ p.telefono || '' }}</span></div>
             <div class="result-actions">
               <span class="result-date">{{ p.created_at ? new Date(p.created_at).toLocaleDateString('es-MX') : '' }}</span>
+              <button v-if="!p.email_confirmado" class="btn-sm" title="Enviar confirmacion de correo" @click.stop="enviarConfirmacionEmail({ ...p, _tipo: 'paciente' })">✉️</button>
+              <button v-if="!p.telefono_confirmado && p.telefono" class="btn-sm" title="Enviar confirmacion SMS" @click.stop="enviarConfirmacionSms({ ...p, _tipo: 'paciente' })">📱</button>
+              <span v-if="p.email_confirmado" class="badge-confirmado" title="Correo confirmado">✔</span>
               <button class="btn-edit" @click.stop="abrirEditarPaciente(p)">Editar</button>
             </div>
           </div>
@@ -994,6 +1157,18 @@ async function crearPacienteParaEmpresa() {
         </div>
         <div v-if="okMsgEmpresa" class="success-msg">{{ okMsgEmpresa }}</div>
         <div v-if="errorMsgEmpresa" class="error-msg">{{ errorMsgEmpresa }}</div>
+        <div v-if="pendienteConfirmacion && pendienteConfirmacion._tab === 'empresas'" class="confirm-banner">
+          <span class="confirm-banner-label">Nueva empresa registrada: <strong>{{ pendienteConfirmacion.nombre }}</strong></span>
+          <div class="confirm-banner-actions">
+            <button class="btn-confirm" @click="enviarConfirmacionEmail(pendienteConfirmacion)" :disabled="confirmandoEmail[pendienteConfirmacion._tipo + ':' + pendienteConfirmacion.id]">
+              {{ confirmandoEmail[pendienteConfirmacion._tipo + ':' + pendienteConfirmacion.id] ? 'Enviando...' : '✉️ Enviar confirmacion de correo' }}
+            </button>
+            <button class="btn-confirm sms" @click="enviarConfirmacionSms(pendienteConfirmacion)" :disabled="confirmandoSms[pendienteConfirmacion._tipo + ':' + pendienteConfirmacion.id]">
+              {{ confirmandoSms[pendienteConfirmacion._tipo + ':' + pendienteConfirmacion.id] ? 'Enviando...' : '📱 Enviar SMS (opcional)' }}
+            </button>
+            <button class="btn-confirm-close" @click="pendienteConfirmacion = null">&times;</button>
+          </div>
+        </div>
 
         <div class="search-box"><input v-model="searchEmpresaAdmin" @input="buscarEmpresasAdmin" placeholder="Buscar por nombre, RFC, email o contacto..." /></div>
         <p v-if="loadingSearchEmpresa" class="loading">Buscando...</p>
@@ -1003,6 +1178,9 @@ async function crearPacienteParaEmpresa() {
             <div class="result-avatar orange"><span>{{ e.nombre?.charAt(0) }}</span></div>
             <div class="result-info"><strong>{{ e.nombre }}</strong><span>{{ e.rfc || '' }} {{ e.contacto_nombre ? '· Contacto: ' + e.contacto_nombre : '' }}</span><span>{{ e.email || '' }}</span></div>
             <div class="result-actions">
+              <button v-if="!e.email_confirmado" class="btn-sm" title="Enviar confirmacion de correo" @click.stop="enviarConfirmacionEmail({ ...e, _tipo: 'empresa' })">✉️</button>
+              <button v-if="!e.telefono_confirmado && e.telefono" class="btn-sm" title="Enviar confirmacion SMS" @click.stop="enviarConfirmacionSms({ ...e, _tipo: 'empresa' })">📱</button>
+              <span v-if="e.email_confirmado" class="badge-confirmado" title="Correo confirmado">✔</span>
               <button class="btn-sm blue" @click.stop="abrirEmpresaPacientes(e)">Pacientes</button>
               <button class="btn-edit" @click.stop="abrirEditarEmpresa(e)">Editar</button>
             </div>
@@ -1309,6 +1487,33 @@ async function crearPacienteParaEmpresa() {
           <div class="field-row"><div class="field"><label>Cedula Profesional</label><input v-model="formMedico.cedula_profesional" /></div><div class="field"><label>Titulo</label><input v-model="formMedico.titulo" placeholder="Dr." /></div></div>
           <div class="field"><label>Especialidad</label><input v-model="formMedico.especialidad" placeholder="Nombre de la especialidad" /></div>
           <div class="field-row"><div class="field"><label>Usuario (login)</label><input v-model="formMedico.usuario" placeholder="dr.lopez" /></div><div class="field"><label>Contrasena</label><input v-model="formMedico.password" type="password" placeholder="******" /></div></div>
+
+          <div class="form-section-label">Datos Oficiales (CURP)</div>
+          <div class="curp-row">
+            <div class="field" style="flex:1"><label>CURP</label><input v-model="formMedico.curp" maxlength="18" placeholder="18 caracteres" style="text-transform:uppercase;font-family:monospace;letter-spacing:1px" @keyup.enter="validarCURPMedico" /></div>
+            <button class="btn-validate" @click="validarCURPMedico" :disabled="curpValidandoMedico || !formMedico.curp || formMedico.curp.length !== 18">
+              <span v-if="curpValidandoMedico" class="spinner-sm"></span><span v-else>Validar</span>
+            </button>
+          </div>
+          <div v-if="curpErrorMedico" class="error" style="margin-top:0.5rem">{{ curpErrorMedico }}</div>
+          <div v-if="curpDatosMedico" class="curp-success"><span class="check-icon">&#10003;</span> Datos cargados de CURP</div>
+
+          <div class="form-section-label">Ubicacion del Consultorio</div>
+          <div class="field-row">
+            <div class="field">
+              <label>Codigo Postal</label>
+              <input v-model="formMedico.codigo_postal" maxlength="5" placeholder="5 digitos" />
+              <span v-if="coloniasMedicoLoading" class="field-hint">Buscando colonias...</span>
+              <div v-if="coloniasMedico.length > 0" class="colonias-list">
+                <div v-for="col in coloniasMedico" :key="col" class="colonia-item" @click="seleccionarColoniaMedico(col)">{{ col }}</div>
+              </div>
+            </div>
+            <div class="field"><label>Ciudad</label><input v-model="formMedico.consultorio_ciudad" /></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label>Estado</label><input v-model="formMedico.consultorio_estado" /></div>
+            <div class="field"><label>Colonia</label><input v-model="formMedico.colonia" placeholder="Colonia / Fracc." /></div>
+          </div>
           <div class="btn-row"><button @click="cerrarFormMedico" class="btn-secondary">Cancelar</button><button @click="guardarMedico" :disabled="savingMedico" class="btn-primary">{{ savingMedico ? 'Guardando...' : (editandoMedico ? 'Actualizar' : 'Guardar') }}</button></div>
         </div>
       </div>
@@ -1343,8 +1548,22 @@ async function crearPacienteParaEmpresa() {
           <!-- CONTACTO -->
           <div class="form-section-label">Contacto</div>
           <div class="field-row"><div class="field"><label>Email *</label><input v-model="formPaciente.email" type="email" /></div><div class="field"><label>Telefono</label><input v-model="formPaciente.telefono" /></div></div>
-          <div class="field-row"><div class="field"><label>Codigo Postal</label><input v-model="formPaciente.codigo_postal" maxlength="5" /></div><div class="field"><label>Estado</label><input v-model="formPaciente.estado" /></div></div>
-          <div class="field"><label>Municipio</label><input v-model="formPaciente.municipio" /></div>
+          <div class="field-row">
+            <div class="field">
+              <label>Codigo Postal</label>
+              <input v-model="formPaciente.codigo_postal" maxlength="5" placeholder="5 digitos" />
+              <span v-if="coloniasPacienteLoading" class="field-hint">Buscando colonias...</span>
+              <div v-if="coloniasPaciente.length > 0" class="colonias-list">
+                <div v-for="col in coloniasPaciente" :key="col" class="colonia-item" @click="seleccionarColoniaPaciente(col)">{{ col }}</div>
+              </div>
+              <span v-if="formPaciente.codigo_postal.length === 5 && coloniasPaciente.length === 0 && !coloniasPacienteLoading" class="field-hint">No se encontraron colonias</span>
+            </div>
+            <div class="field"><label>Estado</label><input v-model="formPaciente.estado" /></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label>Municipio</label><input v-model="formPaciente.municipio" /></div>
+            <div class="field"><label>Colonia</label><input v-model="formPaciente.colonia" placeholder="Colonia / Fracc." /></div>
+          </div>
 
           <!-- PLAN & PASSWORD -->
           <div class="form-section-label">Plan y Acceso</div>
@@ -1777,6 +1996,17 @@ h1 { font-size: 1.5rem; color: #2d3436; }
 .form-section-label { font-size: 0.72rem; color: #00b894; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin: 0.75rem 0 0.5rem; padding-top: 0.75rem; border-top: 1px solid #f0f2f5; }
 .form-section-label:first-child { border-top: none; margin-top: 0; padding-top: 0; }
 .success { background: #e8f5e9; color: #2e7d32; padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 0.75rem; }
+.colonias-list { margin-top: 0.35rem; max-height: 140px; overflow-y: auto; border: 1px solid #dfe6e9; border-radius: 6px; background: white; }
+.colonia-item { padding: 0.45rem 0.7rem; font-size: 0.82rem; cursor: pointer; border-bottom: 1px solid #f0f2f5; }
+.colonia-item:hover { background: #eafaf6; }
+.confirm-banner { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; background: #fff8e1; border: 1px solid #ffe082; border-left: 4px solid #f39c12; color: #7a5c00; padding: 0.75rem 1rem; border-radius: 8px; margin: 1rem 0; font-size: 0.9rem; }
+.confirm-banner .btn-confirm { background: #f39c12; color: white; border: none; padding: 0.45rem 0.85rem; border-radius: 6px; font-weight: 600; font-size: 0.82rem; cursor: pointer; }
+.confirm-banner .btn-confirm:hover:not(:disabled) { opacity: 0.85; }
+.confirm-banner .btn-confirm.sms { background: #00b894; }
+.confirm-banner .btn-confirm:disabled { opacity: 0.5; cursor: not-allowed; }
+.confirm-banner-actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.confirm-banner-close { background: transparent; border: none; color: #7a5c00; font-size: 1.2rem; cursor: pointer; }
+.badge-confirmado { color: #00b894; font-weight: 700; }
 @media (max-width: 640px) {
   .curp-row { flex-direction: column; }
 }

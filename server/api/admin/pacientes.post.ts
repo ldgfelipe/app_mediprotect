@@ -35,7 +35,8 @@ export default defineEventHandler(async (event) => {
   }
 
   const password_hash = await bcrypt.hash(password || 'mediprotect123', 10)
-  const apellidoPat = apellido_paterno || (apellido ? apellido : null)
+  const apellidoFinal = apellido || apellido_paterno || null
+  const apellidoPat = apellido_paterno || apellido || null
 
   const result = await pool.query(`
     INSERT INTO pacientes (nombre, apellido, apellido_paterno, apellido_materno, email, password_hash, telefono, fecha_nacimiento, genero, ciudad, curp,
@@ -44,7 +45,7 @@ export default defineEventHandler(async (event) => {
     RETURNING id, nombre, apellido, apellido_paterno, apellido_materno, email, email_confirmado, telefono, fecha_nacimiento, genero, ciudad, curp,
       codigo_postal, estado, municipio, telefono2, hospital_consultorio, colonia, created_at
   `, [
-    nombre, apellido || null, apellidoPat, apellido_materno || null, email, password_hash,
+    nombre, apellidoFinal, apellidoPat, apellido_materno || null, email, password_hash,
     telefono || null, fecha_nacimiento || null, genero || null,
     ciudad || null, curpUpper || null, codigo_postal || null, estado || null, municipio || null,
     telefono2 || null, hospital_consultorio || null, colonia || null
