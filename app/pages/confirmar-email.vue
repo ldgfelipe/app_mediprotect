@@ -30,6 +30,17 @@ onMounted(async () => {
       status.value = 'success'
     }
     mensaje.value = data.mensaje
+
+    // Auto-redirect if pending booking intent
+    if (tipo === 'paciente') {
+      const pendingDoctor = localStorage.getItem('agendar_doctor')
+      if (pendingDoctor) {
+        setTimeout(() => {
+          localStorage.removeItem('agendar_pendiente')
+          navigateTo({ path: '/agendar-cita', query: { doctor: pendingDoctor } })
+        }, 2000)
+      }
+    }
   } catch (e: any) {
     status.value = 'error'
     mensaje.value = e?.data?.message || 'Error al confirmar el correo'
@@ -37,6 +48,12 @@ onMounted(async () => {
 })
 
 function irADashboard() {
+  // Check for pending booking intent
+  const pendingDoctor = localStorage.getItem('agendar_doctor')
+  if (pendingDoctor && tipo === 'paciente') {
+    localStorage.removeItem('agendar_pendiente')
+    return navigateTo({ path: '/agendar-cita', query: { doctor: pendingDoctor } })
+  }
   if (tipo === 'medico') navigateTo('/dashboard/medico')
   else if (tipo === 'paciente') navigateTo('/dashboard/paciente')
   else navigateTo('/')
@@ -61,14 +78,21 @@ function irALogin() {
         <div class="icon-success">✓</div>
         <h2>¡Correo confirmado!</h2>
         <p>{{ mensaje }}</p>
-        <button @click="irADashboard" class="btn-primary">Ir a mi panel</button>
+        <p v-if="tipo === 'paciente' && localStorage.getItem('agendar_doctor')" class="pending-msg">
+          📋 Redirigiendo a tu cita...
+        </p>
+        <button @click="irADashboard" class="btn-primary">
+          {{ tipo === 'paciente' && localStorage.getItem('agendar_doctor') ? 'Agendar mi cita' : 'Ir a mi panel' }}
+        </button>
       </div>
 
       <div v-else-if="status === 'already'" class="status-box already">
         <div class="icon-already">ℹ</div>
         <h2>Ya confirmado</h2>
         <p>{{ mensaje }}</p>
-        <button @click="irADashboard" class="btn-primary">Ir a mi panel</button>
+        <button @click="irADashboard" class="btn-primary">
+          {{ tipo === 'paciente' && localStorage.getItem('agendar_doctor') ? 'Agendar mi cita' : 'Ir a mi panel' }}
+        </button>
       </div>
 
       <div v-else class="status-box error">
@@ -140,4 +164,5 @@ function irALogin() {
   cursor: pointer; transition: all 0.2s;
 }
 .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,184,148,0.3); }
+.pending-msg { color: #00b894; font-weight: 600; font-size: 0.9rem; margin-top: 0.5rem; }
 </style>
