@@ -161,9 +161,6 @@
       btn.innerHTML = '<span style="color:white;font-weight:700;font-size:1.1rem;">' + (nombre ? nombre.charAt(0).toUpperCase() : 'U') + '</span>';
 
       menu.innerHTML =
-        '<div style="padding:0.75rem 1rem;border-bottom:1px solid #f0f0f0;">' +
-          '<div style="font-weight:600;color:#2d3436;font-size:0.95rem;">Hola, ' + nombre + '</div>' +
-        '</div>' +
         '<a href="' + API_BASE + '/dashboard" class="mp-link" style="display:block;padding:0.75rem 1rem;color:#333;text-decoration:none;font-size:0.9rem;border-bottom:1px solid #f5f5f5;">Mi Panel</a>' +
         '<a href="#" id="mp-logout-btn" class="mp-link" style="display:block;padding:0.75rem 1rem;color:#c62828;text-decoration:none;font-size:0.9rem;">Cerrar Sesión</a>';
 
