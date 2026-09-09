@@ -3,7 +3,7 @@ export default defineEventHandler((event) => {
 
   if (path.startsWith('/api/')) {
     const origin = getHeader(event, 'origin') || ''
-    const allowedOrigins = ['https://www.mediprotect.com.mx', 'http://localhost:3000', 'http://127.0.0.1:3000']
+    const allowedOrigins = ['https://www.mediprotect.com.mx', 'https://mediprotect.com.mx', 'http://localhost:3000', 'http://127.0.0.1:3000']
     const corsOrigin = allowedOrigins.includes(origin) ? origin : 'https://www.mediprotect.com.mx'
     setHeader(event, 'Access-Control-Allow-Origin', corsOrigin)
     setHeader(event, 'Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
