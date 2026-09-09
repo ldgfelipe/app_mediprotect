@@ -656,6 +656,86 @@
             </div>
           </div>
         </div>
+
+        <!-- Tokens API -->
+        <div class="config-section">
+          <div class="section-header">
+            <div class="section-title">
+              <span class="provider-icon-lg">🔑</span>
+              <div>
+                <h3>Tokens API</h3>
+                <p class="section-desc">Gestiona tokens para conexiones externas al sistema</p>
+              </div>
+            </div>
+            <button class="btn-primary btn-sm" @click="showTokenForm = true" v-if="!showTokenForm">
+              + Nuevo Token
+            </button>
+          </div>
+
+          <div class="section-body">
+            <!-- Formulario nuevo token -->
+            <div v-if="showTokenForm" class="token-form">
+              <div class="form-row">
+                <div class="form-group flex-1">
+                  <label>Nombre del token</label>
+                  <input v-model="newTokenName" type="text" placeholder="Ej: App externa, Integration, etc.">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group flex-1">
+                  <label>Permisos</label>
+                  <div class="permisos-grid">
+                    <label v-for="perm in availablePermisos" :key="perm.id" class="checkbox-label">
+                      <input type="checkbox" v-model="newTokenPermisos" :value="perm.id">
+                      {{ perm.label }}
+                    </label>
+                  </div>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button class="btn-secondary" @click="showTokenForm = false">Cancelar</button>
+                <button class="btn-primary" @click="createToken" :disabled="!newTokenName || creatingToken">
+                  {{ creatingToken ? 'Creando...' : 'Crear Token' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Token recién creado -->
+            <div v-if="createdToken" class="token-created-alert">
+              <div class="alert-header">
+                <span class="alert-icon">✅</span>
+                <strong>Token creado correctamente</strong>
+              </div>
+              <div class="token-display">
+                <code>{{ createdToken }}</code>
+                <button class="btn-copy" @click="copyToken">Copiar</button>
+              </div>
+              <p class="alert-warning">⚠️ Guarda este token ahora. No podrás verlo de nuevo.</p>
+            </div>
+
+            <!-- Lista de tokens -->
+            <div v-if="tokens.length > 0" class="tokens-list">
+              <div v-for="token in tokens" :key="token.id" class="token-item">
+                <div class="token-info">
+                  <strong>{{ token.nombre }}</strong>
+                  <span class="token-preview">{{ token.token_preview }}</span>
+                  <span class="token-status" :class="token.activo ? 'active' : 'inactive'">
+                    {{ token.activo ? 'Activo' : 'Inactivo' }}
+                  </span>
+                  <span v-if="token.ultimo_uso" class="token-last-use">
+                    Último uso: {{ new Date(token.ultimo_uso).toLocaleDateString() }}
+                  </span>
+                </div>
+                <div class="token-actions">
+                  <button class="btn-delete-sm" @click="deleteToken(token.id)">Eliminar</button>
+                </div>
+              </div>
+            </div>
+            <div v-else-if="!showTokenForm" class="empty-tokens">
+              No hay tokens API creados. Crea uno para comenzar a conectar aplicaciones externas.
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Botones de acción -->
@@ -1234,10 +1314,70 @@ const eliminarTelefonoVerificado = async (id) => {
   }
 }
 
+// Tokens API
+const tokens = ref<any[]>([])
+const showTokenForm = ref(false)
+const newTokenName = ref('')
+const newTokenPermisos = ref<string[]>([])
+const creatingToken = ref(false)
+const createdToken = ref('')
+
+const availablePermisos = [
+  { id: 'citas:read', label: 'Ver citas' },
+  { id: 'citas:write', label: 'Crear/editar citas' },
+  { id: 'pacientes:read', label: 'Ver pacientes' },
+  { id: 'pacientes:write', label: 'Crear/editar pacientes' },
+  { id: 'medicos:read', label: 'Ver médicos' },
+  { id: 'pagos:read', label: 'Ver pagos' },
+]
+
+const loadTokens = async () => {
+  try {
+    const data = await $fetch('/api/admin/tokens')
+    tokens.value = data.tokens || []
+  } catch (e) {
+    console.error('Error cargando tokens', e)
+  }
+}
+
+const createToken = async () => {
+  creatingToken.value = true
+  try {
+    const data = await $fetch('/api/admin/tokens', {
+      method: 'POST',
+      body: { nombre: newTokenName.value, permisos: newTokenPermisos.value }
+    })
+    createdToken.value = data.token
+    showTokenForm.value = false
+    newTokenName.value = ''
+    newTokenPermisos.value = []
+    await loadTokens()
+  } catch (e) {
+    alert(e?.data?.message || 'Error creando token')
+  } finally {
+    creatingToken.value = false
+  }
+}
+
+const deleteToken = async (id: number) => {
+  if (!confirm('Eliminar este token? La conexión externa dejará de funcionar.')) return
+  try {
+    await $fetch(`/api/admin/tokens/${id}`, { method: 'DELETE' })
+    await loadTokens()
+  } catch (e) {
+    alert(e?.data?.message || 'Error eliminando token')
+  }
+}
+
+const copyToken = () => {
+  navigator.clipboard.writeText(createdToken.value)
+}
+
 onMounted(() => {
   loadConfig()
   cargarTelefonosVerificados()
   loadSmtpConfig()
+  loadTokens()
 })
 </script>
 
@@ -2150,5 +2290,152 @@ nav {
   color: #c62828;
   font-size: 0.85rem;
   font-weight: 500;
+}
+
+/* Token styles */
+.token-form {
+  background: #f8f9fa;
+  padding: 1.25rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.permisos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.5rem;
+}
+
+.token-created-alert {
+  background: #e8f5e9;
+  border: 1px solid #a5d6a7;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.alert-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.alert-icon {
+  font-size: 1.2rem;
+}
+
+.token-display {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: white;
+  padding: 0.75rem;
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+
+.token-display code {
+  flex: 1;
+  font-family: monospace;
+  font-size: 0.85rem;
+  word-break: break-all;
+}
+
+.btn-copy {
+  background: #00b894;
+  color: white;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.btn-sm {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+}
+
+.alert-warning {
+  color: #9a6f00;
+  font-size: 0.8rem;
+  margin: 0;
+}
+
+.tokens-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.token-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.token-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.token-preview {
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: #636e72;
+}
+
+.token-status {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.token-status.active {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.token-status.inactive {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.token-last-use {
+  font-size: 0.75rem;
+  color: #636e72;
+}
+
+.token-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-delete-sm {
+  background: #ffebee;
+  color: #c62828;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.btn-delete-sm:hover {
+  background: #ffcdd2;
+}
+
+.empty-tokens {
+  color: #636e72;
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 2rem;
 }
 </style>
