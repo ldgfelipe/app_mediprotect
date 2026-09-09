@@ -127,7 +127,7 @@
     // Crear menú desplegable
     var menu = document.createElement('div');
     menu.id = 'mp-session-menu';
-    menu.style.cssText = 'position:absolute;top:52px;right:0;background:white;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.15);min-width:200px;display:none;overflow:hidden;';
+    menu.style.cssText = 'position:absolute;top:48px;right:0;background:white;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.15);min-width:200px;display:none;overflow:hidden;padding:0.25rem 0;';
 
     widget.appendChild(btn);
     widget.appendChild(menu);
@@ -156,8 +156,8 @@
       btn.innerHTML = '<span style="color:white;font-weight:700;font-size:1.1rem;">' + (nombre ? nombre.charAt(0).toUpperCase() : 'U') + '</span>';
 
       menu.innerHTML =
-        '<div style="padding:1rem;border-bottom:1px solid #f0f0f0;">' +
-          '<div style="font-weight:600;color:#2d3436;">Hola, ' + nombre + '</div>' +
+        '<div style="padding:0.75rem 1rem;border-bottom:1px solid #f0f0f0;">' +
+          '<div style="font-weight:600;color:#2d3436;font-size:0.95rem;">Hola, ' + nombre + '</div>' +
         '</div>' +
         '<a href="' + API_BASE + '/dashboard" style="display:block;padding:0.75rem 1rem;color:#333;text-decoration:none;font-size:0.9rem;border-bottom:1px solid #f5f5f5;">Mi Panel</a>' +
         '<a href="#" id="mp-session-logout" style="display:block;padding:0.75rem 1rem;color:#c62828;text-decoration:none;font-size:0.9rem;">Cerrar Sesión</a>';
@@ -175,8 +175,8 @@
       btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
 
       menu.innerHTML =
-        '<div style="padding:1rem;text-align:center;">' +
-          '<p style="margin:0 0 0.75rem;color:#636e72;font-size:0.85rem;">Inicia sesión para agendar citas</p>' +
+        '<div style="padding:0.75rem 1rem;text-align:center;">' +
+          '<p style="margin:0 0 0.5rem;color:#636e72;font-size:0.85rem;">Inicia sesión para agendar citas</p>' +
           '<a href="' + LOGIN_URL + '" style="display:block;background:#00b894;color:white;padding:0.6rem;border-radius:8px;text-decoration:none;font-weight:600;font-size:0.9rem;">Entrar</a>' +
           '<a href="' + LOGIN_URL + '" style="display:block;margin-top:0.5rem;color:#0984e3;font-size:0.8rem;text-decoration:none;">Crear cuenta</a>' +
         '</div>';
