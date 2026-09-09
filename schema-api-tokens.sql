@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS api_tokens (
   nombre VARCHAR(100) NOT NULL,
   token_hash VARCHAR(255) NOT NULL,
   token_preview VARCHAR(20) NOT NULL,
+  user_id UUID NOT NULL,
+  user_tipo VARCHAR(20) NOT NULL DEFAULT 'paciente',
   permisos JSONB DEFAULT '[]'::jsonb,
   activo BOOLEAN DEFAULT true,
   ultimo_uso TIMESTAMP WITH TIME ZONE,
@@ -16,3 +18,4 @@ CREATE TABLE IF NOT EXISTS api_tokens (
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_api_tokens_hash ON api_tokens (token_hash);
 CREATE INDEX IF NOT EXISTS idx_api_tokens_activo ON api_tokens (activo);
+CREATE INDEX IF NOT EXISTS idx_api_tokens_user ON api_tokens (user_id, user_tipo);

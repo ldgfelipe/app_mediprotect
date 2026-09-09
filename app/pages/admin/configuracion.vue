@@ -683,6 +683,30 @@
               </div>
               <div class="form-row">
                 <div class="form-group flex-1">
+                  <label>Tipo de usuario</label>
+                  <select v-model="newTokenUserTipo" @change="clearSelectedUser">
+                    <option value="paciente">Paciente</option>
+                    <option value="medico">Médico</option>
+                  </select>
+                </div>
+                <div class="form-group flex-1">
+                  <label>Usuario vinculado</label>
+                  <input v-model="newTokenUserSearch" type="text" :placeholder="newTokenUserTipo === 'medico' ? 'Buscar por nombre o email...' : 'Buscar por email...'" @input="searchUsers">
+                  <div v-if="userSearchResults.length > 0" class="user-search-dropdown">
+                    <div v-for="u in userSearchResults" :key="u.id" class="user-search-item" @click="selectUser(u)">
+                      {{ u.nombre }} {{ u.apellido }} ({{ u.email }})
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div v-if="newTokenUserId" class="form-row">
+                <div class="selected-user-badge">
+                  Usuario seleccionado: <strong>{{ newTokenUserNombre }}</strong>
+                  <button class="btn-icon-sm" @click="clearSelectedUser">&times;</button>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group flex-1">
                   <label>Permisos</label>
                   <div class="permisos-grid">
                     <label v-for="perm in availablePermisos" :key="perm.id" class="checkbox-label">
@@ -694,7 +718,7 @@
               </div>
               <div class="form-actions">
                 <button class="btn-secondary" @click="showTokenForm = false">Cancelar</button>
-                <button class="btn-primary" @click="createToken" :disabled="!newTokenName || creatingToken">
+                <button class="btn-primary" @click="createToken" :disabled="!newTokenName || !newTokenUserId || creatingToken">
                   {{ creatingToken ? 'Creando...' : 'Crear Token' }}
                 </button>
               </div>
@@ -719,6 +743,8 @@
                 <div class="token-info">
                   <strong>{{ token.nombre }}</strong>
                   <span class="token-preview">{{ token.token_preview }}</span>
+                  <span class="token-user">{{ token.user_nombre || '—' }}</span>
+                  <span class="token-user-email">{{ token.user_email || '' }}</span>
                   <span class="token-status" :class="token.activo ? 'active' : 'inactive'">
                     {{ token.activo ? 'Activo' : 'Inactivo' }}
                   </span>
@@ -1319,6 +1345,11 @@ const tokens = ref<any[]>([])
 const showTokenForm = ref(false)
 const newTokenName = ref('')
 const newTokenPermisos = ref<string[]>([])
+const newTokenUserTipo = ref('paciente')
+const newTokenUserSearch = ref('')
+const newTokenUserId = ref('')
+const newTokenUserNombre = ref('')
+const userSearchResults = ref<any[]>([])
 const creatingToken = ref(false)
 const createdToken = ref('')
 
@@ -1330,6 +1361,37 @@ const availablePermisos = [
   { id: 'medicos:read', label: 'Ver médicos' },
   { id: 'pagos:read', label: 'Ver pagos' },
 ]
+
+let searchTimeout: any = null
+const searchUsers = () => {
+  clearTimeout(searchTimeout)
+  if (newTokenUserSearch.value.length < 2) {
+    userSearchResults.value = []
+    return
+  }
+  searchTimeout = setTimeout(async () => {
+    try {
+      const table = newTokenUserTipo.value === 'medico' ? 'medicos' : 'pacientes'
+      const data = await $fetch(`/api/admin/${table}`, { query: { buscar: newTokenUserSearch.value } })
+      userSearchResults.value = (data.rows || data.pacientes || data.medicos || []).slice(0, 8)
+    } catch {
+      userSearchResults.value = []
+    }
+  }, 300)
+}
+
+const selectUser = (user: any) => {
+  newTokenUserId.value = user.id
+  newTokenUserNombre.value = `${user.nombre} ${user.apellido}`
+  newTokenUserSearch.value = `${user.nombre} ${user.apellido}`
+  userSearchResults.value = []
+}
+
+const clearSelectedUser = () => {
+  newTokenUserId.value = ''
+  newTokenUserNombre.value = ''
+  newTokenUserSearch.value = ''
+}
 
 const loadTokens = async () => {
   try {
@@ -1345,12 +1407,18 @@ const createToken = async () => {
   try {
     const data = await $fetch('/api/admin/tokens', {
       method: 'POST',
-      body: { nombre: newTokenName.value, permisos: newTokenPermisos.value }
+      body: {
+        nombre: newTokenName.value,
+        permisos: newTokenPermisos.value,
+        user_id: newTokenUserId.value,
+        user_tipo: newTokenUserTipo.value,
+      }
     })
     createdToken.value = data.token
     showTokenForm.value = false
     newTokenName.value = ''
     newTokenPermisos.value = []
+    clearSelectedUser()
     await loadTokens()
   } catch (e) {
     alert(e?.data?.message || 'Error creando token')
@@ -2306,6 +2374,59 @@ nav {
   gap: 0.5rem;
 }
 
+.user-search-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  z-index: 10;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.user-search-item {
+  padding: 0.6rem 0.75rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.user-search-item:hover {
+  background: #f0f0f0;
+}
+
+.user-search-item:last-child {
+  border-bottom: none;
+}
+
+.selected-user-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #e8f5e9;
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.btn-icon-sm {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  color: #636e72;
+  padding: 0;
+  line-height: 1;
+}
+
+.form-group {
+  position: relative;
+}
+
 .token-created-alert {
   background: #e8f5e9;
   border: 1px solid #a5d6a7;
@@ -2389,6 +2510,17 @@ nav {
 .token-preview {
   font-family: monospace;
   font-size: 0.8rem;
+  color: #636e72;
+}
+
+.token-user {
+  font-size: 0.8rem;
+  color: #2d3436;
+  font-weight: 500;
+}
+
+.token-user-email {
+  font-size: 0.75rem;
   color: #636e72;
 }
 
