@@ -1,18 +1,9 @@
 /**
- * MediProtect Session Bridge
+ * MediProtect Session Bridge v2
  * Uso: <script src="https://app.mediprotect.com.mx/tracker.js"></script>
  *
- * El script:
- * - Detecta token en la URL (?token=...&usuario=...) y lo guarda en localStorage
- * - Actualiza el menú del landing según estado de sesión
- * - Expone window.MediProtect con métodos para verificar sesión
- *
- * Elementos en el HTML del landing (data attributes):
- *   data-mp-auth="logged"    → se muestra SOLO cuando está logueado
- *   data-mp-auth="guest"     → se muestra SOLO cuando NO está logueado
- *   data-mp-name             → se reemplaza con el nombre del usuario
- *   data-mp-logout           → click ejecuta logout
- *   data-mp-login-url        → href se reemplaza con URL de login
+ * Detecta sesión y modifica el menú automáticamente.
+ * Sin data-attributes necesarios - busca patrones comunes de menú.
  */
 (function() {
   'use strict';
@@ -22,6 +13,7 @@
   var API_BASE = 'https://app.mediprotect.com.mx';
   var LOGIN_URL = API_BASE + '/login?returnTo=' + encodeURIComponent(window.location.origin);
 
+  // Guardar token de la URL
   function captureFromURL() {
     try {
       var params = new URLSearchParams(window.location.search);
@@ -51,8 +43,9 @@
   function logout() {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USUARIO_KEY);
-    applyMenu(false, null);
+    updateUI(false, null);
     document.dispatchEvent(new Event('mediaprotect:logout'));
+    window.location.reload();
   }
 
   function checkSession(callback) {
@@ -68,59 +61,117 @@
           var data = JSON.parse(xhr.responseText);
           if (data.autenticado) {
             localStorage.setItem(USUARIO_KEY, JSON.stringify(data.usuario));
-            applyMenu(true, data.usuario);
+            updateUI(true, data.usuario);
             callback(data.usuario, true);
           } else {
             logout();
             callback(null, false);
           }
-        } catch (e) { callback(null, false); }
+        } catch (e) {
+          callback(getUsuario(), isLogged());
+        }
       }
     };
     xhr.onerror = function() {
-      var u = getUsuario();
-      applyMenu(isLogged(), u);
-      callback(u, isLogged());
+      callback(getUsuario(), isLogged());
     };
     xhr.send();
   }
 
-  // Actualizar menú según estado de sesión
-  function applyMenu(logged, usuario) {
-    // Mostrar/ocultar elementos por data-mp-auth
-    var authElements = document.querySelectorAll('[data-mp-auth]');
-    for (var i = 0; i < authElements.length; i++) {
-      var el = authElements[i];
-      var requirement = el.getAttribute('data-mp-auth');
-      if (requirement === 'logged') {
-        el.style.display = logged ? '' : 'none';
-      } else if (requirement === 'guest') {
+  // Buscar y modificar el menú
+  function updateUI(logged, usuario) {
+    var nombre = usuario ? (usuario.nombre || '') : '';
+
+    // 1. Data attributes (si los usa)
+    document.querySelectorAll('[data-mp-auth]').forEach(function(el) {
+      var v = el.getAttribute('data-mp-auth');
+      el.style.display = (v === 'logged' && logged) || (v === 'guest' && !logged) ? '' : 'none';
+    });
+    document.querySelectorAll('[data-mp-name]').forEach(function(el) {
+      el.textContent = nombre;
+    });
+    document.querySelectorAll('[data-mp-login-url]').forEach(function(el) {
+      el.setAttribute('href', LOGIN_URL);
+    });
+    document.querySelectorAll('[data-mp-logout]').forEach(function(el) {
+      el.onclick = function(e) { e.preventDefault(); logout(); };
+    });
+
+    // 2. Detectar links de login/registro por texto
+    var allLinks = document.querySelectorAll('a, button');
+    allLinks.forEach(function(el) {
+      var text = (el.textContent || '').toLowerCase().trim();
+      var href = (el.getAttribute('href') || '').toLowerCase();
+
+      // Links de login
+      if ((text === 'iniciar sesión' || text === 'iniciar sesion' || text === 'login' || text === 'acceder')
+          && !el.hasAttribute('data-mp-handled')) {
+        el.setAttribute('data-mp-handled', '1');
+        if (logged) {
+          el.style.display = 'none';
+        } else {
+          el.setAttribute('href', LOGIN_URL);
+          el.style.display = '';
+        }
+      }
+
+      // Links de registro
+      if ((text === 'registrarse' || text === 'registro' || text === 'regístrate')
+          && !el.hasAttribute('data-mp-handled')) {
+        el.setAttribute('data-mp-handled', '1');
         el.style.display = logged ? 'none' : '';
+      }
+
+      // Botón/links de cerrar sesión
+      if ((text === 'cerrar sesión' || text === 'cerrar sesion' || text === 'logout' || text === 'salir')
+          && !el.hasAttribute('data-mp-handled')) {
+        el.setAttribute('data-mp-handled', '1');
+        if (logged) {
+          el.style.display = '';
+          el.onclick = function(e) { e.preventDefault(); logout(); };
+        } else {
+          el.style.display = 'none';
+        }
+      }
+    });
+
+    // 3. Buscar elemento con "Hola, " y reemplazar nombre
+    document.querySelectorAll('span, p, div, a').forEach(function(el) {
+      var text = el.textContent || '';
+      if (text.match(/hola,?\s/i) && el.children.length === 0 && !el.hasAttribute('data-mp-handled')) {
+        el.setAttribute('data-mp-handled', '1');
+        if (logged) {
+          el.textContent = 'Hola, ' + nombre;
+          el.style.display = '';
+        } else {
+          el.style.display = 'none';
+        }
+      }
+    });
+
+    // 4. Inyectar menú si no existe ninguno detectado
+    if (!document.querySelector('[data-mp-injected]')) {
+      var nav = document.querySelector('nav, .nav, .menu, .navbar, header');
+      if (nav) {
+        var div = document.createElement('div');
+        div.setAttribute('data-mp-injected', '1');
+        div.style.cssText = 'display:flex;align-items:center;gap:1rem;font-family:sans-serif;font-size:0.9rem;';
+
+        if (logged) {
+          div.innerHTML =
+            '<span style="color:#00b894;font-weight:600">Hola, ' + nombre + '</span>' +
+            '<a href="' + API_BASE + '/dashboard" style="color:#333;text-decoration:none">Mi Panel</a>' +
+            '<a href="#" onclick="MediProtect.logout();return false" style="color:#c62828;text-decoration:none;cursor:pointer">Salir</a>';
+        } else {
+          div.innerHTML =
+            '<a href="' + LOGIN_URL + '" style="background:#00b894;color:white;padding:0.4rem 1rem;border-radius:6px;text-decoration:none">Iniciar Sesión</a>';
+        }
+
+        nav.appendChild(div);
       }
     }
 
-    // Reemplazar nombre de usuario
-    var nameElements = document.querySelectorAll('[data-mp-name]');
-    var displayName = usuario ? (usuario.nombre || '') : '';
-    for (var j = 0; j < nameElements.length; j++) {
-      nameElements[j].textContent = displayName;
-    }
-
-    // Configurar URLs de login
-    var loginLinks = document.querySelectorAll('[data-mp-login-url]');
-    for (var k = 0; k < loginLinks.length; k++) {
-      loginLinks[k].setAttribute('href', LOGIN_URL);
-    }
-
-    // Configurar botones de logout
-    var logoutBtns = document.querySelectorAll('[data-mp-logout]');
-    for (var l = 0; l < logoutBtns.length; l++) {
-      logoutBtns[l].onclick = function(e) {
-        e.preventDefault();
-        logout();
-        window.location.reload();
-      };
-    }
+    document.dispatchEvent(new CustomEvent('mediaprotect:update', { detail: { logged: logged, usuario: usuario } }));
   }
 
   // Init
@@ -132,13 +183,22 @@
     isLogged: isLogged,
     checkSession: checkSession,
     logout: logout,
-    applyMenu: applyMenu,
+    updateUI: updateUI,
     getLoginURL: function() { return LOGIN_URL; }
   };
 
-  // Cuando el DOM esté listo, aplicar menú y disparar evento
   function init() {
-    applyMenu(isLogged(), getUsuario());
+    // Aplicar inmediatamente con datos locales
+    updateUI(isLogged(), getUsuario());
+    // Verificar contra API en background
+    checkSession(function() {});
+    // Revisar periódicamente por si el DOM cambia
+    var attempts = 0;
+    var interval = setInterval(function() {
+      updateUI(isLogged(), getUsuario());
+      attempts++;
+      if (attempts >= 10) clearInterval(interval);
+    }, 500);
     document.dispatchEvent(new Event('mediaprotect:ready'));
   }
 
