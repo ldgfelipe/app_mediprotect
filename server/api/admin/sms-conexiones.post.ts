@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
   catch { throw createError({ statusCode: 401, message: 'Token invalido' }) }
 
   const body = await readBody(event)
-  const { id, nombre, proveedor, account_sid, auth_token, from_number, modo, activa, preferida, prioridad, descripcion } = body
+  const { id, nombre, proveedor, account_sid, auth_token, api_url, metodo, from_number, modo, activa, preferida, prioridad, descripcion } = body
 
   if (!nombre) throw createError({ statusCode: 400, message: 'El nombre es requerido' })
 
@@ -28,6 +28,8 @@ export default defineEventHandler(async (event) => {
     if (proveedor !== undefined) { sets.push(`proveedor = $${idx++}`); params.push(proveedor) }
     if (account_sid !== undefined) { sets.push(`account_sid = $${idx++}`); params.push(account_sid) }
     if (auth_token !== undefined && auth_token !== '') { sets.push(`auth_token = $${idx++}`); params.push(auth_token) }
+    if (api_url !== undefined) { sets.push(`api_url = $${idx++}`); params.push(api_url) }
+    if (metodo !== undefined) { sets.push(`metodo = $${idx++}`); params.push(metodo) }
     if (from_number !== undefined) { sets.push(`from_number = $${idx++}`); params.push(from_number) }
     if (modo !== undefined) { sets.push(`modo = $${idx++}`); params.push(modo) }
     if (activa !== undefined) { sets.push(`activa = $${idx++}`); params.push(activa) }
@@ -42,7 +44,7 @@ export default defineEventHandler(async (event) => {
 
     const result = await pool.query(
       `UPDATE sms_conexiones SET ${sets.join(', ')} WHERE id = $${idx}
-       RETURNING id, nombre, proveedor, account_sid, from_number, modo, activa, preferida, prioridad, descripcion, created_at, updated_at`,
+       RETURNING id, nombre, proveedor, account_sid, auth_token, api_url, metodo, from_number, modo, activa, preferida, prioridad, descripcion, created_at, updated_at`,
       params
     )
     if (result.rows.length === 0) throw createError({ statusCode: 404, message: 'Conexion no encontrada' })
@@ -50,10 +52,10 @@ export default defineEventHandler(async (event) => {
   } else {
     // Crear nueva
     const result = await pool.query(
-      `INSERT INTO sms_conexiones (nombre, proveedor, account_sid, auth_token, from_number, modo, activa, preferida, prioridad, descripcion)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-       RETURNING id, nombre, proveedor, account_sid, from_number, modo, activa, preferida, prioridad, descripcion, created_at, updated_at`,
-      [nombre, proveedor || 'twilio', account_sid || '', auth_token || '', from_number || '', modo || 'sandbox', activa !== false, preferida === true, prioridad || 0, descripcion || '']
+      `INSERT INTO sms_conexiones (nombre, proveedor, account_sid, auth_token, api_url, metodo, from_number, modo, activa, preferida, prioridad, descripcion)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       RETURNING id, nombre, proveedor, account_sid, auth_token, api_url, metodo, from_number, modo, activa, preferida, prioridad, descripcion, created_at, updated_at`,
+      [nombre, proveedor || 'twilio', account_sid || '', auth_token || '', api_url || '', metodo || 'POST', from_number || '', modo || 'sandbox', activa !== false, preferida === true, prioridad || 0, descripcion || '']
     )
     return { success: true, conexion: result.rows[0] }
   }

@@ -288,14 +288,22 @@
                     <option value="twilio">Twilio</option>
                     <option value="vonage">Vonage</option>
                     <option value="aws_sns">AWS SNS</option>
+                    <option value="api_rest">API REST</option>
                   </select>
                 </div>
               </div>
 
               <div class="form-row">
-                <div class="form-group flex-1">
-                  <label>Account SID</label>
-                  <div class="input-with-action">
+                <div class="form-group" style="flex: 1.4">
+                  <label v-if="sms.form.proveedor === 'api_rest'">URL de la API REST *</label>
+                  <label v-else>Account SID</label>
+                  <div v-if="sms.form.proveedor === 'api_rest'" class="input-with-action">
+                    <input type="url" v-model="sms.form.api_url" placeholder="https://api.gateway.com/send-sms">
+                    <button class="btn-icon" type="button" @click="sms.form.showUrl = !sms.form.showUrl">
+                      {{ sms.form.showUrl ? '🙈' : '👁️' }}
+                    </button>
+                  </div>
+                  <div v-else class="input-with-action">
                     <input :type="sms.form.showSid ? 'text' : 'password'" v-model="sms.form.account_sid" placeholder="ACxxxx">
                     <button class="btn-icon" @click="sms.form.showSid = !sms.form.showSid">
                       {{ sms.form.showSid ? '🙈' : '👁️' }}
@@ -303,13 +311,28 @@
                   </div>
                 </div>
                 <div class="form-group flex-1">
-                  <label>Auth Token</label>
+                  <label v-if="sms.form.proveedor === 'api_rest'">Token / API Key (opcional)</label>
+                  <label v-else>Auth Token</label>
                   <div class="input-with-action">
                     <input :type="sms.form.showToken ? 'text' : 'password'" v-model="sms.form.auth_token" placeholder="xxxx">
                     <button class="btn-icon" @click="sms.form.showToken = !sms.form.showToken">
                       {{ sms.form.showToken ? '🙈' : '👁️' }}
                     </button>
                   </div>
+                </div>
+              </div>
+
+              <div class="form-row" v-if="sms.form.proveedor === 'api_rest'">
+                <div class="form-group flex-1" style="flex: 1.4">
+                  <label>Numero de envio (opcional)</label>
+                  <input v-model="sms.form.from_number" type="text" placeholder="+521234567890">
+                </div>
+                <div class="form-group" style="flex: 1">
+                  <label>Método</label>
+                  <select v-model="sms.form.metodo">
+                    <option value="POST">POST</option>
+                    <option value="GET">GET</option>
+                  </select>
                 </div>
               </div>
 
@@ -772,6 +795,9 @@ const sms = ref({
     preferida: false,
     prioridad: 0,
     descripcion: '',
+    api_url: '',
+    metodo: 'POST',
+    showUrl: false,
     showSid: false,
     showToken: false,
   },
@@ -1056,6 +1082,9 @@ const abrirFormConexion = (conexion?: any) => {
       preferida: conexion.preferida,
       prioridad: conexion.prioridad,
       descripcion: conexion.descripcion || '',
+      api_url: conexion.api_url || '',
+      metodo: conexion.metodo || 'POST',
+      showUrl: false,
       showSid: false,
       showToken: false,
     }
@@ -1064,7 +1093,7 @@ const abrirFormConexion = (conexion?: any) => {
     sms.value.form = {
       nombre: '', proveedor: 'twilio', account_sid: '', auth_token: '',
       from_number: '', modo: 'sandbox', activa: true, preferida: false,
-      prioridad: 0, descripcion: '', showSid: false, showToken: false,
+      prioridad: 0, descripcion: '', api_url: '', metodo: 'POST', showUrl: false, showSid: false, showToken: false,
     }
   }
   sms.value.showForm = true
@@ -1076,6 +1105,11 @@ const guardarConexion = async () => {
   sms.value.saving = true
   try {
     const payload: any = { ...sms.value.form }
+    if (sms.value.form.proveedor === 'api_rest') {
+      delete payload.account_sid
+    } else {
+      delete payload.api_url
+    }
     if (sms.value.editandoId) {
       payload.id = sms.value.editandoId
       if (!payload.auth_token) delete payload.auth_token

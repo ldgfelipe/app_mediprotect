@@ -13,6 +13,8 @@ export interface SmsConexion {
   account_sid: string
   auth_token: string
   from_number: string
+  api_url: string
+  metodo: string
   modo: string
   activa: boolean
   preferida: boolean
@@ -24,12 +26,14 @@ export interface SmsConfig {
   account_sid: string
   auth_token: string
   from_number: string
+  api_url: string
+  metodo: string
   modo: string
 }
 
 async function getConexionesActivas(): Promise<SmsConexion[]> {
   const result = await pool.query(
-    'SELECT id, nombre, proveedor, account_sid, auth_token, from_number, modo, activa, preferida, prioridad FROM sms_conexiones WHERE activa = true ORDER BY preferida DESC, prioridad ASC, created_at ASC'
+    'SELECT id, nombre, proveedor, account_sid, auth_token, from_number, api_url, metodo, modo, activa, preferida, prioridad FROM sms_conexiones WHERE activa = true ORDER BY preferida DESC, prioridad ASC, created_at ASC'
   )
   return result.rows
 }
@@ -38,7 +42,7 @@ async function getSmsConfig(): Promise<SmsConfig> {
   const conexiones = await getConexionesActivas()
   if (conexiones.length > 0) {
     const c = conexiones[0]
-    return { provider: c.proveedor, account_sid: c.account_sid, auth_token: c.auth_token, from_number: c.from_number, modo: c.modo }
+    return { provider: c.proveedor, account_sid: c.account_sid, auth_token: c.auth_token, from_number: c.from_number, api_url: c.api_url, metodo: c.metodo || 'POST', modo: c.modo }
   }
   // Fallback a configuracion antigua
   const result = await pool.query(
@@ -51,6 +55,7 @@ async function getSmsConfig(): Promise<SmsConfig> {
     account_sid: configMap.sms_twilio_account_sid || '',
     auth_token: configMap.sms_twilio_auth_token || '',
     from_number: configMap.sms_twilio_from_number || '',
+    api_url: '',
     modo: configMap.sms_modo || 'sandbox'
   }
 }
@@ -101,6 +106,57 @@ export function normalizarTelefonoMX(telefono: string): string {
   return '+' + limpio
 }
 
+async function enviarSmsApiRest(
+  config: SmsConfig & { metodo?: string },
+  telefono: string,
+  mensaje: string
+): Promise<{ success: boolean; sid?: string; error?: string }> {
+  const url = (config.api_url || config.account_sid || '').trim()
+  if (!url) {
+    return { success: false, error: 'API REST sin configurar. Agrega la URL de la API.' }
+  }
+
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (config.auth_token) headers['Authorization'] = `Bearer ${config.auth_token}`
+
+  const payload: Record<string, any> = {
+    to: telefono,
+    phone: telefono,
+    telefono,
+    message: mensaje,
+    mensaje,
+    text: mensaje,
+    from: config.from_number || '',
+  }
+
+  const metodo = (config.metodo || 'POST').toUpperCase()
+
+  try {
+    let res: Response
+    if (metodo === 'GET') {
+      const qs = new URLSearchParams()
+      qs.set('to', telefono)
+      qs.set('telefono', telefono)
+      qs.set('message', mensaje)
+      qs.set('mensaje', mensaje)
+      qs.set('descripcion', mensaje)
+      if (config.from_number) qs.set('from', config.from_number)
+      res = await fetch(`${url}${url.includes('?') ? '&' : '?'}${qs.toString()}`, {
+        method: 'GET', headers, signal: AbortSignal.timeout(15000)
+      })
+    } else {
+      res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload), signal: AbortSignal.timeout(15000) })
+    }
+    if (!res.ok) {
+      const bodyText = await res.text().catch(() => '')
+      return { success: false, error: `API REST respondio ${res.status}: ${bodyText.slice(0, 200)}` }
+    }
+    return { success: true, sid: `rest-${Date.now()}` }
+  } catch (err: any) {
+    return { success: false, error: `Error conectando a la API REST: ${err.message}` }
+  }
+}
+
 async function enviarSmsConConexion(
   conexion: SmsConexion | SmsConfig,
   telefono: string,
@@ -111,12 +167,17 @@ async function enviarSmsConConexion(
     account_sid: conexion.account_sid,
     auth_token: conexion.auth_token,
     from_number: conexion.from_number,
+    api_url: conexion.api_url || '',
+    metodo: conexion.metodo || 'POST',
     modo: conexion.modo || 'sandbox'
   }
 
   switch (config.provider) {
     case 'twilio':
       return await enviarSmsTwilio(config, telefono, mensaje)
+    case 'api_rest':
+    case 'rest':
+      return await enviarSmsApiRest(config, telefono, mensaje)
     default:
       return { success: false, error: `Proveedor '${config.provider}' no soportado` }
   }
