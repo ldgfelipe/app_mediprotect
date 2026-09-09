@@ -1,9 +1,16 @@
 /**
- * MediProtect Session Bridge v2
+ * MediProtect Session Bridge v3
  * Uso: <script src="https://app.mediprotect.com.mx/tracker.js"></script>
  *
- * Detecta sesión y modifica el menú automáticamente.
- * Sin data-attributes necesarios - busca patrones comunes de menú.
+ * SOLO maneja data-attributes en el HTML existente del landing.
+ * NO inyecta elementos nuevos. NO escanea links por texto.
+ *
+ * Data attributes soportados:
+ *   data-mp-auth="logged"    → se muestra SOLO cuando logueado
+ *   data-mp-auth="guest"     → se muestra SOLO cuando NO logueado
+ *   data-mp-name             → se reemplaza con el nombre del usuario
+ *   data-mp-login-url        → href se setea con URL de login
+ *   data-mp-logout           → click ejecuta logout
  */
 (function() {
   'use strict';
@@ -13,7 +20,6 @@
   var API_BASE = 'https://app.mediprotect.com.mx';
   var LOGIN_URL = API_BASE + '/login?returnTo=' + encodeURIComponent(window.location.origin);
 
-  // Guardar token de la URL
   function captureFromURL() {
     try {
       var params = new URLSearchParams(window.location.search);
@@ -78,126 +84,35 @@
     xhr.send();
   }
 
-  // Buscar y modificar el menú
+  // SOLO maneja data-attributes. NADA mas.
   function updateUI(logged, usuario) {
     var nombre = usuario ? (usuario.nombre || '') : '';
 
-    // 1. Data attributes (si los usa)
+    // Mostrar/ocultar por data-mp-auth
     document.querySelectorAll('[data-mp-auth]').forEach(function(el) {
       var v = el.getAttribute('data-mp-auth');
       el.style.display = (v === 'logged' && logged) || (v === 'guest' && !logged) ? '' : 'none';
     });
+
+    // Rellenar nombre
     document.querySelectorAll('[data-mp-name]').forEach(function(el) {
       el.textContent = nombre;
     });
+
+    // Setear URL de login
     document.querySelectorAll('[data-mp-login-url]').forEach(function(el) {
       el.setAttribute('href', LOGIN_URL);
     });
+
+    // Configurar logout
     document.querySelectorAll('[data-mp-logout]').forEach(function(el) {
       el.onclick = function(e) { e.preventDefault(); logout(); };
     });
 
-    // 2. Detectar links de login/registro por texto
-    var allLinks = document.querySelectorAll('a, button');
-    allLinks.forEach(function(el) {
-      var text = (el.textContent || '').toLowerCase().trim();
-      var href = (el.getAttribute('href') || '').toLowerCase();
-
-      // Links de login
-      if ((text === 'iniciar sesión' || text === 'iniciar sesion' || text === 'login' || text === 'acceder')
-          && !el.hasAttribute('data-mp-handled')) {
-        el.setAttribute('data-mp-handled', '1');
-        if (logged) {
-          el.style.display = 'none';
-        } else {
-          el.setAttribute('href', LOGIN_URL);
-          el.style.display = '';
-        }
-      }
-
-      // Links de registro
-      if ((text === 'registrarse' || text === 'registro' || text === 'regístrate')
-          && !el.hasAttribute('data-mp-handled')) {
-        el.setAttribute('data-mp-handled', '1');
-        el.style.display = logged ? 'none' : '';
-      }
-
-      // Botón/links de cerrar sesión
-      if ((text === 'cerrar sesión' || text === 'cerrar sesion' || text === 'logout' || text === 'salir')
-          && !el.hasAttribute('data-mp-handled')) {
-        el.setAttribute('data-mp-handled', '1');
-        if (logged) {
-          el.style.display = '';
-          el.onclick = function(e) { e.preventDefault(); logout(); };
-        } else {
-          el.style.display = 'none';
-        }
-      }
-    });
-
-    // 3. Buscar elemento con "Hola, " y reemplazar nombre
-    document.querySelectorAll('span, p, div, a').forEach(function(el) {
-      var text = el.textContent || '';
-      if (text.match(/hola,?\s/i) && el.children.length === 0 && !el.hasAttribute('data-mp-handled')) {
-        el.setAttribute('data-mp-handled', '1');
-        if (logged) {
-          el.textContent = 'Hola, ' + nombre;
-          el.style.display = '';
-        } else {
-          el.style.display = 'none';
-        }
-      }
-    });
-
-    // 4. Inyectar menú si no existe ninguno detectado
-    if (!document.querySelector('[data-mp-injected]')) {
-      var nav = document.querySelector('nav, .nav, .menu, .navbar, header');
-      if (nav) {
-        var div = document.createElement('div');
-        div.setAttribute('data-mp-injected', '1');
-        div.style.cssText = 'display:flex;align-items:center;gap:1rem;font-family:sans-serif;font-size:0.9rem;';
-
-        if (logged) {
-          var nombreSpan = document.createElement('span');
-          nombreSpan.style.cssText = 'color:#00b894;font-weight:600';
-          nombreSpan.textContent = 'Hola, ' + nombre;
-          div.appendChild(nombreSpan);
-
-          var panelLink = document.createElement('a');
-          panelLink.href = API_BASE + '/dashboard';
-          panelLink.textContent = 'Mi Panel';
-          panelLink.style.cssText = 'color:#333;text-decoration:none';
-          div.appendChild(panelLink);
-
-          var logoutLink = document.createElement('a');
-          logoutLink.href = '#';
-          logoutLink.textContent = 'Salir';
-          logoutLink.style.cssText = 'color:#c62828;text-decoration:none;cursor:pointer';
-          logoutLink.addEventListener('click', function(e) {
-            e.preventDefault();
-            logout();
-          });
-          div.appendChild(logoutLink);
-        } else {
-          var loginLink = document.createElement('a');
-          loginLink.href = LOGIN_URL;
-          loginLink.textContent = 'Iniciar Sesión';
-          loginLink.style.cssText = 'background:#00b894;color:white;padding:0.4rem 1rem;border-radius:6px;text-decoration:none';
-          div.appendChild(loginLink);
-        }
-
-        nav.appendChild(div);
-      }
-    }
-
     document.dispatchEvent(new CustomEvent('mediaprotect:update', { detail: { logged: logged, usuario: usuario } }));
   }
 
-  // Init
   captureFromURL();
-
-  // No inyectar en app.mediprotect.com.mx
-  var isAppDomain = window.location.hostname === 'app.mediprotect.com.mx';
 
   window.MediProtect = {
     getToken: getToken,
@@ -210,11 +125,8 @@
   };
 
   function init() {
-    // Aplicar inmediatamente con datos locales
     updateUI(isLogged(), getUsuario());
-    // Verificar contra API en background
     checkSession(function() {});
-    // Revisar periódicamente por si el DOM cambia
     var attempts = 0;
     var interval = setInterval(function() {
       updateUI(isLogged(), getUsuario());
