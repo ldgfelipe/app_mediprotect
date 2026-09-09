@@ -158,13 +158,32 @@
         div.style.cssText = 'display:flex;align-items:center;gap:1rem;font-family:sans-serif;font-size:0.9rem;';
 
         if (logged) {
-          div.innerHTML =
-            '<span style="color:#00b894;font-weight:600">Hola, ' + nombre + '</span>' +
-            '<a href="' + API_BASE + '/dashboard" style="color:#333;text-decoration:none">Mi Panel</a>' +
-            '<a href="#" onclick="MediProtect.logout();return false" style="color:#c62828;text-decoration:none;cursor:pointer">Salir</a>';
+          var nombreSpan = document.createElement('span');
+          nombreSpan.style.cssText = 'color:#00b894;font-weight:600';
+          nombreSpan.textContent = 'Hola, ' + nombre;
+          div.appendChild(nombreSpan);
+
+          var panelLink = document.createElement('a');
+          panelLink.href = API_BASE + '/dashboard';
+          panelLink.textContent = 'Mi Panel';
+          panelLink.style.cssText = 'color:#333;text-decoration:none';
+          div.appendChild(panelLink);
+
+          var logoutLink = document.createElement('a');
+          logoutLink.href = '#';
+          logoutLink.textContent = 'Salir';
+          logoutLink.style.cssText = 'color:#c62828;text-decoration:none;cursor:pointer';
+          logoutLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            logout();
+          });
+          div.appendChild(logoutLink);
         } else {
-          div.innerHTML =
-            '<a href="' + LOGIN_URL + '" style="background:#00b894;color:white;padding:0.4rem 1rem;border-radius:6px;text-decoration:none">Iniciar Sesión</a>';
+          var loginLink = document.createElement('a');
+          loginLink.href = LOGIN_URL;
+          loginLink.textContent = 'Iniciar Sesión';
+          loginLink.style.cssText = 'background:#00b894;color:white;padding:0.4rem 1rem;border-radius:6px;text-decoration:none';
+          div.appendChild(loginLink);
         }
 
         nav.appendChild(div);
@@ -176,6 +195,9 @@
 
   // Init
   captureFromURL();
+
+  // No inyectar en app.mediprotect.com.mx
+  var isAppDomain = window.location.hostname === 'app.mediprotect.com.mx';
 
   window.MediProtect = {
     getToken: getToken,
