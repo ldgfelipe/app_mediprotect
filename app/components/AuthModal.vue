@@ -195,9 +195,9 @@ async function doRegister() {
 
 <template>
   <Teleport to="body">
-    <div v-if="show" class="mp-modal-overlay" @click.self="closeModal">
+    <div v-if="show" class="mp-modal-overlay">
       <div class="mp-modal">
-        <button class="mp-modal-close" @click="closeModal">&times;</button>
+        <button v-if="paso === 'elegir' || regSuccess" class="mp-modal-close" @click="closeModal">&times;</button>
 
         <!-- PASO: Elegir -->
         <div v-if="paso === 'elegir' && !regSuccess" class="mp-modal-content">
