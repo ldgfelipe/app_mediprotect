@@ -44,7 +44,7 @@ export default defineEventHandler(async (event) => {
 
   const result = await pool.query(
     `INSERT INTO citas (id_paciente, id_medico, fecha_hora, notas_paciente, costo_consulta, estado)
-     VALUES ($1, $2, $3, $4, $5, 'pendiente')
+     VALUES ($1, $2, COALESCE($3::timestamptz, NOW()), $4, $5, 'pendiente')
      RETURNING *`,
     [user.id, id_medico || null, fecha_hora || null, notasConMedico, costoConsulta]
   )

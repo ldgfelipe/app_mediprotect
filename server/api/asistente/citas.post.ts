@@ -25,6 +25,12 @@ export default defineEventHandler(async (event) => {
   if (!id_paciente || !fecha_hora) {
     throw createError({ statusCode: 400, message: 'Paciente y fecha/hora son requeridos' })
   }
+
+  // Validar formato de fecha_hora
+  const fechaValida = new Date(fecha_hora)
+  if (isNaN(fechaValida.getTime())) {
+    throw createError({ statusCode: 400, message: 'Formato de fecha/hora inválido' })
+  }
   if (!id_medico && !medico_nombre) {
     throw createError({ statusCode: 400, message: 'Se requiere un médico (seleccionado o nombre manual)' })
   }
@@ -64,7 +70,7 @@ export default defineEventHandler(async (event) => {
   // Create the cita
   const result = await pool.query(
     `INSERT INTO citas (id_paciente, id_medico, fecha_hora, notas_paciente, notas_asistente, asistente_id, estado)
-     VALUES ($1, $2, $3, $4, $5, $6, 'pendiente')
+     VALUES ($1, $2, COALESCE($3::timestamptz, NOW()), $4, $5, $6, 'pendiente')
      RETURNING *`,
     [id_paciente, id_medico || null, fecha_hora, notas_paciente || null, notasConMedico, user.id]
   )
