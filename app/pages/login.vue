@@ -1,6 +1,7 @@
 <script setup lang="ts">
 definePageMeta({ layout: false })
 
+const route = useRoute()
 const email = ref('')
 const password = ref('')
 const tipo = ref('paciente')
@@ -11,6 +12,7 @@ const tokenCookie = useCookie('token')
 const usuarioCookie = useCookie('usuario')
 
 const esMedico = computed(() => tipo.value === 'medico')
+const returnTo = computed(() => route.query.returnTo as string || '')
 
 async function handleSubmit() {
   error.value = ''
@@ -23,6 +25,18 @@ async function handleSubmit() {
 
     tokenCookie.value = res.token
     usuarioCookie.value = res.usuario
+
+    if (returnTo.value) {
+      const usuarioData = encodeURIComponent(JSON.stringify({
+        id: res.usuario.id,
+        nombre: res.usuario.nombre,
+        apellido: res.usuario.apellido,
+        email: res.usuario.email,
+        tipo: res.usuario.tipo,
+      }))
+      window.location.href = `${returnTo.value}?token=${encodeURIComponent(res.token)}&usuario=${usuarioData}`
+      return
+    }
 
     const destino = tipo.value === 'medico' ? '/dashboard/medico' : '/dashboard/paciente'
     return navigateTo(destino)
