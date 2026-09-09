@@ -940,7 +940,7 @@ async function crearPacienteParaEmpresa() {
             <button class="btn-confirm sms" @click="enviarConfirmacionSms(pendienteConfirmacion)" :disabled="confirmandoSms[pendienteConfirmacion._tipo + ':' + pendienteConfirmacion.id]">
               {{ confirmandoSms[pendienteConfirmacion._tipo + ':' + pendienteConfirmacion.id] ? 'Enviando...' : '📱 Enviar SMS (opcional)' }}
             </button>
-            <button class="btn-confirm-close" @click="pendienteConfirmacion = null">&times;</button>
+            <button class="btn-confirm-close" @click="pendienteConfirmacion.value = null">&times;</button>
           </div>
         </div>
 
@@ -1125,7 +1125,7 @@ async function crearPacienteParaEmpresa() {
             <button class="btn-confirm sms" @click="enviarConfirmacionSms(pendienteConfirmacion)" :disabled="confirmandoSms[pendienteConfirmacion._tipo + ':' + pendienteConfirmacion.id]">
               {{ confirmandoSms[pendienteConfirmacion._tipo + ':' + pendienteConfirmacion.id] ? 'Enviando...' : '📱 Enviar SMS (opcional)' }}
             </button>
-            <button class="btn-confirm-close" @click="pendienteConfirmacion = null">&times;</button>
+            <button class="btn-confirm-close" @click="pendienteConfirmacion.value = null">&times;</button>
           </div>
         </div>
 
@@ -1166,7 +1166,7 @@ async function crearPacienteParaEmpresa() {
             <button class="btn-confirm sms" @click="enviarConfirmacionSms(pendienteConfirmacion)" :disabled="confirmandoSms[pendienteConfirmacion._tipo + ':' + pendienteConfirmacion.id]">
               {{ confirmandoSms[pendienteConfirmacion._tipo + ':' + pendienteConfirmacion.id] ? 'Enviando...' : '📱 Enviar SMS (opcional)' }}
             </button>
-            <button class="btn-confirm-close" @click="pendienteConfirmacion = null">&times;</button>
+            <button class="btn-confirm-close" @click="pendienteConfirmacion.value = null">&times;</button>
           </div>
         </div>
 
