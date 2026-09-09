@@ -8,6 +8,18 @@
 (function() {
   'use strict';
 
+  // No inyectar nada si estamos en la app (evita duplicados)
+  var host = window.location.hostname;
+  if (host === 'app.mediprotect.com.mx' || host === 'localhost' || host === '127.0.0.1') {
+    // Exponer API para la app pero sin widget
+    window.MediProtect = {
+      getToken: function() { return localStorage.getItem('mp_app_session') || localStorage.getItem('mp_token'); },
+      isLogged: function() { return !!(localStorage.getItem('mp_app_session') || localStorage.getItem('mp_token')); },
+      getUsuario: function() { try { var r = localStorage.getItem('mp_usuario'); return r ? JSON.parse(r) : null; } catch(e) { return null; } }
+    };
+    return;
+  }
+
   var API_BASE = 'https://app.mediprotect.com.mx';
   var LOGIN_URL = API_BASE + '/login?returnTo=' + encodeURIComponent(window.location.origin);
   var TOKEN_KEY = 'mp_app_session';
