@@ -44,6 +44,14 @@ const mensajesWA = ref<any[]>([])
 const notaText = ref('')
 const newMsg = ref({ remitente: '', destinatario: '', telefono: '', mensaje: '' })
 
+const busquedaMedicoCitas = ref('')
+const medicosCitasList = ref<any[]>([])
+const cargandoMedicosCitas = ref(false)
+const medicoDetalle = ref<any>(null)
+const medicoCitasData = ref<any>(null)
+const cargandoMedicoDetalle = ref(false)
+const filtroEstadoMedico = ref('')
+
 onMounted(async () => {
   await cargarCitas()
 })
@@ -259,6 +267,48 @@ async function buscarPerfilMedico() {
 
 function seleccionarPerfilMedico(m: any) { medicoSeleccionadoPerfil.value = m; medicoResults.value = [] }
 function cerrarPerfilMedico() { medicoSeleccionadoPerfil.value = null; medicoBusqueda.value = '' }
+
+let searchTimeoutMedicoCitas: any = null
+async function buscarMedicosCitas() {
+  const termino = busquedaMedicoCitas.value.trim()
+  if (!termino || termino.length < 2) { medicosCitasList.value = []; return }
+  if (searchTimeoutMedicoCitas) clearTimeout(searchTimeoutMedicoCitas)
+  searchTimeoutMedicoCitas = setTimeout(async () => {
+    cargandoMedicosCitas.value = true
+    try {
+      const data: any = await $fetch('/api/medicos/buscar?q=' + encodeURIComponent(termino), { headers: { Authorization: 'Bearer ' + adminToken.value } })
+      medicosCitasList.value = data.medicos || []
+    } catch { medicosCitasList.value = [] }
+    cargandoMedicosCitas.value = false
+  }, 400)
+}
+
+async function abrirMedicoCitas(medico: any) {
+  medicoDetalle.value = medico
+  cargandoMedicoDetalle.value = true
+  filtroEstadoMedico.value = ''
+  try {
+    const data: any = await $fetch('/api/admin/citas/medico/' + medico.id, { headers: { Authorization: 'Bearer ' + adminToken.value } })
+    medicoCitasData.value = data
+  } catch (e) { console.error(e); medicoCitasData.value = null }
+  cargandoMedicoDetalle.value = false
+}
+
+function cerrarMedicoCitas() {
+  medicoDetalle.value = null
+  medicoCitasData.value = null
+}
+
+const medicoCitasFiltradas = computed(() => {
+  if (!medicoCitasData.value?.citas) return { pendientes: [], historial: [] }
+  let citas = medicoCitasData.value.citas
+  if (filtroEstadoMedico.value) {
+    citas = citas.filter((c: any) => c.estado === filtroEstadoMedico.value)
+  }
+  const pendientes = citas.filter((c: any) => ['pendiente', 'confirmada', 'paciente_llego', 'en_atencion'].includes(c.estado))
+  const historial = citas.filter((c: any) => ['asistida', 'cancelada', 'no_asistida', 'reagendada'].includes(c.estado))
+  return { pendientes, historial }
+})
 </script>
 
 <template>
@@ -291,6 +341,7 @@ function cerrarPerfilMedico() { medicoSeleccionadoPerfil.value = null; medicoBus
             <div class="view-toggle">
               <button :class="{ active: vistaCitas === 'calendar' }" @click="vistaCitas = 'calendar'" title="Vista calendario">Calendario</button>
               <button :class="{ active: vistaCitas === 'list' }" @click="vistaCitas = 'list'" title="Vista lista">Lista</button>
+              <button :class="{ active: vistaCitas === 'medicos' }" @click="vistaCitas = 'medicos'" title="Vista por medico">Medicos</button>
             </div>
             <button @click="abrirNuevaCita" class="btn-primary">+ Nueva Cita</button>
           </div>
@@ -326,6 +377,107 @@ function cerrarPerfilMedico() { medicoSeleccionadoPerfil.value = null; medicoBus
               <tr v-if="!filtered.length"><td colspan="4" class="empty">Sin resultados</td></tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <div v-if="vistaCitas === 'medicos' && activeTab === 'citas'">
+        <div v-if="!medicoDetalle">
+          <header class="content-header">
+            <h1>Citas por Medico</h1>
+          </header>
+          <div class="search-box">
+            <input v-model="busquedaMedicoCitas" placeholder="Buscar medico por nombre..." @input="buscarMedicosCitas" />
+          </div>
+          <div v-if="cargandoMedicosCitas" class="loading">Buscando...</div>
+          <div v-if="medicosCitasList.length > 0 && !cargandoMedicosCitas" class="results-list">
+            <div v-for="m in medicosCitasList" :key="m.id" class="result-card medico-card" @click="abrirMedicoCitas(m)">
+              <div class="result-avatar blue"><span>{{ m.nombre?.charAt(0) }}{{ m.apellido?.charAt(0) }}</span></div>
+              <div class="result-info">
+                <strong>{{ m.titulo || 'Dr.' }} {{ m.nombre }} {{ m.apellido }}</strong>
+                <span>{{ m.especialidad_nombre || 'Sin especialidad' }}</span>
+              </div>
+              <div class="medico-stats-mini" v-if="m.estadisticas">
+                <span class="stat-pill green">{{ m.estadisticas.pendientes || 0 }} pend.</span>
+                <span class="stat-pill blue">{{ m.estadisticas.proximas || 0 }} prox.</span>
+              </div>
+            </div>
+          </div>
+          <div v-if="!cargandoMedicosCitas && medicosCitasList.length === 0 && busquedaMedicoCitas.length >= 2" class="empty">No se encontraron medicos</div>
+          <div v-if="busquedaMedicoCitas.length < 2 && !cargandoMedicosCitas" class="empty">Escribe al menos 2 caracteres para buscar</div>
+        </div>
+
+        <div v-else>
+          <button class="btn-back" @click="cerrarMedicoCitas">&larr; Volver a lista</button>
+          <div class="medico-detalle-header">
+            <div class="result-avatar blue lg"><span>{{ medicoDetalle.nombre?.charAt(0) }}{{ medicoDetalle.apellido?.charAt(0) }}</span></div>
+            <div class="perfil-info">
+              <h2>{{ medicoDetalle.titulo || 'Dr.' }} {{ medicoDetalle.nombre }} {{ medicoDetalle.apellido }}</h2>
+              <span>{{ medicoDetalle.especialidad_nombre || 'Sin especialidad' }}</span>
+              <span v-if="medicoDetalle.cedula_profesional">Cedula: {{ medicoDetalle.cedula_profesional }}</span>
+            </div>
+          </div>
+
+          <div class="stats-grid" v-if="medicoCitasData?.estadisticas">
+            <div class="stat-card"><span class="stat-num">{{ medicoCitasData.estadisticas.total }}</span><span class="stat-label">Total</span></div>
+            <div class="stat-card pending"><span class="stat-num">{{ medicoCitasData.estadisticas.pendientes }}</span><span class="stat-label">Pendientes</span></div>
+            <div class="stat-card confirm"><span class="stat-num">{{ medicoCitasData.estadisticas.confirmadas }}</span><span class="stat-label">Confirmadas</span></div>
+            <div class="stat-card active"><span class="stat-num">{{ medicoCitasData.estadisticas.en_curso }}</span><span class="stat-label">En curso</span></div>
+            <div class="stat-card success"><span class="stat-num">{{ medicoCitasData.estadisticas.asistidas }}</span><span class="stat-label">Asistidas</span></div>
+            <div class="stat-card cancel"><span class="stat-num">{{ medicoCitasData.estadisticas.canceladas }}</span><span class="stat-label">Canceladas</span></div>
+          </div>
+
+          <div class="filters" style="margin-top:1rem">
+            <select v-model="filtroEstadoMedico">
+              <option value="">Todos los estados</option>
+              <option value="pendiente">Pendientes</option>
+              <option value="confirmada">Confirmadas</option>
+              <option value="paciente_llego">Paciente llego</option>
+              <option value="en_atencion">En atencion</option>
+              <option value="asistida">Asistidas</option>
+              <option value="cancelada">Canceladas</option>
+              <option value="no_asistida">No asistidas</option>
+            </select>
+          </div>
+
+          <div v-if="cargandoMedicoDetalle" class="loading">Cargando citas...</div>
+
+          <div v-if="!cargandoMedicoDetalle && medicoCitasData">
+            <div v-if="medicoCitasFiltradas.pendientes.length" class="citas-section">
+              <h3 class="section-title">Citas Pendientes / Activas</h3>
+              <div class="table-container">
+                <table>
+                  <thead><tr><th>Paciente</th><th>Fecha</th><th>Estado</th><th></th></tr></thead>
+                  <tbody>
+                    <tr v-for="c in medicoCitasFiltradas.pendientes" :key="c.id" class="cita-row" @click="abrirCita(c)">
+                      <td><strong>{{ c.paciente_nombre || '—' }}</strong></td>
+                      <td>{{ new Date(c.fecha_hora).toLocaleString('es-MX') }}</td>
+                      <td><span class="badge" :style="{ background: estadoColor(c.estado) }">{{ c.estado }}</span></td>
+                      <td><button v-if="c.paciente_telefono" class="btn-wa-sm" @click.stop="abrirWA(c.paciente_telefono)">WA</button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div v-if="medicoCitasFiltradas.historial.length" class="citas-section">
+              <h3 class="section-title">Historial</h3>
+              <div class="table-container">
+                <table>
+                  <thead><tr><th>Paciente</th><th>Fecha</th><th>Estado</th><th></th></tr></thead>
+                  <tbody>
+                    <tr v-for="c in medicoCitasFiltradas.historial" :key="c.id" class="cita-row" @click="abrirCita(c)">
+                      <td><strong>{{ c.paciente_nombre || '—' }}</strong></td>
+                      <td>{{ new Date(c.fecha_hora).toLocaleString('es-MX') }}</td>
+                      <td><span class="badge" :style="{ background: estadoColor(c.estado) }">{{ c.estado }}</span></td>
+                      <td><button v-if="c.paciente_telefono" class="btn-wa-sm" @click.stop="abrirWA(c.paciente_telefono)">WA</button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div v-if="!medicoCitasFiltradas.pendientes.length && !medicoCitasFiltradas.historial.length" class="empty">Sin citas para este medico</div>
+          </div>
         </div>
       </div>
 
@@ -595,4 +747,28 @@ th { background: #f8f9fa; color: #636e72; font-weight: 600; }
 .wa-time { color: #b2bec3; font-size: 0.75rem; }
 .wa-new { display: flex; gap: 0.4rem; margin-top: 0.75rem; flex-wrap: wrap; }
 .wa-new input { flex: 1; min-width: 80px; padding: 0.4rem 0.6rem; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 0.8rem; }
+.medico-card { justify-content: flex-start; }
+.medico-stats-mini { display: flex; gap: 0.4rem; margin-left: auto; }
+.stat-pill { padding: 0.15rem 0.5rem; border-radius: 10px; font-size: 0.7rem; color: white; font-weight: 600; }
+.stat-pill.green { background: #fdcb6e; color: #2d3436; }
+.stat-pill.blue { background: #0984e3; }
+.medico-detalle-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.25rem; padding-bottom: 1rem; border-bottom: 1px solid #e0e0e0; }
+.result-avatar.lg { width: 56px; height: 56px; font-size: 1.1rem; }
+.stats-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.75rem; margin-bottom: 1rem; }
+.stat-card { background: white; border-radius: 10px; border: 1px solid #e0e0e0; padding: 0.75rem; text-align: center; display: flex; flex-direction: column; }
+.stat-card .stat-num { font-size: 1.5rem; font-weight: 700; color: #2d3436; }
+.stat-card .stat-label { font-size: 0.75rem; color: #636e72; }
+.stat-card.pending { border-color: #fdcb6e; }
+.stat-card.pending .stat-num { color: #e17055; }
+.stat-card.confirm { border-color: #00b894; }
+.stat-card.confirm .stat-num { color: #00b894; }
+.stat-card.active { border-color: #6c5ce7; }
+.stat-card.active .stat-num { color: #6c5ce7; }
+.stat-card.success { border-color: #00cec9; }
+.stat-card.success .stat-num { color: #00cec9; }
+.stat-card.cancel { border-color: #d63031; }
+.stat-card.cancel .stat-num { color: #d63031; }
+.citas-section { margin-bottom: 1.5rem; }
+.section-title { margin: 0 0 0.75rem; font-size: 1rem; color: #2d3436; }
+.btn-wa-sm { background: #25d366; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer; font-size: 0.7rem; font-weight: 600; }
 </style>
