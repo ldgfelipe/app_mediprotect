@@ -1,10 +1,6 @@
-import { Pool } from 'pg'
-
 let transporter: any = null
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:Mobiltoo111213@db.mruezojnfgkdhtgxwgmv.supabase.co:5432/postgres'
-})
+const pool = getPool()
 
 export interface SmsConexion {
   id: number

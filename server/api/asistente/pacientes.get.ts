@@ -1,8 +1,4 @@
-import { Pool } from 'pg'
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:Mobiltoo111213@db.mruezojnfgkdhtgxwgmv.supabase.co:5432/postgres'
-})
+const pool = getPool()
 
 // GET - Asistente busca pacientes
 export default defineEventHandler(async (event) => {

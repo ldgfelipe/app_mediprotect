@@ -1,9 +1,6 @@
-import { Pool } from 'pg'
 import bcrypt from 'bcryptjs'
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:Mobiltoo111213@db.mruezojnfgkdhtgxwgmv.supabase.co:5432/postgres'
-})
+const pool = getPool()
 
 // POST - Create new assistant (admin only)
 export default defineEventHandler(async (event) => {

@@ -1,10 +1,7 @@
-import { Pool } from 'pg'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:Mobiltoo111213@db.mruezojnfgkdhtgxwgmv.supabase.co:5432/postgres'
-})
+const pool = getPool()
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
