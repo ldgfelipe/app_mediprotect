@@ -402,13 +402,13 @@ const showNuevoMedico = ref(false)
 const editandoMedico = ref(false)
 const medicoEditId = ref(null)
 const especialidades = ref([])
-const formMedico = ref({ nombre: '', apellido: '', email: '', telefono: '', cedula_profesional: '', titulo: 'Dr.', especialidad: '', usuario: '', password: '', curp: '', codigo_postal: '', colonia: '', consultorio_ciudad: '', consultorio_estado: '' })
+const formMedico = ref({ nombre: '', apellido: '', email: '', telefono: '', cedula_profesional: '', titulo: 'Dr.', especialidad: '', usuario: '', password: '', curp: '', codigo_postal: '', colonia: '', consultorio_ciudad: '', consultorio_estado: '', comision_tipo: 1 })
 const savingMedico = ref(false)
 const errorMsgMedico = ref('')
 const okMsgMedico = ref('')
 
 function abrirEditarMedico(m) {
-  formMedico.value = { nombre: m.nombre, apellido: m.apellido, email: m.email || '', telefono: m.telefono || '', cedula_profesional: m.cedula_profesional || '', titulo: m.titulo || 'Dr.', especialidad: m.especialidad_nombre || '', usuario: '', password: '', curp: m.curp || '', codigo_postal: m.codigo_postal || '', colonia: m.colonia || '', consultorio_ciudad: m.consultorio_ciudad || '', consultorio_estado: m.consultorio_estado || '' }
+  formMedico.value = { nombre: m.nombre, apellido: m.apellido, email: m.email || '', telefono: m.telefono || '', cedula_profesional: m.cedula_profesional || '', titulo: m.titulo || 'Dr.', especialidad: m.especialidad_nombre || '', usuario: '', password: '', curp: m.curp || '', codigo_postal: m.codigo_postal || '', colonia: m.colonia || '', consultorio_ciudad: m.consultorio_ciudad || '', consultorio_estado: m.consultorio_estado || '', comision_tipo: m.comision_tipo || 1 }
   medicoEditId.value = m.id
   editandoMedico.value = true
   showNuevoMedico.value = true
@@ -420,7 +420,7 @@ function cerrarFormMedico() {
   showNuevoMedico.value = false
   editandoMedico.value = false
   medicoEditId.value = null
-  formMedico.value = { nombre: '', apellido: '', email: '', telefono: '', cedula_profesional: '', titulo: 'Dr.', especialidad: '', usuario: '', password: '', curp: '', codigo_postal: '', colonia: '', consultorio_ciudad: '', consultorio_estado: '' }
+  formMedico.value = { nombre: '', apellido: '', email: '', telefono: '', cedula_profesional: '', titulo: 'Dr.', especialidad: '', usuario: '', password: '', curp: '', codigo_postal: '', colonia: '', consultorio_ciudad: '', consultorio_estado: '', comision_tipo: 1 }
   errorMsgMedico.value = ''
   consultorios.value = []
   resetConsultorioForm()
@@ -1555,6 +1555,17 @@ async function crearPacienteParaEmpresa() {
           </div>
           <div v-if="curpErrorMedico" class="error" style="margin-top:0.5rem">{{ curpErrorMedico }}</div>
           <div v-if="curpDatosMedico" class="curp-success"><span class="check-icon">&#10003;</span> Datos cargados de CURP</div>
+
+          <div class="form-section-label">Comision</div>
+          <div class="field-row">
+            <div class="field"><label>Tipo de Comision</label>
+              <select v-model="formMedico.comision_tipo">
+                <option :value="1">Tipo 1 — $100 MXN</option>
+                <option :value="2">Tipo 2 — $75 MXN</option>
+                <option :value="3">Tipo 3 — $50 MXN</option>
+              </select>
+            </div>
+          </div>
 
           <div class="form-section-label">Ubicacion del Consultorio</div>
           <div class="field-row">

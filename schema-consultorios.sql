@@ -1,5 +1,5 @@
 -- ============================================
--- Migración: Tabla consultorios + google_maps_url en empresas
+-- Migración: Tabla consultorios + google_maps_url en empresas + comision_tipo
 -- ============================================
 
 -- Tabla de consultorios (multi-ubicación por médico)
@@ -24,3 +24,6 @@ CREATE INDEX IF NOT EXISTS idx_consultorios_medico ON consultorios(id_medico);
 
 -- URL de Google Maps en empresas
 ALTER TABLE empresas ADD COLUMN IF NOT EXISTS google_maps_url TEXT;
+
+-- Tipo de comision del medico (1=$100, 2=$75, 3=$50)
+ALTER TABLE medicos ADD COLUMN IF NOT EXISTS comision_tipo INTEGER DEFAULT 1;

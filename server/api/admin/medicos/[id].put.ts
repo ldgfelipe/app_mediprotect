@@ -15,7 +15,8 @@ export default defineEventHandler(async (event) => {
     consultorio_direccion, bio, activo, password,
     precio_regular, precio_miembro, usuario,
     apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta,
-    curp, codigo_postal, colonia, telefono_confirmado, email_confirmado
+    curp, codigo_postal, colonia, telefono_confirmado, email_confirmado,
+    comision_tipo
   } = body
 
   const pool = useDbPool(event)
@@ -103,6 +104,7 @@ export default defineEventHandler(async (event) => {
   if (colonia !== undefined) { sets.push(`colonia = $${idx++}`); params.push(colonia || null) }
   if (telefono_confirmado !== undefined) { sets.push(`telefono_confirmado = $${idx++}`); params.push(telefono_confirmado) }
   if (email_confirmado !== undefined) { sets.push(`email_confirmado = $${idx++}`); params.push(email_confirmado) }
+  if (comision_tipo !== undefined) { sets.push(`comision_tipo = $${idx++}`); params.push(comision_tipo || 1) }
 
   if (sets.length === 0) {
     throw createError({ statusCode: 400, message: 'No hay datos para actualizar' })

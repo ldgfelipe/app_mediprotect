@@ -19,7 +19,7 @@ const newMedico = ref({
   ciudad: '', hospital_consultorio: '', rfc: '', tipo_consulta: '',
   bio: '', servicios: '', universidad: '', horario_atencion: '', idiomas: 'Espanol',
   precio_regular: '', precio_miembro: '', usuario: '', password: '',
-  curp: '', codigo_postal: '', colonia: '', consultorio_estado: ''
+  curp: '', codigo_postal: '', colonia: '', consultorio_estado: '', comision_tipo: 1
 })
 
 const searchingAI = ref(false)
@@ -114,7 +114,7 @@ async function loadEspecialidades() {
 }
 
 function openNewModal() {
-  newMedico.value = { nombre: '', apellido_paterno: '', apellido_materno: '', email: '', telefono: '', cedula_profesional: '', titulo: '', especialidad: '', ciudad: '', hospital_consultorio: '', rfc: '', tipo_consulta: '', bio: '', servicios: '', universidad: '', horario_atencion: '', idiomas: 'Espanol', precio_regular: '', precio_miembro: '', usuario: '', password: '', curp: '', codigo_postal: '', colonia: '', consultorio_estado: '' }
+  newMedico.value = { nombre: '', apellido_paterno: '', apellido_materno: '', email: '', telefono: '', cedula_profesional: '', titulo: '', especialidad: '', ciudad: '', hospital_consultorio: '', rfc: '', tipo_consulta: '', bio: '', servicios: '', universidad: '', horario_atencion: '', idiomas: 'Espanol', precio_regular: '', precio_miembro: '', usuario: '', password: '', curp: '', codigo_postal: '', colonia: '', consultorio_estado: '', comision_tipo: 1 }
   formText.value = ''; perfilUrl.value = ''; importMode.value = 'url'
   aiResult.value = null; aiError.value = ''; showAiPreview.value = false
   curpErrorNuevo.value = ''
@@ -286,7 +286,8 @@ function abrirEditar(m: any) {
     precio_regular: m.precio_regular || '', precio_miembro: m.precio_miembro || '',
     rfc: m.rfc || '', hospital_consultorio: m.hospital_consultorio || '', tipo_consulta: m.tipo_consulta || '',
     curp: m.curp || '', codigo_postal: m.codigo_postal || '', colonia: m.colonia || '',
-    consultorio_estado: m.consultorio_estado || '', consultorio_direccion: m.consultorio_direccion || ''
+    consultorio_estado: m.consultorio_estado || '', consultorio_direccion: m.consultorio_direccion || '',
+    comision_tipo: m.comision_tipo || 1
   }
   editPhoto.value = null
   editPhotoPreview.value = m.foto_url || ''
@@ -775,8 +776,16 @@ function abrirGoogleMaps(url: string) {
               </div>
               <div class="form-row">
                 <div class="form-group"><label>Precio Miembro ($)</label><input v-model="newMedico.precio_miembro" type="number" step="0.01" min="0" placeholder="Ej: 400" /></div>
-                <div class="form-group"><label>Universidad</label><input v-model="newMedico.universidad" placeholder="Ej: BUAP" /></div>
+                <div class="form-group"><label>Tipo de Comision</label>
+                  <select v-model="newMedico.comision_tipo">
+                    <option :value="1">Tipo 1 — $100 MXN</option>
+                    <option :value="2">Tipo 2 — $75 MXN</option>
+                    <option :value="3">Tipo 3 — $50 MXN</option>
+                  </select>
+                </div>
               </div>
+              <div class="form-row">
+                <div class="form-group"><label>Universidad</label><input v-model="newMedico.universidad" placeholder="Ej: BUAP" /></div>
 
               <!-- CONSULTORIOS ADICIONALES -->
               <div class="section-divider"><span>Consultorios / Ubicaciones</span></div>
@@ -948,6 +957,15 @@ function abrirGoogleMaps(url: string) {
             <div class="form-row">
               <div class="form-group"><label>Precio Regular ($)</label><input v-model="editForm.precio_regular" type="number" step="0.01" min="0" /></div>
               <div class="form-group"><label>Precio Miembro ($)</label><input v-model="editForm.precio_miembro" type="number" step="0.01" min="0" /></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Tipo de Comision</label>
+                <select v-model="editForm.comision_tipo">
+                  <option :value="1">Tipo 1 — $100 MXN</option>
+                  <option :value="2">Tipo 2 — $75 MXN</option>
+                  <option :value="3">Tipo 3 — $50 MXN</option>
+                </select>
+              </div>
             </div>
             <div class="form-group"><label>Biografia</label><textarea v-model="editForm.bio" rows="3"></textarea></div>
 
