@@ -601,7 +601,7 @@ async function buscarColoniasPaciente(cp) {
 }
 
 function seleccionarColoniaPaciente(col) {
-  formPaciente.value.colonia = col
+  formPaciente.value.colonia = typeof col === 'object' ? col.colonia : col
   coloniasPaciente.value = []
 }
 
@@ -655,7 +655,7 @@ async function buscarColoniasMedico(cp) {
 }
 
 function seleccionarColoniaMedico(col) {
-  formMedico.value.colonia = col
+  formMedico.value.colonia = typeof col === 'object' ? col.colonia : col
   coloniasMedico.value = []
 }
 
@@ -1505,7 +1505,7 @@ async function crearPacienteParaEmpresa() {
               <input v-model="formMedico.codigo_postal" maxlength="5" placeholder="5 digitos" />
               <span v-if="coloniasMedicoLoading" class="field-hint">Buscando colonias...</span>
               <div v-if="coloniasMedico.length > 0" class="colonias-list">
-                <div v-for="col in coloniasMedico" :key="col" class="colonia-item" @click="seleccionarColoniaMedico(col)">{{ col }}</div>
+                <div v-for="col in coloniasMedico" :key="typeof col === 'object' ? col.colonia : col" class="colonia-item" @click="seleccionarColoniaMedico(col)">{{ typeof col === 'object' ? col.colonia : col }}</div>
               </div>
             </div>
             <div class="field"><label>Ciudad</label><input v-model="formMedico.consultorio_ciudad" /></div>
@@ -1554,7 +1554,7 @@ async function crearPacienteParaEmpresa() {
               <input v-model="formPaciente.codigo_postal" maxlength="5" placeholder="5 digitos" />
               <span v-if="coloniasPacienteLoading" class="field-hint">Buscando colonias...</span>
               <div v-if="coloniasPaciente.length > 0" class="colonias-list">
-                <div v-for="col in coloniasPaciente" :key="col" class="colonia-item" @click="seleccionarColoniaPaciente(col)">{{ col }}</div>
+                <div v-for="col in coloniasPaciente" :key="typeof col === 'object' ? col.colonia : col" class="colonia-item" @click="seleccionarColoniaPaciente(col)">{{ typeof col === 'object' ? col.colonia : col }}</div>
               </div>
               <span v-if="formPaciente.codigo_postal.length === 5 && coloniasPaciente.length === 0 && !coloniasPacienteLoading" class="field-hint">No se encontraron colonias</span>
             </div>
