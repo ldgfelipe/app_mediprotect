@@ -1,5 +1,5 @@
 export default defineEventHandler(async (event) => {
-  const pool = useDbPool()
+  const pool = useDbPool(event)
   const result = await pool.query(
     `SELECT clave, valor FROM configuracion_sistema
      WHERE categoria = 'pagos'

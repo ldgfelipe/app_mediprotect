@@ -2,7 +2,7 @@ import { verifyToken } from '../../utils/auth'
 
 export default defineEventHandler(async (event) => {
   const decoded = verifyToken(event)
-  const pool = useDbPool()
+  const pool = useDbPool(event)
   const { id, tipo } = decoded
 
   if (tipo === 'medico') {

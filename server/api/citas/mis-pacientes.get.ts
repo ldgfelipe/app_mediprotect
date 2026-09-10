@@ -4,7 +4,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, message: 'Acceso solo para médicos' })
   }
 
-  const pool = useDbPool()
+  const pool = useDbPool(event)
   const result = await pool.query(
     `SELECT p.id, p.nombre, p.apellido, p.email, p.telefono,
             COUNT(c.id)::int as total_citas,

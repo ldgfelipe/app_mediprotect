@@ -1,6 +1,6 @@
 export default defineEventHandler(async (event) => {
   const { id } = getRouterParams(event)
-  const pool = useDbPool()
+  const pool = useDbPool(event)
 
   const result = await pool.query(
     `SELECT m.id, m.nombre, m.apellido, m.email, m.telefono, m.cedula_profesional,

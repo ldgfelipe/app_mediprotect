@@ -30,7 +30,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, message: 'No autorizado para confirmar este correo' })
   }
 
-  const pool = useDbPool()
+  const pool = useDbPool(event)
 
   const table = tipo === 'medico' ? 'medicos' : 'pacientes'
   const result = await pool.query(`SELECT id, email, nombre, apellido, email_confirmado FROM ${table} WHERE email = $1`, [email])

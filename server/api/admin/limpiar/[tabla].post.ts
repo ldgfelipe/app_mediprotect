@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const pool = useDbPool()
+  const pool = useDbPool(event)
   const safe = /^[a-z_]+$/.test(tabla)
   if (!safe) throw createError({ statusCode: 400, message: 'Nombre de tabla inválido' })
 

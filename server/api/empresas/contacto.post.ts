@@ -1,6 +1,6 @@
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
-  const pool = useDbPool()
+  const pool = useDbPool(event)
 
   const result = await pool.query(`
     INSERT INTO empresas (nombre, rfc, email, telefono, contacto_nombre, direccion, ciudad, estado, activo)

@@ -8,10 +8,10 @@ export default defineEventHandler(async (event) => {
   try {
     payload = jwt.verify(token, process.env.JWT_SECRET || 'mediprotect_jwt_secret_key_2026')
   } catch {
-    throw createError({ statusCode: 401, message: 'Token inválido' })
+    throw createError({ statusCode: 401, message: 'Token invï¿½lido' })
   }
 
-  const pool = useDbPool()
+  const pool = useDbPool(event)
   const result = await pool.query(`
     SELECT p.id, p.nombre, p.slug, p.precio, p.descripcion,
            pp.fecha_inicio, pp.fecha_fin, pp.activo as suscripcion_activa,
@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
   `, [payload.id])
 
   if (!result.rows.length) {
-    // Asignar plan básico por defecto
+    // Asignar plan bï¿½sico por defecto
     await pool.query(
       `INSERT INTO paciente_paquete (id_paciente, id_paquete) VALUES ($1, 1)
        ON CONFLICT (id_paciente, id_paquete) DO NOTHING`,

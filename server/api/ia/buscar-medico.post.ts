@@ -5,18 +5,18 @@ export default defineEventHandler(async (event) => {
   const token = getHeader(event, 'authorization')?.replace('Bearer ', '') || getCookie(event, 'admin_token')
   if (!token) throw createError({ statusCode: 401, message: 'No autorizado' })
   try { jwt.verify(token, process.env.JWT_SECRET || 'mediprotect_jwt_secret_key_2026') }
-  catch { throw createError({ statusCode: 401, message: 'Token inválido' }) }
+  catch { throw createError({ statusCode: 401, message: 'Token invï¿½lido' }) }
 
   const body = await readBody(event)
   const { texto } = body
 
   if (!texto || texto.trim().length < 20) {
-    throw createError({ statusCode: 400, message: 'La información del médico es requerida (mínimo 20 caracteres)' })
+    throw createError({ statusCode: 400, message: 'La informaciï¿½n del mï¿½dico es requerida (mï¿½nimo 20 caracteres)' })
   }
 
-  const pool = useDbPool()
+  const pool = useDbPool(event)
 
-  // Obtener configuración de IA
+  // Obtener configuraciï¿½n de IA
   const configResult = await pool.query(
     `SELECT clave, valor FROM configuracion_sistema
      WHERE clave IN (
@@ -54,54 +54,54 @@ export default defineEventHandler(async (event) => {
   if (!provider) {
     throw createError({
       statusCode: 400,
-      message: 'No hay proveedor de IA configurado. Ve a Configuración > IA para configurar uno.'
+      message: 'No hay proveedor de IA configurado. Ve a Configuraciï¿½n > IA para configurar uno.'
     })
   }
 
-  // Prompt para procesar información del médico desde Google Form
-  const prompt = `Eres un asistente que procesa información de médicos proveniente de formularios de Google Forms.
+  // Prompt para procesar informaciï¿½n del mï¿½dico desde Google Form
+  const prompt = `Eres un asistente que procesa informaciï¿½n de mï¿½dicos proveniente de formularios de Google Forms.
 
-El usuario te va a pegar la respuesta de un Google Form con información de un médico. Tu tarea es extraer y organizar toda la información en un perfil estructurado.
+El usuario te va a pegar la respuesta de un Google Form con informaciï¿½n de un mï¿½dico. Tu tarea es extraer y organizar toda la informaciï¿½n en un perfil estructurado.
 
-IMPORTANTE: Extrae la información TAL COMO VIENE en el texto. No inventes datos que no estén presentes.
+IMPORTANTE: Extrae la informaciï¿½n TAL COMO VIENE en el texto. No inventes datos que no estï¿½n presentes.
 
 Devuelve un JSON con estos campos:
 
 {
-  "nombre": "Nombre del médico (sin título como Dr.)",
+  "nombre": "Nombre del mï¿½dico (sin tï¿½tulo como Dr.)",
   "apellido": "Apellido(s)",
-  "cedula_profesional": "Número de cédula",
-  "titulo": "Título profesional (ej: Médico Cirujano, Doctor en Medicina)",
-  "especialidad": "Especialidad médica principal",
+  "cedula_profesional": "Nï¿½mero de cï¿½dula",
+  "titulo": "Tï¿½tulo profesional (ej: Mï¿½dico Cirujano, Doctor en Medicina)",
+  "especialidad": "Especialidad mï¿½dica principal",
   "subespecialidad": "Subespecialidad si aplica",
-  "universidad": "Universidad donde estudió",
-  "ciudad": "Ciudad de práctica",
-  "hospital": "Hospital o clínica donde trabaja",
-  "clinica": "Nombre de clínica propia si tiene",
-  "consultorio": "Dirección del consultorio",
-  "telefono": "Teléfono de contacto",
-  "email": "Correo electrónico",
+  "universidad": "Universidad donde estudiï¿½",
+  "ciudad": "Ciudad de prï¿½ctica",
+  "hospital": "Hospital o clï¿½nica donde trabaja",
+  "clinica": "Nombre de clï¿½nica propia si tiene",
+  "consultorio": "Direcciï¿½n del consultorio",
+  "telefono": "Telï¿½fono de contacto",
+  "email": "Correo electrï¿½nico",
   "web": "Sitio web personal si tiene",
   "linkedin": "Perfil de LinkedIn si tiene",
-  "bio": "Breve biografía profesional (2-3 párrafos bien escritos, estilo perfil profesional para web)",
+  "bio": "Breve biografï¿½a profesional (2-3 pï¿½rrafos bien escritos, estilo perfil profesional para web)",
   "servicios": ["Lista de servicios que ofrece"],
   "idiomas": ["Idiomas que habla"],
   "formacion_academica": [{"titulo": "...", "institucion": "...", "anio": "..."}],
-  "certificaciones": ["Certificaciones, membresías y títulos adicionales"],
-  "horario_atencion": "Horario general de atención",
-  "experiencia_anos": "Años de experiencia si se menciona",
+  "certificaciones": ["Certificaciones, membresï¿½as y tï¿½tulos adicionales"],
+  "horario_atencion": "Horario general de atenciï¿½n",
+  "experiencia_anos": "Aï¿½os de experiencia si se menciona",
   "enfermedades_tratadas": ["Enfermedades o condiciones que trata"],
   "procedimientos": ["Procedimientos especiales que realiza"],
   "fotos_urls": ["URLs de fotos si se mencionan"]
 }
 
-Información del médico (respuesta del Google Form):
+Informaciï¿½n del mï¿½dico (respuesta del Google Form):
 ---
 ${texto}
 ---
 
-Si un campo no se encuentra en el texto, déjalo como null o string vacío. Para la biografía, reforma el texto de forma profesional y atractiva para un perfil de página web.
-Para servicios y enfermedades, extrae y organiza la información de forma clara.
+Si un campo no se encuentra en el texto, dï¿½jalo como null o string vacï¿½o. Para la biografï¿½a, reforma el texto de forma profesional y atractiva para un perfil de pï¿½gina web.
+Para servicios y enfermedades, extrae y organiza la informaciï¿½n de forma clara.
 
 Responde SOLO con el JSON, sin explicaciones adicionales.`
 

@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
   try { jwt.verify(token, process.env.JWT_SECRET || 'mediprotect_jwt_secret_key_2026') }
   catch { throw createError({ statusCode: 401, message: 'Token invalido' }) }
 
-  const pool = useDbPool()
+  const pool = useDbPool(event)
 
   const result = await pool.query(
     "SELECT clave, valor, valor_encriptado, descripcion, tipo FROM configuracion_sistema WHERE categoria = 'sms'"

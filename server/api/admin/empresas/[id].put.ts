@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
 
   const id = getRouterParam(event, 'id')
   const body = await readBody(event)
-  const pool = useDbPool()
+  const pool = useDbPool(event)
 
   const { nombre, rfc, email, telefono, contacto_nombre, direccion, ciudad, estado, activo } = body
 

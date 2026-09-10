@@ -14,7 +14,7 @@ function hashToken(token: string): string {
 
 export default defineEventHandler(async (event) => {
   verifyAdmin(event)
-  const pool = useDbPool()
+  const pool = useDbPool(event)
   const body = await readBody(event)
 
   const { nombre, permisos, user_id, user_tipo } = body

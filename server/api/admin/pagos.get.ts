@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
   const sandbox = query.sandbox as string || ''
   const buscar = query.buscar as string || ''
 
-  const pool = useDbPool()
+  const pool = useDbPool(event)
 
   let where = 'WHERE 1=1'
   const params: any[] = []

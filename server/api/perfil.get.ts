@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Parámetro "path" requerido. Ejemplo: /perfil-dr-erasmo-aaron-vega' })
   }
 
-  const pool = useDbPool()
+  const pool = useDbPool(event)
 
   const result = await pool.query(`
     SELECT

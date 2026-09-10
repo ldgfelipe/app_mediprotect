@@ -4,16 +4,16 @@ export default defineEventHandler(async (event) => {
   const token = getHeader(event, 'authorization')?.replace('Bearer ', '') || getCookie(event, 'admin_token')
   if (!token) throw createError({ statusCode: 401, message: 'No autorizado' })
   try { jwt.verify(token, process.env.JWT_SECRET || 'mediprotect_jwt_secret_key_2026') }
-  catch { throw createError({ statusCode: 401, message: 'Token inválido' }) }
+  catch { throw createError({ statusCode: 401, message: 'Token invï¿½lido' }) }
 
-  const pool = useDbPool()
+  const pool = useDbPool(event)
   const result = await pool.query(`
     SELECT c.id, c.fecha_hora, c.estado, c.created_at, c.notas_paciente, c.notas_asistente,
            CONCAT(p.nombre, ' ', p.apellido) as paciente_nombre,
            p.telefono as paciente_telefono,
            CASE WHEN m.id IS NOT NULL THEN CONCAT(m.nombre, ' ', m.apellido)
                 ELSE COALESCE(
-                  NULLIF(TRIM(BOTH '[]' FROM SPLIT_PART(c.notas_paciente, '[Médico:', 2)), ''),
+                  NULLIF(TRIM(BOTH '[]' FROM SPLIT_PART(c.notas_paciente, '[Mï¿½dico:', 2)), ''),
                   'No especificado'
                 )
            END as medico_nombre

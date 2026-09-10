@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Configuración inválida' })
   }
 
-  const pool = useDbPool()
+  const pool = useDbPool(event)
 
   const upsert = async (clave: string, valor: string, tipo: string) => {
     const result = await pool.query(

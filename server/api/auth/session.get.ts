@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const bearerToken = authHeader.split(' ')[1]
-  const pool = useDbPool()
+  const pool = useDbPool(event)
 
   // Try JWT first
   try {

@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Al menos uno de los campos es requerido: curp, genero, estado_civil' })
   }
 
-  const pool = useDbPool()
+  const pool = useDbPool(event)
 
   // Obtener todos los pacientes
   const allPatients = await pool.query('SELECT id FROM pacientes ORDER BY created_at')

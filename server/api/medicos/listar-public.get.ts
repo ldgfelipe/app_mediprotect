@@ -2,7 +2,7 @@ export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const termino = (query.q as string || '').trim().toLowerCase()
 
-  const pool = useDbPool()
+  const pool = useDbPool(event)
 
   let sql = `
     SELECT m.id, m.nombre, m.apellido, m.titulo, m.foto_url, m.ciudad,

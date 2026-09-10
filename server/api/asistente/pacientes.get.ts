@@ -1,6 +1,6 @@
 // GET - Asistente busca pacientes
 export default defineEventHandler(async (event) => {
-  const pool = useDbPool()
+  const pool = useDbPool(event)
   const authHeader = getHeader(event, 'authorization')?.replace('Bearer ', '')
   if (!authHeader) throw createError({ statusCode: 401, message: 'No autorizado' })
 

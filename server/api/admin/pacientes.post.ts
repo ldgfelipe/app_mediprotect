@@ -27,7 +27,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'El código postal debe tener 5 dígitos' })
   }
 
-  const pool = useDbPool()
+  const pool = useDbPool(event)
 
   const existing = await pool.query('SELECT id FROM pacientes WHERE email = $1', [email])
   if (existing.rows.length > 0) {

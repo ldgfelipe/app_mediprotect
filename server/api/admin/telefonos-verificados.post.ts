@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'El telefono debe tener al menos 10 digitos' })
   }
 
-  const pool = useDbPool()
+  const pool = useDbPool(event)
   try {
     await pool.query(
       'INSERT INTO telefonos_verificados (telefono, descripcion, verificado_por) VALUES ($1, $2, $3)',

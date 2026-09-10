@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Formato de CURP invalido' })
   }
 
-  const pool = useDbPool()
+  const pool = useDbPool(event)
 
   const cached = await pool.query('SELECT datos FROM curp_cache WHERE curp = $1', [curp])
   if (cached.rows.length > 0) {

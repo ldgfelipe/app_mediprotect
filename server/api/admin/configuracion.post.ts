@@ -4,16 +4,16 @@ export default defineEventHandler(async (event) => {
   const token = getHeader(event, 'authorization')?.replace('Bearer ', '') || getCookie(event, 'admin_token')
   if (!token) throw createError({ statusCode: 401, message: 'No autorizado' })
   try { jwt.verify(token, process.env.JWT_SECRET || 'mediprotect_jwt_secret_key_2026') }
-  catch { throw createError({ statusCode: 401, message: 'Token inválido' }) }
+  catch { throw createError({ statusCode: 401, message: 'Token invï¿½lido' }) }
 
   const body = await readBody(event)
   const { configuraciones } = body
 
   if (!configuraciones || !Array.isArray(configuraciones)) {
-    throw createError({ statusCode: 400, message: 'Formato inválido' })
+    throw createError({ statusCode: 400, message: 'Formato invï¿½lido' })
   }
 
-  const pool = useDbPool()
+  const pool = useDbPool(event)
   const resultados: any[] = []
 
   for (const config of configuraciones) {

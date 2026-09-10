@@ -4,9 +4,9 @@ export default defineEventHandler(async (event) => {
   const token = getHeader(event, 'authorization')?.replace('Bearer ', '') || getCookie(event, 'admin_token')
   if (!token) throw createError({ statusCode: 401, message: 'No autorizado' })
   try { jwt.verify(token, process.env.JWT_SECRET || 'mediprotect_jwt_secret_key_2026') }
-  catch { throw createError({ statusCode: 401, message: 'Token inválido' }) }
+  catch { throw createError({ statusCode: 401, message: 'Token invï¿½lido' }) }
 
-  const pool = useDbPool()
+  const pool = useDbPool(event)
   const buscar = getQuery(event).buscar as string | undefined
 
   let query = 'SELECT id, nombre, apellido, email, telefono, curp, genero, estado_civil, id_empresa, email_confirmado, telefono_confirmado, created_at FROM pacientes'

@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Se esperaba un array de configuraciones' })
   }
 
-  const pool = useDbPool()
+  const pool = useDbPool(event)
   let actualizados = 0
 
   for (const config of configuraciones) {

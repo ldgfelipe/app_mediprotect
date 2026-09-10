@@ -30,7 +30,7 @@ export default defineEventHandler(async (event) => {
 
   const table = tipo === 'medico' ? 'medicos' : tipo === 'paciente' ? 'pacientes' : 'empresas'
 
-  const pool = useDbPool()
+  const pool = useDbPool(event)
 
   const result = await pool.query(
     `SELECT id, telefono FROM ${table} WHERE id = $1`,

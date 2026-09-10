@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'pago_id y metodo son requeridos' })
   }
 
-  const pool = useDbPool()
+  const pool = useDbPool(event)
 
   // Verificar que el pago existe y está pendiente
   const pagoResult = await pool.query(

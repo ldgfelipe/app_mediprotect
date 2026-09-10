@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 
 export default defineEventHandler(async (event) => {
-  const pool = useDbPool()
+  const pool = useDbPool(event)
   const body = await readBody(event)
   const { email, password } = body
 

@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
   if (!id) throw createError({ statusCode: 400, message: 'ID requerido' })
 
-  const pool = useDbPool()
+  const pool = useDbPool(event)
 
   // 1. Verificar que el paciente existe
   const existing = await pool.query('SELECT id, nombre FROM pacientes WHERE id = $1', [id])

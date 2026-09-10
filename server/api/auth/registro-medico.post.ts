@@ -6,8 +6,8 @@ import { enviarCorreo } from '../../utils/email.js'
 function generarSlug(nombre: string, apellido: string): string {
   return (nombre + '-' + apellido)
     .toLowerCase()
-    .replace(/[áäàâ]/g, 'a').replace(/[éëèê]/g, 'e').replace(/[íïìî]/g, 'i')
-    .replace(/[óöòô]/g, 'o').replace(/[úüùû]/g, 'u').replace(/ñ/g, 'n')
+    .replace(/[ï¿½ï¿½ï¿½ï¿½]/g, 'a').replace(/[ï¿½ï¿½ï¿½ï¿½]/g, 'e').replace(/[ï¿½ï¿½ï¿½ï¿½]/g, 'i')
+    .replace(/[ï¿½ï¿½ï¿½ï¿½]/g, 'o').replace(/[ï¿½ï¿½ï¿½ï¿½]/g, 'u').replace(/ï¿½/g, 'n')
     .replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
 }
 
@@ -16,17 +16,17 @@ export default defineEventHandler(async (event) => {
 
   const curpUpper = (curp || '').toUpperCase().trim()
   if (curpUpper && !/^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/.test(curpUpper)) {
-    throw createError({ statusCode: 400, message: 'El formato de CURP no es válido' })
+    throw createError({ statusCode: 400, message: 'El formato de CURP no es vï¿½lido' })
   }
 
   if (codigo_postal && !/^\d{5}$/.test(codigo_postal)) {
-    throw createError({ statusCode: 400, message: 'El código postal debe tener 5 dígitos' })
+    throw createError({ statusCode: 400, message: 'El cï¿½digo postal debe tener 5 dï¿½gitos' })
   }
 
-  const pool = useDbPool()
+  const pool = useDbPool(event)
   const existing = await pool.query('SELECT id FROM medicos WHERE email = $1', [email])
   if (existing.rows.length > 0) {
-    throw createError({ statusCode: 400, message: 'El email ya está registrado' })
+    throw createError({ statusCode: 400, message: 'El email ya estï¿½ registrado' })
   }
 
   let idEspecialidad = null
@@ -84,8 +84,8 @@ export default defineEventHandler(async (event) => {
       medico.email,
       'Confirma tu correo en MediProtect',
       `<h2>Bienvenido, ${medico.nombre} ${medico.apellido}!</h2>
-       <p>Tu cuenta de médico ha sido registrada exitosamente en <strong>MediProtect</strong>.</p>
-       <p>Para completar tu registro, confirma tu correo electrónico:</p>
+       <p>Tu cuenta de mï¿½dico ha sido registrada exitosamente en <strong>MediProtect</strong>.</p>
+       <p>Para completar tu registro, confirma tu correo electrï¿½nico:</p>
        <p><a href="${confirmUrl}" style="display:inline-block;background:#00b894;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">Confirmar mi correo</a></p>
        <p>Si no puedes hacer clic, copia y pega esta URL en tu navegador:</p>
        <p style="word-break:break-all;font-size:0.85rem;color:#636e72;">${confirmUrl}</p>
@@ -93,7 +93,7 @@ export default defineEventHandler(async (event) => {
        <p>Saludos,<br>Equipo MediProtect</p>`
     )
   } catch (e: any) {
-    console.error('Error enviando correo de confirmación:', e.message)
+    console.error('Error enviando correo de confirmaciï¿½n:', e.message)
   }
 
   setResponseStatus(event, 201)

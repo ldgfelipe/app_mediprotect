@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Tipo inválido' })
   }
 
-  const pool = useDbPool()
+  const pool = useDbPool(event)
 
   const tabla = tipo === 'medico' ? 'medicos' : tipo === 'paciente' ? 'pacientes' : 'empresas'
   const selectUsuario = tipo === 'empresa'
