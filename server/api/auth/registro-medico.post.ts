@@ -12,7 +12,7 @@ function generarSlug(nombre: string, apellido: string): string {
 }
 
 export default defineEventHandler(async (event) => {
-  const { nombre, apellido, email, password, telefono, cedula_profesional, especialidad, consultorio_direccion, consultorio_ciudad, consultorio_estado, bio, apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta, curp, codigo_postal, colonia } = await readBody(event)
+  const { nombre, apellido, email, password, telefono, cedula_profesional, especialidad, consultorio_direccion, consultorio_ciudad, consultorio_estado, bio, apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta, curp, codigo_postal, colonia, comision_tipo } = await readBody(event)
 
   const curpUpper = (curp || '').toUpperCase().trim()
   if (curpUpper && !/^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/.test(curpUpper)) {
@@ -54,11 +54,11 @@ export default defineEventHandler(async (event) => {
 
   const password_hash = await bcrypt.hash(password, 10)
   const result = await pool.query(
-    `INSERT INTO medicos (nombre, apellido, email, password_hash, telefono, cedula_profesional, id_especialidad, consultorio_direccion, consultorio_ciudad, consultorio_estado, bio, slug, apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta, curp, codigo_postal, colonia)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+    `INSERT INTO medicos (nombre, apellido, email, password_hash, telefono, cedula_profesional, id_especialidad, consultorio_direccion, consultorio_ciudad, consultorio_estado, bio, slug, apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta, curp, codigo_postal, colonia, comision_tipo)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
      RETURNING id, nombre, apellido, email, email_confirmado, telefono, cedula_profesional, id_especialidad, slug, created_at,
-               apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta, curp, codigo_postal, colonia`,
-    [nombre, apellido, email, password_hash, telefono, cedula_profesional, idEspecialidad, consultorio_direccion, consultorio_ciudad, consultorio_estado, bio, slug, apellido_paterno || apellido || null, apellido_materno || null, rfc || null, hospital_consultorio || null, tipo_consulta || null, curpUpper || null, codigo_postal || null, colonia || null]
+               apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta, curp, codigo_postal, colonia, comision_tipo`,
+    [nombre, apellido, email, password_hash, telefono, cedula_profesional, idEspecialidad, consultorio_direccion, consultorio_ciudad, consultorio_estado, bio, slug, apellido_paterno || apellido || null, apellido_materno || null, rfc || null, hospital_consultorio || null, tipo_consulta || null, curpUpper || null, codigo_postal || null, colonia || null, comision_tipo || 1]
   )
 
   const medico = result.rows[0]

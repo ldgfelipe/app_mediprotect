@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
 
   if (tipo === 'medico') {
     const result = await pool.query(
-      `SELECT m.id, m.nombre, m.apellido, m.email, m.email_confirmado, m.telefono, m.telefono_confirmado, m.foto_url, m.cedula_profesional, m.consultorio_direccion, m.consultorio_ciudad, m.consultorio_estado, m.bio, m.created_at, m.apellido_paterno, m.apellido_materno, m.rfc, m.hospital_consultorio, m.tipo_consulta, m.curp, m.codigo_postal, m.colonia, COALESCE(m.estudios, '[]'::jsonb) as estudios, e.nombre as especialidad
+      `SELECT m.id, m.nombre, m.apellido, m.email, m.email_confirmado, m.telefono, m.telefono_confirmado, m.foto_url, m.cedula_profesional, m.consultorio_direccion, m.consultorio_ciudad, m.consultorio_estado, m.bio, m.created_at, m.apellido_paterno, m.apellido_materno, m.rfc, m.hospital_consultorio, m.tipo_consulta, m.curp, m.codigo_postal, m.colonia, m.comision_tipo, COALESCE(m.estudios, '[]'::jsonb) as estudios, e.nombre as especialidad
        FROM medicos m
        LEFT JOIN especialidades e ON m.id_especialidad = e.id WHERE m.id = $1`, [id]
     )

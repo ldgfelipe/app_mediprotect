@@ -15,13 +15,17 @@ export default defineEventHandler(async (event) => {
   const fechaFin = new Date(year, month, 0, 23, 59, 59)
 
   const medico = await pool.query(`
-    SELECT id, nombre, apellido, precio_regular, precio_miembro, especialidad, telefono, email
+    SELECT id, nombre, apellido, precio_regular, precio_miembro, especialidad, telefono, email, COALESCE(comision_tipo, 1) as comision_tipo
     FROM medicos WHERE id = $1
   `, [medicoId])
   if (medico.rows.length === 0) throw createError({ statusCode: 404, message: 'Médico no encontrado' })
 
+  const comisionTipo = medico.rows[0].comision_tipo
+  const comisionPorCita: Record<number, number> = { 1: 100, 2: 75, 3: 50 }
+  const comisionUnitaria = comisionPorCita[comisionTipo] || 100
+
   const citas = await pool.query(`
-    SELECT 
+    SELECT
       c.id,
       c.fecha_hora,
       c.estado,
@@ -38,14 +42,27 @@ export default defineEventHandler(async (event) => {
   `, [medicoId, fechaInicio, fechaFin])
 
   const resumen = await pool.query(`
-    SELECT 
+    SELECT
       COUNT(*) as total,
       COUNT(*) FILTER (WHERE estado IN ('confirmada', 'asistida')) as confirmadas,
-      COALESCE(SUM(costo_consulta) FILTER (WHERE estado IN ('confirmada', 'asistida')), 0) as ingresos,
-      COALESCE(SUM(costo_consulta * 0.15) FILTER (WHERE estado IN ('confirmada', 'asistida')), 0) as comision
+      COALESCE(SUM(costo_consulta) FILTER (WHERE estado IN ('confirmada', 'asistida')), 0) as ingresos
     FROM citas
     WHERE id_medico = $1 AND fecha_hora >= $2 AND fecha_hora <= $3
   `, [medicoId, fechaInicio, fechaFin])
 
-  return { medico: medico.rows[0], citas: citas.rows, resumen: resumen.rows[0], periodo }
+  const confirmadas = parseInt(resumen.rows[0]?.confirmadas) || 0
+  const resumenData = resumen.rows[0]
+  resumenData.comision = confirmadas * comisionUnitaria
+  resumenData.comision_tipo = comisionTipo
+  resumenData.comision_por_cita = comisionUnitaria
+
+  return {
+    medico: medico.rows[0],
+    citas: citas.rows.map((c: any) => ({
+      ...c,
+      comision: ['confirmada', 'asistida'].includes(c.estado) ? comisionUnitaria : 0
+    })),
+    resumen: resumenData,
+    periodo
+  }
 })

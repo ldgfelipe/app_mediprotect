@@ -52,6 +52,7 @@ const form = ref({
   rfc: usuario.value?.rfc || '',
   hospital_consultorio: usuario.value?.hospital_consultorio || '',
   tipo_consulta: usuario.value?.tipo_consulta || '',
+  comision_tipo: usuario.value?.comision_tipo || 1,
 })
 
 const planContratado = ref(usuario.value?.plan_contratado || null)
@@ -129,6 +130,7 @@ onMounted(async () => {
         form.value.consultorio_ciudad = u.consultorio_ciudad || ''
         form.value.consultorio_estado = u.consultorio_estado || ''
         form.value.bio = u.bio || ''
+        form.value.comision_tipo = u.comision_tipo || 1
       }
       if (u.estudios) estudios.value = u.estudios
     }
@@ -489,6 +491,15 @@ async function enviarConfirmacionEmail() {
             <div class="form-group"><label>Estado</label><input v-model="form.consultorio_estado" /></div>
           </div>
           <div class="form-group"><label>Biografia</label><textarea v-model="form.bio" rows="3"></textarea></div>
+          <div class="form-group">
+            <label>Tipo de Comision</label>
+            <select v-model="form.comision_tipo">
+              <option :value="1">Tipo 1 - $100 MXN por cita</option>
+              <option :value="2">Tipo 2 - $75 MXN por cita</option>
+              <option :value="3">Tipo 3 - $50 MXN por cita</option>
+            </select>
+            <span class="photo-hint">Comision que se cobra por cada cita confirmada</span>
+          </div>
         </template>
 
         <button type="submit" class="btn-primary" :disabled="loading">{{ loading ? 'Guardando...' : 'Guardar Cambios' }}</button>

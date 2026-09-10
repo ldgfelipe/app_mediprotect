@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
   const offset = (page - 1) * limit
 
   let where = `WHERE c.fecha_hora >= $1 AND c.fecha_hora <= $2`
-  const params = [fechaInicio, fechaFin]
+  const params: any[] = [fechaInicio, fechaFin]
   let paramIdx = 3
 
   if (search) {
@@ -30,24 +30,27 @@ export default defineEventHandler(async (event) => {
   const totalResult = await pool.query(`
     SELECT COUNT(DISTINCT m.id)
     FROM medicos m
-    LEFT JOIN citas c ON c.id_medico = m.id ${where.replace('c.fecha_hora', 'c.fecha_hora')}
+    LEFT JOIN citas c ON c.id_medico = m.id
+    LEFT JOIN especialidades e ON e.id = m.id_especialidad
+    ${where}
     GROUP BY m.id
     HAVING COUNT(c.id) > 0
   `, params)
   const total = parseInt(totalResult.rows[0]?.count || '0')
 
   const result = await pool.query(`
-    SELECT 
+    SELECT
       m.id, m.nombre, m.apellido, m.precio_regular, m.precio_miembro,
+      COALESCE(m.comision_tipo, 1) as comision_tipo,
       e.nombre as especialidad_nombre,
       COUNT(c.id) as total_citas,
       COUNT(c.id) FILTER (WHERE c.estado IN ('confirmada', 'asistida')) as citas_confirmadas,
       COALESCE(SUM(c.costo_consulta) FILTER (WHERE c.estado IN ('confirmada', 'asistida')), 0) as ingresos,
-      COALESCE(SUM(c.costo_consulta * 0.15) FILTER (WHERE c.estado IN ('confirmada', 'asistida')), 0) as comision
+      COALESCE(SUM(CASE COALESCE(m.comision_tipo, 1) WHEN 2 THEN 75 WHEN 3 THEN 50 ELSE 100 END) FILTER (WHERE c.estado IN ('confirmada', 'asistida')), 0) as comision
     FROM medicos m
     LEFT JOIN especialidades e ON e.id = m.id_especialidad
     LEFT JOIN citas c ON c.id_medico = m.id ${where}
-    GROUP BY m.id, m.nombre, m.apellido, m.precio_regular, m.precio_miembro, e.nombre
+    GROUP BY m.id, m.nombre, m.apellido, m.precio_regular, m.precio_miembro, e.nombre, m.comision_tipo
     HAVING COUNT(c.id) > 0
     ORDER BY ingresos DESC
     LIMIT $${paramIdx} OFFSET $${paramIdx + 1}

@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
   const normalize = (t: string) => (t || '').replace(/[^0-9]/g, '').slice(-10)
 
   if (decoded.tipo === 'medico') {
-    const { nombre, apellido, telefono, cedula_profesional, consultorio_direccion, consultorio_ciudad, consultorio_estado, bio, foto_url, apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta, curp, codigo_postal, colonia, estudios } = body
+    const { nombre, apellido, telefono, cedula_profesional, consultorio_direccion, consultorio_ciudad, consultorio_estado, bio, foto_url, apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta, curp, codigo_postal, colonia, comision_tipo, estudios } = body
     const curpUpper = (curp || '').toUpperCase().trim()
     const phoneChanged = telefono && normalize(telefono) !== normalize(currentPhone)
     const resetPhone = phoneChanged ? ', telefono_confirmado = false' : ''
@@ -33,11 +33,12 @@ export default defineEventHandler(async (event) => {
        curp = COALESCE($15, curp),
        codigo_postal = COALESCE($16, codigo_postal),
        colonia = COALESCE($17, colonia),
+       comision_tipo = COALESCE($18, comision_tipo),
        updated_at = NOW()
        ${resetPhone}
-       WHERE id = $18 RETURNING id, nombre, apellido, email, email_confirmado, telefono, telefono_confirmado, cedula_profesional, consultorio_direccion, consultorio_ciudad, consultorio_estado, bio, foto_url, created_at,
-               apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta, curp, codigo_postal, colonia`,
-      [nombre, apellido, telefono, cedula_profesional, consultorio_direccion, consultorio_ciudad, consultorio_estado, bio, foto_url, apellido_paterno || apellido || null, apellido_materno || null, rfc || null, hospital_consultorio || null, tipo_consulta || null, curpUpper || null, codigo_postal || null, colonia || null, decoded.id]
+       WHERE id = $19 RETURNING id, nombre, apellido, email, email_confirmado, telefono, telefono_confirmado, cedula_profesional, consultorio_direccion, consultorio_ciudad, consultorio_estado, bio, foto_url, created_at,
+               apellido_paterno, apellido_materno, rfc, hospital_consultorio, tipo_consulta, curp, codigo_postal, colonia, comision_tipo`,
+      [nombre, apellido, telefono, cedula_profesional, consultorio_direccion, consultorio_ciudad, consultorio_estado, bio, foto_url, apellido_paterno || apellido || null, apellido_materno || null, rfc || null, hospital_consultorio || null, tipo_consulta || null, curpUpper || null, codigo_postal || null, colonia || null, comision_tipo || null, decoded.id]
     )
     if (result.rows.length === 0) throw createError({ statusCode: 404, message: 'No encontrado' })
 
