@@ -181,6 +181,7 @@ async function validarCURP() {
         <NuxtLink to="/admin/pagos">Pagos</NuxtLink>
         <NuxtLink to="/admin/citas">Citas</NuxtLink>
         <NuxtLink to="/admin/asistentes">Asistentes</NuxtLink>
+        <NuxtLink to="/admin/usuarios">Usuarios</NuxtLink>
         <NuxtLink to="/admin/planes">Planes</NuxtLink>
         <NuxtLink to="/admin/facturacion">Facturacion</NuxtLink>
         <NuxtLink to="/admin/configuracion">Configuracion</NuxtLink>
