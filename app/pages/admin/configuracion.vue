@@ -73,12 +73,8 @@
           <div class="form-row">
             <div class="form-group flex-1">
               <label>Supabase Project URL</label>
-              <input
-                v-model="sistema.firebaseUrl"
-                type="text"
-                :placeholder="sistema.modo === 'pruebas' ? 'https://dhadacgebhdiantlhllz.supabase.co (test activo)' : 'https://mruezojnfgkdhtgxwgmv.supabase.co (produccion activa)'"
-                @input="markDirty"
-              >
+              <div class="readonly-field">{{ sistema.modo === 'pruebas' ? 'https://dhadacgebhdiantlhllz.supabase.co' : 'https://mruezojnfgkdhtgxwgmv.supabase.co' }}</div>
+              <small class="field-hint">URL del proyecto de Supabase activo (no editable)</small>
               <small class="field-hint">URL del proyecto de Supabase que usa este sistema (base de datos, auth, storage, etc.)</small>
             </div>
           </div>
@@ -1989,6 +1985,16 @@ nav {
   margin-top: 0.25rem;
   font-size: 0.78rem;
   color: #90a4ae;
+}
+
+.readonly-field {
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-family: monospace;
+  background: #f5f5f5;
+  color: #636e72;
 }
 
 .curp-status {
