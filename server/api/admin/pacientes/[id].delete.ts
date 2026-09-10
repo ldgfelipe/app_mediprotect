@@ -19,9 +19,9 @@ export default defineEventHandler(async (event) => {
 
   const pacienteNombre = existing.rows[0].nombre
 
-  // 2. Eliminar de empresas_pacientes (vínculo paciente-empresa)
+  // 2. Eliminar de empresa_pacientes (vinculo paciente-empresa)
   await pool.query(
-    'DELETE FROM empresas_pacientes WHERE id_paciente = $1',
+    'DELETE FROM empresa_pacientes WHERE id_paciente = $1',
     [id]
   )
 
