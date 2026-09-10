@@ -1,4 +1,4 @@
-export default defineEventHandler(async () => {
+export default defineEventHandler(async (event) => {
   const pool = useDbPool(event)
 
   const result = await pool.query(`
