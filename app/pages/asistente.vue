@@ -660,9 +660,9 @@ function seleccionarColoniaMedico(col) {
 }
 
 // ========== CONFIRMACIONES (correo + SMS) ==========
-const pendienteConfirmacion = ref<any>(null)
-const confirmandoEmail = ref<any>({})
-const confirmandoSms = ref<any>({})
+const pendienteConfirmacion = ref(null)
+const confirmandoEmail = ref({})
+const confirmandoSms = ref({})
 
 async function enviarConfirmacionEmail(registro) {
   const key = `${registro._tipo}:${registro.id}`
