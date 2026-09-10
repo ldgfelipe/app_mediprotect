@@ -542,7 +542,7 @@ const consultoriosEdit = ref<any[]>([])
 const consultorioForm = ref({ nombre: '', direccion: '', codigo_postal: '', colonia: '', ciudad: '', estado: '', hospital_consultorio: '', google_maps_url: '', es_principal: false })
 const editConsultorioId = ref<string | null>(null)
 
-function agregarConsultorio Nuevo() {
+function agregarConsultorioNuevo() {
   if (!consultorioForm.value.direccion && !consultorioForm.value.ciudad) return
   consultoriosNuevo.value.push({ ...consultorioForm.value })
   Object.assign(consultorioForm.value, { nombre: '', direccion: '', codigo_postal: '', colonia: '', ciudad: '', estado: '', hospital_consultorio: '', google_maps_url: '', es_principal: false })
