@@ -822,7 +822,7 @@ function abrirGoogleMaps(url: string) {
                 </div>
                 <div class="form-row">
                   <label class="checkbox-label"><input type="checkbox" v-model="consultorioForm.es_principal" /> Consultorio principal</label>
-                  <button type="button" class="btn-add-consultorio" @click="agregarConsultorio Nuevo()">+ Agregar</button>
+                  <button type="button" class="btn-add-consultorio" @click="agregarConsultorioNuevo()">+ Agregar</button>
                 </div>
               </div>
 
