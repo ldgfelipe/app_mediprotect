@@ -786,6 +786,7 @@ function abrirGoogleMaps(url: string) {
               </div>
               <div class="form-row">
                 <div class="form-group"><label>Universidad</label><input v-model="newMedico.universidad" placeholder="Ej: BUAP" /></div>
+              </div>
 
               <!-- CONSULTORIOS ADICIONALES -->
               <div class="section-divider"><span>Consultorios / Ubicaciones</span></div>
