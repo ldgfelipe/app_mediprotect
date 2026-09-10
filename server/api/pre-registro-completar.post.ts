@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    const pool = getPool()
+    const pool = useDbPool()
     await pool.query(
       `UPDATE pre_registros SET estado_registro = 'completado', actualizado_en = NOW() WHERE id = $1`,
       [pre_registro_id]

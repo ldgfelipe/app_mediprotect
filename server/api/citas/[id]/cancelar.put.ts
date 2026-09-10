@@ -1,7 +1,7 @@
 export default defineEventHandler(async (event) => {
   const decoded = verifyToken(event)
   const { id } = getRouterParams(event)
-  const pool = getPool()
+  const pool = useDbPool()
 
   const cita = await pool.query(
     'SELECT id, id_paciente, id_medico, estado FROM citas WHERE id = $1', [id]

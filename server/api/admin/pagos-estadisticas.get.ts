@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, message: 'Acceso no autorizado' })
   }
 
-  const pool = getPool()
+  const pool = useDbPool()
 
   // Estadísticas generales
   const statsResult = await pool.query(`

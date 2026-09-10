@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken'
 export default defineEventHandler(async (event) => {
   try {
     const { email, password } = await readBody(event)
-    const pool = getPool()
+    const pool = useDbPool()
 
     const result = await pool.query(`
       SELECT u.*, r.nombre as rol_nombre

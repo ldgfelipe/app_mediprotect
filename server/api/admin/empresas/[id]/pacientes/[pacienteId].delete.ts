@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
   const pacienteId = getRouterParam(event, 'pacienteId')
 
-  const pool = getPool()
+  const pool = useDbPool()
 
   await pool.query(
     'UPDATE empresa_pacientes SET activo = false WHERE id_empresa = $1 AND id_paciente = $2',

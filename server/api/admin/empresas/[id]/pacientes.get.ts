@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
   catch { throw createError({ statusCode: 401, message: 'Token inválido' }) }
 
   const id = getRouterParam(event, 'id')
-  const pool = getPool()
+  const pool = useDbPool()
 
   const result = await pool.query(`
     SELECT ep.*, p.nombre, p.apellido, p.email, p.telefono

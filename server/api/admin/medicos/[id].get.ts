@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
   try { jwt.verify(token, process.env.JWT_SECRET || 'mediprotect_jwt_secret_key_2026') }
   catch { throw createError({ statusCode: 401, message: 'Token inválido' }) }
 
-  const pool = getPool()
+  const pool = useDbPool()
   const id = getRouterParam(event, 'id')
 
   const result = await pool.query(`

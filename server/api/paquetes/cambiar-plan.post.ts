@@ -20,7 +20,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'id_nuevo_plan es requerido' })
   }
 
-  const pool = getPool()
+  const pool = useDbPool()
 
   // Get new plan info
   const planResult = await pool.query(

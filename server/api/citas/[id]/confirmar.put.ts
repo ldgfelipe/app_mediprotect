@@ -5,7 +5,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const { id } = getRouterParams(event)
-  const pool = getPool()
+  const pool = useDbPool()
 
   const cita = await pool.query(
     'SELECT id, id_medico, estado FROM citas WHERE id = $1', [id]

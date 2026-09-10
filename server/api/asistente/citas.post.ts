@@ -1,7 +1,6 @@
-const pool = getPool()
-
 // POST - Asistente crea cita para un paciente
 export default defineEventHandler(async (event) => {
+  const pool = useDbPool()
   const authHeader = getHeader(event, 'authorization')?.replace('Bearer ', '')
   if (!authHeader) throw createError({ statusCode: 401, message: 'No autorizado' })
 

@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    const pool = getPool()
+    const pool = useDbPool()
 
     // Si ya existe un pre-registro pendiente con esta CURP, actualizarlo
     const existing = await pool.query(

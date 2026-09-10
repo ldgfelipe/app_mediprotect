@@ -30,7 +30,7 @@ export default defineEventHandler(async (event) => {
 
   const table = tipo === 'medico' ? 'medicos' : tipo === 'paciente' ? 'pacientes' : 'empresas'
 
-  const pool = getPool()
+  const pool = useDbPool()
 
   const querySelect = tipo === 'empresa'
     ? 'SELECT id, email, nombre, contacto_nombre, email_confirmado FROM empresas WHERE id = $1'

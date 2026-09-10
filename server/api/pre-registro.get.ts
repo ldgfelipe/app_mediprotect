@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    const pool = getPool()
+    const pool = useDbPool()
 
     let sql = `SELECT id, curp, nombre, apellido_paterno, apellido_materno,
       fecha_nacimiento, genero, email, telefono,

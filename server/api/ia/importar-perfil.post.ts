@@ -1,11 +1,11 @@
-ï»¿import jwt from 'jsonwebtoken'
+import jwt from 'jsonwebtoken'
 
 export default defineEventHandler(async (event) => {
   // Verificar auth
   const token = getHeader(event, 'authorization')?.replace('Bearer ', '') || getCookie(event, 'admin_token')
   if (!token) throw createError({ statusCode: 401, message: 'No autorizado' })
   try { jwt.verify(token, process.env.JWT_SECRET || 'mediprotect_jwt_secret_key_2026') }
-  catch { throw createError({ statusCode: 401, message: 'Token invÃ¡lido' }) }
+  catch { throw createError({ statusCode: 401, message: 'Token inválido' }) }
 
   const body = await readBody(event)
   const { url } = body
@@ -24,10 +24,10 @@ export default defineEventHandler(async (event) => {
   }
 
   // Llamar a la API de directorio para obtener el perfil
-  const pool = getPool()
+  const pool = useDbPool()
 
   try {
-    // Buscar mÃ©dico por slug en nuestra DB
+    // Buscar médico por slug en nuestra DB
     const result = await pool.query(`
       SELECT m.*, e.nombre as especialidad_nombre, e.slug as especialidad_slug,
              e.color as especialidad_color, e.icono as especialidad_icono
@@ -40,13 +40,13 @@ export default defineEventHandler(async (event) => {
     if (result.rowCount === 0) {
       throw createError({
         statusCode: 404,
-        message: `No se encontrÃ³ un mÃ©dico con el slug "${slug}" en el directorio. Verifica que la URL sea correcta.`
+        message: `No se encontró un médico con el slug "${slug}" en el directorio. Verifica que la URL sea correcta.`
       })
     }
 
     const medico = result.rowCount > 0 ? result.rows[0] : null
 
-    // Si no estÃ¡ en nuestra DB, intentar obtener datos bÃ¡sicos del slug
+    // Si no está en nuestra DB, intentar obtener datos básicos del slug
     if (!medico) {
       // Construir nombre desde el slug
       const nombreFormateado = slug
@@ -70,7 +70,7 @@ export default defineEventHandler(async (event) => {
           universidad: null,
           cedula_profesional: null,
           servicios: [],
-          idiomas: ['EspaÃ±ol'],
+          idiomas: ['Español'],
           formacion_academica: [],
           certificaciones: [],
           horario_atencion: null,
@@ -99,7 +99,7 @@ export default defineEventHandler(async (event) => {
       universidad: medico.universidad,
       cedula_profesional: medico.cedula_profesional,
       servicios: medico.servicios || [],
-      idiomas: medico.idiomas || ['EspaÃ±ol'],
+      idiomas: medico.idiomas || ['Español'],
       formacion_academica: medico.formacion_academica || [],
       certificaciones: medico.certificaciones ? (typeof medico.certificaciones === 'string' ? medico.certificaciones.split(',').map((c: string) => c.trim()) : medico.certificaciones) : [],
       horario_atencion: medico.horario_atencion,
@@ -135,30 +135,30 @@ function extraerSlug(url: string): string | null {
   // Limpiar URL
   const cleanUrl = url.trim().toLowerCase()
 
-  // PatrÃ³n 1: https://www.mediprotect.com.mx/perfil-dr-{slug}
+  // Patrón 1: https://www.mediprotect.com.mx/perfil-dr-{slug}
   let match = cleanUrl.match(/mediprotect\.com\.mx\/perfil[-_]dr[-_]([a-z0-9-]+)/)
   if (match) return match[1]
 
-  // PatrÃ³n 2: https://www.mediprotect.com.mx/perfil-{slug}
+  // Patrón 2: https://www.mediprotect.com.mx/perfil-{slug}
   match = cleanUrl.match(/mediprotect\.com\.mx\/perfil[-_]([a-z0-9-]+)/)
   if (match) return match[1]
 
-  // PatrÃ³n 3: https://www.mediprotect.com.mx/red-medica/{slug}
+  // Patrón 3: https://www.mediprotect.com.mx/red-medica/{slug}
   match = cleanUrl.match(/mediprotect\.com\.mx\/red-medica\/([a-z0-9-]+)/)
   if (match) return match[1]
 
-  // PatrÃ³n 4: https://www.mediprotect.com.mx/{slug} (directo)
+  // Patrón 4: https://www.mediprotect.com.mx/{slug} (directo)
   match = cleanUrl.match(/mediprotect\.com\.mx\/([a-z0-9-]+)/)
   if (match) {
     const slug = match[1]
-    // Excluir pÃ¡ginas que no son perfiles
+    // Excluir páginas que no son perfiles
     const excluded = ['red-medica', 'beneficios', 'directorio-medico', 'planes', 'contacto', 'about']
     if (!excluded.some(e => slug.startsWith(e))) {
       return slug
     }
   }
 
-  // PatrÃ³n 5: Si es solo el slug (sin URL)
+  // Patrón 5: Si es solo el slug (sin URL)
   if (/^[a-z0-9-]+$/.test(cleanUrl) && cleanUrl.length > 3) {
     return cleanUrl
   }

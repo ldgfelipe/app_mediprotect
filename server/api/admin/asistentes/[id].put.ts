@@ -1,7 +1,6 @@
-const pool = getPool()
-
 // PUT - Update assistant (admin only)
 export default defineEventHandler(async (event) => {
+  const pool = useDbPool()
   const auth = getCookie(event, 'admin_token') || getHeader(event, 'authorization')?.replace('Bearer ', '')
   if (!auth) throw createError({ statusCode: 401, message: 'No autorizado' })
 

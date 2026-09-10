@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
 
   if (!titulo) throw createError({ statusCode: 400, message: 'El titulo es requerido' })
 
-  const pool = getPool()
+  const pool = useDbPool()
   const result = await pool.query(
     `INSERT INTO actualizaciones_sistema (titulo, descripcion, tipo, version, estado, creado_por)
      VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,

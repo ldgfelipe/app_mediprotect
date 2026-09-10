@@ -4,7 +4,7 @@ import { join } from 'path'
 
 export default defineEventHandler(async (event) => {
   const decoded = verifyToken(event)
-  const pool = getPool()
+  const pool = useDbPool()
   
   if (!['medico', 'admin'].includes(decoded.tipo)) {
     throw createError({ statusCode: 403, message: 'No autorizado' })

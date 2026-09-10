@@ -82,7 +82,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Nombre de tabla inválido' })
   }
 
-  const pool = getPool()
+  const pool = useDbPool()
 
   const colRes = await pool.query(
     `SELECT column_name, data_type FROM information_schema.columns WHERE table_name=$1 ORDER BY ordinal_position`,

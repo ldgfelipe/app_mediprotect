@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, message: 'Usuario y contraseña son requeridos' })
     }
 
-    const pool = getPool()
+    const pool = useDbPool()
     const table = tipo === 'paciente' ? 'pacientes' : 'medicos'
     const result = await pool.query(
       tipo === 'medico'

@@ -1,19 +1,19 @@
-Ôªøimport jwt from 'jsonwebtoken'
+import jwt from 'jsonwebtoken'
 
 export default defineEventHandler(async (event) => {
   const token = getHeader(event, 'authorization')?.replace('Bearer ', '') || getCookie(event, 'admin_token')
   if (!token) throw createError({ statusCode: 401, message: 'No autorizado' })
   try { jwt.verify(token, process.env.JWT_SECRET || 'mediprotect_jwt_secret_key_2026') }
-  catch { throw createError({ statusCode: 401, message: 'Token inv√°lido' }) }
+  catch { throw createError({ statusCode: 401, message: 'Token inv·lido' }) }
 
-  const pool = getPool()
+  const pool = useDbPool()
   const result = await pool.query(`
     SELECT c.id, c.fecha_hora, c.estado, c.created_at, c.notas_paciente, c.notas_asistente,
            CONCAT(p.nombre, ' ', p.apellido) as paciente_nombre,
            p.telefono as paciente_telefono,
            CASE WHEN m.id IS NOT NULL THEN CONCAT(m.nombre, ' ', m.apellido)
                 ELSE COALESCE(
-                  NULLIF(TRIM(BOTH '[]' FROM SPLIT_PART(c.notas_paciente, '[M√©dico:', 2)), ''),
+                  NULLIF(TRIM(BOTH '[]' FROM SPLIT_PART(c.notas_paciente, '[MÈdico:', 2)), ''),
                   'No especificado'
                 )
            END as medico_nombre

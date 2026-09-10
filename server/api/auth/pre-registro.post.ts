@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'nombre, telefono e id_medico son requeridos' })
   }
 
-  const pool = getPool()
+  const pool = useDbPool()
 
   const medico = await pool.query(
     'SELECT id, nombre, apellido, telefono FROM medicos WHERE id = $1 AND activo = true', [id_medico]

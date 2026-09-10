@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
     apellido_paterno, apellido_materno, codigo_postal, estado, municipio, telefono2, hospital_consultorio,
     curp, estado_civil, ocupacion, id_paquete, beneficiarios, colonia } = body
 
-  const pool = getPool()
+  const pool = useDbPool()
 
   const existing = await pool.query('SELECT id FROM pacientes WHERE id = $1', [id])
   if (existing.rowCount === 0) {

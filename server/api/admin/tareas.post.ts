@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
 
   if (!titulo) throw createError({ statusCode: 400, message: 'El titulo es requerido' })
 
-  const pool = getPool()
+  const pool = useDbPool()
   const result = await pool.query(
     `INSERT INTO tareas_pendientes (titulo, descripcion, prioridad, estado, asignado_a)
      VALUES ($1, $2, $3, $4, $5) RETURNING *`,

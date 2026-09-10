@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'resultado debe ser asistida o no_asistida' })
   }
 
-  const pool = getPool()
+  const pool = useDbPool()
 
   const cita = await pool.query(
     'SELECT id, id_medico, estado FROM citas WHERE id = $1', [id]

@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
 
   if (!id) throw createError({ statusCode: 400, message: 'ID requerido' })
 
-  const pool = getPool()
+  const pool = useDbPool()
   const result = await pool.query(
     `UPDATE tareas_pendientes SET
        titulo = COALESCE($1, titulo),

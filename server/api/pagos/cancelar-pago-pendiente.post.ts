@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
   const { pago_id } = body
   if (!pago_id) throw createError({ statusCode: 400, message: 'pago_id requerido' })
 
-  const pool = getPool()
+  const pool = useDbPool()
 
   const result = await pool.query(
     `UPDATE pagos SET estado = 'cancelado', updated_at = NOW()

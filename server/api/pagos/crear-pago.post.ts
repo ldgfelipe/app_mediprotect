@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'id_paciente, monto y provedor son requeridos' })
   }
 
-  const pool = getPool()
+  const pool = useDbPool()
 
   // Obtener configuración del provedor
   const configResult = await pool.query(

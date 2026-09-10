@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
   catch { throw createError({ statusCode: 401, message: 'Token inválido' }) }
 
   const { tabla } = getRouterParams(event)
-  const pool = getPool()
+  const pool = useDbPool()
 
   const safe = /^[a-z_]+$/.test(tabla)
   if (!safe) throw createError({ statusCode: 400, message: 'Nombre de tabla inválido' })

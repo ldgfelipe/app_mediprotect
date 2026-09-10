@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
   try { jwt.verify(token, process.env.JWT_SECRET || 'mediprotect_jwt_secret_key_2026') }
   catch { throw createError({ statusCode: 401, message: 'Token invalido' }) }
 
-  const pool = getPool()
+  const pool = useDbPool()
   const result = await pool.query(
     'SELECT * FROM tareas_pendientes ORDER BY CASE prioridad WHEN \'alta\' THEN 1 WHEN \'media\' THEN 2 WHEN \'baja\' THEN 3 END, created_at DESC LIMIT 100'
   )

@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs'
 
 export default defineEventHandler(async (event) => {
   const decoded = verifyToken(event)
-  const pool = getPool()
+  const pool = useDbPool()
   const body = await readBody(event)
 
   // Obtener telefono actual para comparar

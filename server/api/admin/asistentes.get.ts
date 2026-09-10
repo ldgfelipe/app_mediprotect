@@ -1,9 +1,8 @@
 import bcrypt from 'bcryptjs'
 
-const pool = getPool()
-
 // GET - List all assistants (admin only)
 export default defineEventHandler(async (event) => {
+  const pool = useDbPool()
   const auth = getCookie(event, 'admin_token') || getHeader(event, 'authorization')?.replace('Bearer ', '')
   if (!auth) throw createError({ statusCode: 401, message: 'No autorizado' })
 

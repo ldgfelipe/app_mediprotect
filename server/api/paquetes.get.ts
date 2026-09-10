@@ -1,5 +1,5 @@
 export default defineEventHandler(async () => {
-  const pool = getPool()
+  const pool = useDbPool()
   const paquetes = await pool.query(`
     SELECT p.*, json_agg(json_build_object(
       'beneficio', pb.beneficio,

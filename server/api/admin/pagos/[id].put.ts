@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
 
   const id = getRouterParam(event, 'id')
   const body = await readBody(event)
-  const pool = getPool()
+  const pool = useDbPool()
 
   const result = await pool.query(
     'UPDATE pagos SET estado = $1, updated_at = NOW() WHERE id = $2 RETURNING *',

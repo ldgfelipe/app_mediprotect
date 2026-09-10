@@ -5,7 +5,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event)
-  const pool = getPool()
+  const pool = useDbPool()
 
   const result = await pool.query(
     `INSERT INTO disponibilidad_medico (id_medico, dia_semana, hora_inicio, hora_fin)

@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
     return { valido: false, mensaje: 'El formato de CURP no es válido' }
   }
 
-  const pool = getPool()
+  const pool = useDbPool()
 
   const existing = await pool.query('SELECT id FROM pacientes WHERE curp = $1', [curpUpper])
   if (existing.rows.length > 0) {

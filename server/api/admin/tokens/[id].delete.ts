@@ -9,7 +9,7 @@ function verifyAdmin(event: any) {
 
 export default defineEventHandler(async (event) => {
   verifyAdmin(event)
-  const pool = getPool()
+  const pool = useDbPool()
   const id = getRouterParam(event, 'id')
   if (!id) throw createError({ statusCode: 400, message: 'ID requerido' })
 

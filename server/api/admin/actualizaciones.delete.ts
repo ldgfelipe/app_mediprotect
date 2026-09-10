@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
   const id = query.id
   if (!id) throw createError({ statusCode: 400, message: 'ID requerido' })
 
-  const pool = getPool()
+  const pool = useDbPool()
   const result = await pool.query('DELETE FROM actualizaciones_sistema WHERE id = $1', [id])
   if (result.rowCount === 0) throw createError({ statusCode: 404, message: 'No encontrada' })
 

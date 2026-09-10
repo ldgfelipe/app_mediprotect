@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
 
   if (!nombre) throw createError({ statusCode: 400, message: 'El nombre es requerido' })
 
-  const pool = getPool()
+  const pool = useDbPool()
 
   // Si se marca como preferida, quitar preferida de las demas
   if (preferida) {

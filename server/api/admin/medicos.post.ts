@@ -1,4 +1,4 @@
-ï»¿import jwt from 'jsonwebtoken'
+import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import { enviarCorreo } from '../../utils/email.js'
@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
   const token = getHeader(event, 'authorization')?.replace('Bearer ', '') || getCookie(event, 'admin_token')
   if (!token) throw createError({ statusCode: 401, message: 'No autorizado' })
   try { jwt.verify(token, process.env.JWT_SECRET || 'mediprotect_jwt_secret_key_2026') }
-  catch { throw createError({ statusCode: 401, message: 'Token invÃ¡lido' }) }
+  catch { throw createError({ statusCode: 401, message: 'Token inválido' }) }
 
   const body = await readBody(event)
   const {
@@ -24,26 +24,26 @@ export default defineEventHandler(async (event) => {
 
   const curpUpper = (curp || '').toUpperCase().trim()
   if (curpUpper && !/^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/.test(curpUpper)) {
-    throw createError({ statusCode: 400, message: 'El formato de CURP no es vÃ¡lido' })
+    throw createError({ statusCode: 400, message: 'El formato de CURP no es válido' })
   }
 
   if (codigo_postal && !/^\d{5}$/.test(codigo_postal)) {
-    throw createError({ statusCode: 400, message: 'El cÃ³digo postal debe tener 5 dÃ­gitos' })
+    throw createError({ statusCode: 400, message: 'El código postal debe tener 5 dígitos' })
   }
 
-  const pool = getPool()
+  const pool = useDbPool()
 
   if (email) {
     const existing = await pool.query('SELECT id FROM medicos WHERE email = $1', [email])
     if (existing.rows.length > 0) {
-      throw createError({ statusCode: 400, message: 'El email ya estÃ¡ registrado' })
+      throw createError({ statusCode: 400, message: 'El email ya está registrado' })
     }
   }
 
   if (usuario) {
     const dupUser = await pool.query('SELECT id FROM medicos WHERE usuario = $1', [usuario])
     if (dupUser.rowCount > 0) {
-      throw createError({ statusCode: 400, message: 'Ya existe un mÃ©dico con ese usuario' })
+      throw createError({ statusCode: 400, message: 'Ya existe un médico con ese usuario' })
     }
   }
 
@@ -72,7 +72,7 @@ export default defineEventHandler(async (event) => {
     .replace(/\s+/g, '-')
 
   const serviciosArray = servicios ? servicios.split(',').map((s: string) => s.trim()).filter(Boolean) : []
-  const idiomasArray = idiomas ? idiomas.split(',').map((i: string) => i.trim()).filter(Boolean) : ['EspaÃ±ol']
+  const idiomasArray = idiomas ? idiomas.split(',').map((i: string) => i.trim()).filter(Boolean) : ['Español']
 
   let passwordHash = null
   if (password && password.trim()) {
@@ -119,8 +119,8 @@ export default defineEventHandler(async (event) => {
           email,
           'Confirma tu correo en MediProtect',
           `<h2>Bienvenido, ${nombre} ${apellido}!</h2>
-           <p>Tu cuenta de mÃ©dico ha sido registrada exitosamente en <strong>MediProtect</strong>.</p>
-           <p>Para completar tu registro, confirma tu correo electrÃ³nico:</p>
+           <p>Tu cuenta de médico ha sido registrada exitosamente en <strong>MediProtect</strong>.</p>
+           <p>Para completar tu registro, confirma tu correo electrónico:</p>
            <p><a href="${confirmUrl}" style="display:inline-block;background:#00b894;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">Confirmar mi correo</a></p>
            <p>Si no puedes hacer clic, copia y pega esta URL en tu navegador:</p>
            <p style="word-break:break-all;font-size:0.85rem;color:#636e72;">${confirmUrl}</p>
@@ -128,7 +128,7 @@ export default defineEventHandler(async (event) => {
            <p>Saludos,<br>Equipo MediProtect</p>`
         )
       } catch (e: any) {
-        console.error('Error enviando correo de confirmaciÃ³n:', e.message)
+        console.error('Error enviando correo de confirmación:', e.message)
       }
     }
 
@@ -142,8 +142,8 @@ export default defineEventHandler(async (event) => {
     }
   } catch (err: any) {
     if (err.code === '23505') {
-      throw createError({ statusCode: 400, message: 'Ya existe un mÃ©dico con esa cÃ©dula o email' })
+      throw createError({ statusCode: 400, message: 'Ya existe un médico con esa cédula o email' })
     }
-    throw createError({ statusCode: 500, message: 'Error al guardar mÃ©dico: ' + err.message })
+    throw createError({ statusCode: 500, message: 'Error al guardar médico: ' + err.message })
   }
 })

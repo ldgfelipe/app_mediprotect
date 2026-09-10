@@ -1,7 +1,6 @@
-const pool = getPool()
-
 // GET - Bitácora de una cita específica
 export default defineEventHandler(async (event) => {
+  const pool = useDbPool()
   const authHeader = getHeader(event, 'authorization')?.replace('Bearer ', '')
   if (!authHeader) throw createError({ statusCode: 401, message: 'No autorizado' })
 
