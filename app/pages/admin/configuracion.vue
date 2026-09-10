@@ -76,7 +76,7 @@
               <input
                 v-model="sistema.firebaseUrl"
                 type="text"
-                placeholder="https://xxxxx.supabase.co"
+                :placeholder="sistema.modo === 'pruebas' ? 'https://dhadacgebhdiantlhllz.supabase.co (test activo)' : 'https://mruezojnfgkdhtgxwgmv.supabase.co (produccion activa)'"
                 @input="markDirty"
               >
               <small class="field-hint">URL del proyecto de Supabase que usa este sistema (base de datos, auth, storage, etc.)</small>
