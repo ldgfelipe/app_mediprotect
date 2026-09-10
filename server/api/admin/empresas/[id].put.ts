@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event)
   const pool = useDbPool(event)
 
-  const { nombre, rfc, email, telefono, contacto_nombre, direccion, ciudad, estado, activo } = body
+  const { nombre, rfc, email, telefono, contacto_nombre, direccion, ciudad, estado, activo, google_maps_url } = body
 
   const result = await pool.query(`
     UPDATE empresas SET
@@ -23,9 +23,10 @@ export default defineEventHandler(async (event) => {
       ciudad = COALESCE($7, ciudad),
       estado = COALESCE($8, estado),
       activo = COALESCE($9, activo),
+      google_maps_url = COALESCE($10, google_maps_url),
       updated_at = NOW()
-    WHERE id = $10 RETURNING *
-  `, [nombre, rfc, email, telefono, contacto_nombre, direccion, ciudad, estado, activo, id])
+    WHERE id = $11 RETURNING *
+  `, [nombre, rfc, email, telefono, contacto_nombre, direccion, ciudad, estado, activo, google_maps_url, id])
 
   if (!result.rows.length) throw createError({ statusCode: 404, message: 'Empresa no encontrada' })
   return { empresa: result.rows[0] }

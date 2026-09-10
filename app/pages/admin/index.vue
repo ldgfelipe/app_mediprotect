@@ -23,7 +23,7 @@ const okMsg = ref('')
 
 const formMedico = ref({ nombre: '', apellido: '', email: '', telefono: '', cedula_profesional: '', titulo: 'Dr.', especialidad: '', usuario: '', password: '' })
 const formPaciente = ref({ nombre: '', apellido: '', email: '', telefono: '', fecha_nacimiento: '', genero: '', ciudad: '', curp: '', password: '' })
-const formEmpresa = ref({ nombre: '', rfc: '', email: '', telefono: '', contacto_nombre: '', direccion: '', ciudad: '', estado: '' })
+const formEmpresa = ref({ nombre: '', rfc: '', email: '', telefono: '', contacto_nombre: '', direccion: '', ciudad: '', estado: '', google_maps_url: '' })
 
 const curpInput = ref('')
 const curpResult = ref<any>(null)
@@ -143,7 +143,7 @@ async function guardarEmpresa() {
   try {
     await $fetch('/api/admin/empresas', { method: 'POST', headers: { Authorization: 'Bearer ' + adminToken.value }, body: formEmpresa.value })
     okMsg.value = 'Empresa registrada correctamente'; showNuevaEmpresa.value = false
-    formEmpresa.value = { nombre: '', rfc: '', email: '', telefono: '', contacto_nombre: '', direccion: '', ciudad: '', estado: '' }
+    formEmpresa.value = { nombre: '', rfc: '', email: '', telefono: '', contacto_nombre: '', direccion: '', ciudad: '', estado: '', google_maps_url: '' }
     stats.value.total_empresas = (stats.value.total_empresas || 0) + 1
     setTimeout(() => { okMsg.value = '' }, 3000)
   } catch (e: any) { errorMsg.value = e.data?.message || 'Error al guardar' }
@@ -354,6 +354,7 @@ async function validarCURP() {
           <div class="form-group"><label>Contacto</label><input v-model="formEmpresa.contacto_nombre" /></div>
           <div class="form-group"><label>Direccion</label><input v-model="formEmpresa.direccion" /></div>
           <div class="form-row"><div class="form-group"><label>Ciudad</label><input v-model="formEmpresa.ciudad" /></div><div class="form-group"><label>Estado</label><input v-model="formEmpresa.estado" /></div></div>
+          <div class="form-group"><label>URL Google Maps</label><input v-model="formEmpresa.google_maps_url" placeholder="https://maps.google.com/..." /></div>
           <div class="form-actions"><button class="btn-cancel" @click="showNuevaEmpresa = false">Cancelar</button><button class="btn-primary" @click="guardarEmpresa" :disabled="saving">{{ saving ? 'Guardando...' : 'Guardar' }}</button></div>
         </div>
       </div>

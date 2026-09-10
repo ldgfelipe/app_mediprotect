@@ -412,6 +412,8 @@ function abrirEditarMedico(m) {
   medicoEditId.value = m.id
   editandoMedico.value = true
   showNuevoMedico.value = true
+  cargarConsultoriosMedico(m.id)
+  resetConsultorioForm()
 }
 
 function cerrarFormMedico() {
@@ -420,6 +422,8 @@ function cerrarFormMedico() {
   medicoEditId.value = null
   formMedico.value = { nombre: '', apellido: '', email: '', telefono: '', cedula_profesional: '', titulo: 'Dr.', especialidad: '', usuario: '', password: '', curp: '', codigo_postal: '', colonia: '', consultorio_ciudad: '', consultorio_estado: '' }
   errorMsgMedico.value = ''
+  consultorios.value = []
+  resetConsultorioForm()
 }
 
 let medicoSearchTimeout = null
@@ -450,10 +454,21 @@ async function guardarMedico() {
     let nuevoId = null
     if (editandoMedico.value && medicoEditId.value) {
       await $fetch(`/api/admin/medicos/${medicoEditId.value}`, { method: 'PUT', headers: { Authorization: 'Bearer ' + authToken.value }, body: formMedico.value })
+      for (const c of consultorios.value) {
+        try {
+          if (c._new) { await $fetch('/api/admin/consultorios', { method: 'POST', headers: { Authorization: 'Bearer ' + authToken.value }, body: { ...c, id_medico: medicoEditId.value } }) }
+          else { await $fetch(`/api/admin/consultorios/${c.id}`, { method: 'PUT', headers: { Authorization: 'Bearer ' + authToken.value }, body: c }) }
+        } catch {}
+      }
       okMsgMedico.value = 'Medico actualizado correctamente'
     } else {
       const data = await $fetch('/api/admin/medicos', { method: 'POST', headers: { Authorization: 'Bearer ' + authToken.value }, body: formMedico.value })
       nuevoId = data?.medico?.id || null
+      if (nuevoId) {
+        for (const c of consultorios.value) {
+          try { await $fetch('/api/admin/consultorios', { method: 'POST', headers: { Authorization: 'Bearer ' + authToken.value }, body: { ...c, id_medico: nuevoId } }) } catch {}
+        }
+      }
       okMsgMedico.value = 'Medico registrado correctamente'
     }
     if (nuevoId) {
@@ -465,6 +480,49 @@ async function guardarMedico() {
   } catch (e) { errorMsgMedico.value = e.data?.message || 'Error al guardar' }
   finally { savingMedico.value = false }
 }
+
+// ========== CONSULTORIOS (MULTI-UBICACIÓN) ==========
+const consultorios = ref([])
+const consultorioForm = ref({ nombre: '', direccion: '', codigo_postal: '', colonia: '', ciudad: '', estado: '', hospital_consultorio: '', google_maps_url: '', es_principal: false })
+const editConsultorioId = ref(null)
+
+function agregarConsultorio() {
+  if (!consultorioForm.value.direccion && !consultorioForm.value.ciudad) return
+  consultorios.value.push({ ...consultorioForm.value })
+  resetConsultorioForm()
+}
+
+function eliminarConsultorio(idx) { consultorios.value.splice(idx, 1) }
+
+function guardarConsultorioEdit() {
+  if (!consultorioForm.value.direccion && !consultorioForm.value.ciudad) return
+  if (editConsultorioId.value) {
+    const idx = consultorios.value.findIndex(c => c.id === editConsultorioId.value)
+    if (idx !== -1) consultorios.value[idx] = { ...consultorioForm.value, id: editConsultorioId.value }
+  } else {
+    consultorios.value.push({ ...consultorioForm.value, _new: true })
+  }
+  resetConsultorioForm()
+}
+
+function editarConsultorioItem(c) {
+  editConsultorioId.value = c.id || null
+  Object.assign(consultorioForm.value, { nombre: c.nombre || '', direccion: c.direccion || '', codigo_postal: c.codigo_postal || '', colonia: c.colonia || '', ciudad: c.ciudad || '', estado: c.estado || '', hospital_consultorio: c.hospital_consultorio || '', google_maps_url: c.google_maps_url || '', es_principal: c.es_principal || false })
+}
+
+function resetConsultorioForm() {
+  editConsultorioId.value = null
+  Object.assign(consultorioForm.value, { nombre: '', direccion: '', codigo_postal: '', colonia: '', ciudad: '', estado: '', hospital_consultorio: '', google_maps_url: '', es_principal: false })
+}
+
+async function cargarConsultoriosMedico(id_medico) {
+  try {
+    const data = await $fetch(`/api/admin/consultorios?id_medico=${id_medico}`, { headers: { Authorization: 'Bearer ' + authToken.value } })
+    consultorios.value = data?.consultorios || []
+  } catch { consultorios.value = [] }
+}
+
+function abrirGoogleMaps(url) { if (url) window.open(url, '_blank') }
 
 // ========== SECCION: PACIENTES (crear/buscar/editar) ==========
 const searchPacienteAdmin = ref('')
@@ -701,7 +759,7 @@ const loadingSearchEmpresa = ref(false)
 const showNuevaEmpresa = ref(false)
 const editandoEmpresa = ref(false)
 const empresaEditId = ref(null)
-const formEmpresa = ref({ nombre: '', rfc: '', email: '', telefono: '', contacto_nombre: '', direccion: '', ciudad: '', estado: '' })
+const formEmpresa = ref({ nombre: '', rfc: '', email: '', telefono: '', contacto_nombre: '', direccion: '', ciudad: '', estado: '', google_maps_url: '' })
 const savingEmpresa = ref(false)
 const errorMsgEmpresa = ref('')
 const okMsgEmpresa = ref('')
@@ -759,7 +817,7 @@ async function guardarEmpresa() {
 }
 
 function abrirEditarEmpresa(e) {
-  formEmpresa.value = { nombre: e.nombre, rfc: e.rfc || '', email: e.email || '', telefono: e.telefono || '', contacto_nombre: e.contacto_nombre || '', direccion: e.direccion || '', ciudad: e.ciudad || '', estado: e.estado || '' }
+  formEmpresa.value = { nombre: e.nombre, rfc: e.rfc || '', email: e.email || '', telefono: e.telefono || '', contacto_nombre: e.contacto_nombre || '', direccion: e.direccion || '', ciudad: e.ciudad || '', estado: e.estado || '', google_maps_url: e.google_maps_url || '' }
   empresaEditId.value = e.id
   editandoEmpresa.value = true
   showNuevaEmpresa.value = true
@@ -769,7 +827,7 @@ function cerrarFormEmpresa() {
   showNuevaEmpresa.value = false
   editandoEmpresa.value = false
   empresaEditId.value = null
-  formEmpresa.value = { nombre: '', rfc: '', email: '', telefono: '', contacto_nombre: '', direccion: '', ciudad: '', estado: '' }
+  formEmpresa.value = { nombre: '', rfc: '', email: '', telefono: '', contacto_nombre: '', direccion: '', ciudad: '', estado: '', google_maps_url: '' }
   errorMsgEmpresa.value = ''
 }
 
@@ -1514,6 +1572,50 @@ async function crearPacienteParaEmpresa() {
             <div class="field"><label>Estado</label><input v-model="formMedico.consultorio_estado" /></div>
             <div class="field"><label>Colonia</label><input v-model="formMedico.colonia" placeholder="Colonia / Fracc." /></div>
           </div>
+
+          <!-- CONSULTORIOS ADICIONALES -->
+          <div class="section-divider"><span>Consultorios / Ubicaciones</span></div>
+          <div v-if="consultorios.length > 0" class="consultorios-list">
+            <div v-for="(c, idx) in consultorios" :key="c.id || idx" class="consultorio-item" :class="{ principal: c.es_principal }">
+              <div class="consultorio-info">
+                <strong>{{ c.nombre || 'Consultorio ' + (idx+1) }}</strong> <span v-if="c.es_principal" class="badge-principal">Principal</span>
+                <span>{{ c.direccion }} {{ c.colonia ? ', ' + c.colonia : '' }} {{ c.ciudad ? ', ' + c.ciudad : '' }} {{ c.estado ? ', ' + c.estado : '' }}</span>
+                <span v-if="c.hospital_consultorio">{{ c.hospital_consultorio }}</span>
+                <span v-if="c.google_maps_url"><a :href="c.google_maps_url" target="_blank" class="maps-link">📍 Ver en Maps</a></span>
+              </div>
+              <div class="consultorio-actions">
+                <button type="button" class="btn-sm" @click="editarConsultorioItem(c)">Editar</button>
+                <button type="button" class="btn-remove" @click="eliminarConsultorio(idx)">✕</button>
+              </div>
+            </div>
+          </div>
+          <div class="consultorio-form">
+            <div class="field-row">
+              <div class="field"><label>Nombre</label><input v-model="consultorioForm.nombre" placeholder="Ej: Consultorio Principal" /></div>
+              <div class="field"><label>Direccion</label><input v-model="consultorioForm.direccion" placeholder="Calle y numero" /></div>
+            </div>
+            <div class="field-row">
+              <div class="field"><label>CP</label><input v-model="consultorioForm.codigo_postal" maxlength="5" placeholder="5 digitos" /></div>
+              <div class="field"><label>Colonia</label><input v-model="consultorioForm.colonia" /></div>
+              <div class="field"><label>Ciudad</label><input v-model="consultorioForm.ciudad" /></div>
+            </div>
+            <div class="field-row">
+              <div class="field"><label>Estado</label><input v-model="consultorioForm.estado" /></div>
+              <div class="field"><label>Hospital</label><input v-model="consultorioForm.hospital_consultorio" /></div>
+            </div>
+            <div class="field-row">
+              <div class="field" style="flex:2"><label>URL Google Maps</label><input v-model="consultorioForm.google_maps_url" placeholder="https://maps.google.com/..." /></div>
+              <div class="field" style="flex:0; align-self:flex-end;">
+                <button type="button" v-if="consultorioForm.google_maps_url" class="btn-maps" @click="abrirGoogleMaps(consultorioForm.google_maps_url)">📍 Abrir</button>
+              </div>
+            </div>
+            <div class="field-row">
+              <label class="checkbox-label"><input type="checkbox" v-model="consultorioForm.es_principal" /> Consultorio principal</label>
+              <button type="button" class="btn-add-consultorio" @click="editConsultorioId ? guardarConsultorioEdit() : agregarConsultorio()">{{ editConsultorioId ? 'Actualizar' : '+ Agregar' }}</button>
+              <button v-if="editConsultorioId" type="button" class="btn-secondary" @click="resetConsultorioForm()">Cancelar edicion</button>
+            </div>
+          </div>
+
           <div class="btn-row"><button @click="cerrarFormMedico" class="btn-secondary">Cancelar</button><button @click="guardarMedico" :disabled="savingMedico" class="btn-primary">{{ savingMedico ? 'Guardando...' : (editandoMedico ? 'Actualizar' : 'Guardar') }}</button></div>
         </div>
       </div>
@@ -1588,6 +1690,12 @@ async function crearPacienteParaEmpresa() {
           <div class="field"><label>Contacto</label><input v-model="formEmpresa.contacto_nombre" /></div>
           <div class="field"><label>Direccion</label><input v-model="formEmpresa.direccion" /></div>
           <div class="field-row"><div class="field"><label>Ciudad</label><input v-model="formEmpresa.ciudad" /></div><div class="field"><label>Estado</label><input v-model="formEmpresa.estado" /></div></div>
+          <div class="field-row">
+            <div class="field" style="flex:2"><label>URL Google Maps</label><input v-model="formEmpresa.google_maps_url" placeholder="https://maps.google.com/..." /></div>
+            <div class="field" style="flex:0; align-self:flex-end;">
+              <button type="button" v-if="formEmpresa.google_maps_url" class="btn-maps" @click="abrirGoogleMaps(formEmpresa.google_maps_url)">📍 Abrir</button>
+            </div>
+          </div>
           <div class="btn-row"><button @click="cerrarFormEmpresa" class="btn-secondary">Cancelar</button><button @click="guardarEmpresa" :disabled="savingEmpresa" class="btn-primary">{{ savingEmpresa ? 'Guardando...' : (editandoEmpresa ? 'Actualizar' : 'Guardar') }}</button></div>
         </div>
       </div>
@@ -2010,4 +2118,28 @@ h1 { font-size: 1.5rem; color: #2d3436; }
 @media (max-width: 640px) {
   .curp-row { flex-direction: column; }
 }
+
+/* Consultorios multi-ubicacion */
+.section-divider { margin: 0.75rem 0 0.5rem; padding-bottom: 0.4rem; border-bottom: 2px solid #e0e0e0; }
+.section-divider span { font-size: 0.75rem; font-weight: 700; color: #2d3436; text-transform: uppercase; letter-spacing: 0.5px; }
+.consultorios-list { margin-bottom: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.consultorio-item { display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 0.85rem; background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px; gap: 0.75rem; }
+.consultorio-item.principal { border-color: #00b894; background: #f0fff4; }
+.consultorio-info { display: flex; flex-direction: column; gap: 0.15rem; flex: 1; min-width: 0; }
+.consultorio-info strong { font-size: 0.85rem; color: #2d3436; }
+.consultorio-info span { font-size: 0.78rem; color: #636e72; }
+.consultorio-actions { display: flex; gap: 0.35rem; flex-shrink: 0; }
+.badge-principal { display: inline-block; background: #00b894; color: white; padding: 0.1rem 0.5rem; border-radius: 10px; font-size: 0.65rem; font-weight: 600; margin-left: 0.35rem; vertical-align: middle; }
+.btn-add-consultorio { background: #00b894; color: white; border: none; padding: 0.4rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.82rem; font-weight: 600; }
+.btn-add-consultorio:hover { background: #00a884; }
+.btn-maps { background: #4285f4; color: white; border: none; padding: 0.4rem 0.75rem; border-radius: 6px; cursor: pointer; font-size: 0.78rem; white-space: nowrap; }
+.btn-maps:hover { background: #3367d6; }
+.btn-remove { background: none; border: 1px solid #d63031; color: #d63031; border-radius: 4px; cursor: pointer; font-size: 0.7rem; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.btn-remove:hover { background: #ffebee; }
+.btn-sm { padding: 0.25rem 0.5rem; border: 1px solid #dfe6e9; border-radius: 4px; cursor: pointer; font-size: 0.75rem; background: white; }
+.btn-sm:hover { background: #f5f5f5; }
+.maps-link { color: #4285f4; font-size: 0.78rem; text-decoration: none; font-weight: 500; }
+.maps-link:hover { text-decoration: underline; }
+.checkbox-label { display: flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; color: #2d3436; cursor: pointer; }
+.consultorio-form { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 0.75rem; margin-bottom: 0.75rem; }
 </style>
