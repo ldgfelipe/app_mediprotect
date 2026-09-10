@@ -33,7 +33,7 @@
             <span class="provider-icon-lg">🌐</span>
             <div>
               <h3>General del Sistema</h3>
-              <p class="section-desc">Modo de operación, Firebase y base de datos activa</p>
+              <p class="section-desc">Modo de operación, Supabase y base de datos activa</p>
             </div>
           </div>
         </div>
@@ -69,17 +69,17 @@
             </div>
           </div>
 
-          <!-- Firebase URL -->
+          <!-- Supabase URL -->
           <div class="form-row">
             <div class="form-group flex-1">
-              <label>Firebase Project URL</label>
+              <label>Supabase Project URL</label>
               <input
                 v-model="sistema.firebaseUrl"
                 type="text"
-                placeholder="https://midominio.web.app"
+                placeholder="https://xxxxx.supabase.co"
                 @input="markDirty"
               >
-              <small class="field-hint">URL del proyecto de Firebase que usa este sistema (hosting, storage, etc.)</small>
+              <small class="field-hint">URL del proyecto de Supabase que usa este sistema (base de datos, auth, storage, etc.)</small>
             </div>
           </div>
 
