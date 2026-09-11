@@ -1,4 +1,5 @@
 export default defineEventHandler(async (event) => {
+  try {
   const pool = useDbPool(event)
 
   const result = await pool.query(`
@@ -24,7 +25,10 @@ export default defineEventHandler(async (event) => {
     color: r.color || 'primary',
     descripcion: r.descripcion,
     total_medicos: Number(r.total_medicos),
-  }))
+  
+  } catch (err: any) {
+    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
+  }}))
 
   return { categorias, total: categorias.length }
 })

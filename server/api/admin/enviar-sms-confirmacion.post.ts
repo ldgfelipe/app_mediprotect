@@ -1,21 +1,8 @@
-import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
 import { enviarSms, generarCodigoVerificacion, getConexionesActivas } from '../../utils/sms.js'
 
 export default defineEventHandler(async (event) => {
-  const token = getHeader(event, 'authorization')?.replace('Bearer ', '') || getCookie(event, 'admin_token')
-  if (!token) throw createError({ statusCode: 401, message: 'No autorizado' })
-
-  let user: any
-  try {
-    user = jwt.verify(token, process.env.JWT_SECRET || 'mediprotect_jwt_secret_key_2026')
-  } catch {
-    throw createError({ statusCode: 401, message: 'Token invalido' })
-  }
-
-  if (user.tipo !== 'admin' && user.rol !== 'admin' && user.tipo !== 'asistente') {
-    throw createError({ statusCode: 403, message: 'Solo administradores y asistentes pueden enviar SMS de confirmacion' })
-  }
+  const user = verifyAdminOrAsistenteToken(event)
 
   const body = await readBody(event)
   const { id, tipo, telefono } = body

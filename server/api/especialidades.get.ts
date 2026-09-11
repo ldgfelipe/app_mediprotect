@@ -1,5 +1,9 @@
 export default defineEventHandler(async (event) => {
-  const pool = useDbPool(event)
-  const result = await pool.query('SELECT * FROM especialidades ORDER BY nombre')
-  return { especialidades: result.rows }
+  try {
+    const pool = useDbPool(event)
+    const result = await pool.query('SELECT * FROM especialidades ORDER BY nombre')
+    return { especialidades: result.rows }
+  } catch (err: any) {
+    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
+  }
 })

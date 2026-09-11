@@ -1,4 +1,5 @@
 export default defineEventHandler(async (event) => {
+  const user = verifyToken(event)
   const body = await readBody(event)
   const { pago_id, metodo, tarjeta } = body
 
@@ -19,6 +20,10 @@ export default defineEventHandler(async (event) => {
   }
 
   const pago = pagoResult.rows[0]
+
+  if (user.tipo !== 'admin' && user.id !== pago.id_paciente) {
+    throw createError({ statusCode: 403, message: 'No puedes procesar pagos de otro paciente' })
+  }
 
   try {
     let nuevoEstado = 'pagado'

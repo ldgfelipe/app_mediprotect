@@ -1,4 +1,5 @@
 export default defineEventHandler(async (event) => {
+  try {
   const query = getQuery(event)
   const termino = (query.q as string || '').trim().toLowerCase()
 
@@ -24,7 +25,10 @@ export default defineEventHandler(async (event) => {
         OR LOWER(e.nombre) ILIKE '%' || $1 || '%'
       )
     `
-  }
+  
+  } catch (err: any) {
+    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
+  }}
 
   sql += ' ORDER BY m.nombre, m.apellido LIMIT 50'
 

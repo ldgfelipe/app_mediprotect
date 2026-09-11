@@ -1,10 +1,14 @@
 export default defineEventHandler(async (event) => {
+  try {
   const id = getRouterParam(event, 'id')
   const pool = useDbPool(event)
 
   if (!id) {
     throw createError({ statusCode: 400, message: 'ID o slug requerido' })
-  }
+  
+  } catch (err: any) {
+    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
+  }}
 
   // Support both UUID and slug
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)

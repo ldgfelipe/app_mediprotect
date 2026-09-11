@@ -1,8 +1,12 @@
 export default defineEventHandler(async (event) => {
+  try {
   const decoded = verifyToken(event)
   if (decoded.tipo !== 'paciente') {
     throw createError({ statusCode: 403, message: 'Solo pacientes pueden agendar citas' })
-  }
+  
+  } catch (err: any) {
+    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
+  }}
 
   const { id_medico, fecha_hora, notas_paciente } = await readBody(event)
   if (!id_medico || !fecha_hora) {

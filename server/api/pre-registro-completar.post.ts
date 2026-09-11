@@ -1,4 +1,5 @@
 export default defineEventHandler(async (event) => {
+  const user = verifyToken(event)
   const b = await readBody(event)
   const { pre_registro_id } = b
 

@@ -1,4 +1,10 @@
 export default defineEventHandler(async (event) => {
+  const webhookSecret = process.env.WEBHOOK_SECRET || 'mediprotect_webhook_2026'
+  const authHeader = getHeader(event, 'x-webhook-secret')
+  if (authHeader !== webhookSecret) {
+    throw createError({ statusCode: 401, message: 'Webhook no autorizado' })
+  }
+
   const body = await readBody(event)
   const query = getQuery(event)
   const provedor = query.provedor as string || 'mercadopago'

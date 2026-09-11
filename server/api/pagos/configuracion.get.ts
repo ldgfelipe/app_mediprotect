@@ -1,4 +1,5 @@
 export default defineEventHandler(async (event) => {
+  try {
   const pool = useDbPool(event)
   const result = await pool.query(
     `SELECT clave, valor FROM configuracion_sistema
@@ -10,7 +11,10 @@ export default defineEventHandler(async (event) => {
     mercadopago: false,
     stripe: false,
     paypal: false
-  }
+  
+  } catch (err: any) {
+    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
+  }}
 
   for (const row of result.rows) {
     if (row.clave === 'pago_mercadopago_key' && row.valor) proveedores.mercadopago = true

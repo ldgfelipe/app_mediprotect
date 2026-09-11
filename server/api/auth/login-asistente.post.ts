@@ -2,9 +2,13 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 
 export default defineEventHandler(async (event) => {
+  try {
   const pool = useDbPool(event)
   const body = await readBody(event)
-  const { email, password } = body
+  const { email, password 
+  } catch (err: any) {
+    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
+  }} = body
 
   if (!email || !password) {
     throw createError({ statusCode: 400, message: 'Email y contraseña son requeridos' })

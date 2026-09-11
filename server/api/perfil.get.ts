@@ -1,10 +1,14 @@
 export default defineEventHandler(async (event) => {
+  try {
   const query = getQuery(event)
   const path = (query.path as string || '').trim()
 
   if (!path) {
     throw createError({ statusCode: 400, message: 'Parámetro "path" requerido. Ejemplo: /perfil-dr-erasmo-aaron-vega' })
-  }
+  
+  } catch (err: any) {
+    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
+  }}
 
   const pool = useDbPool(event)
 

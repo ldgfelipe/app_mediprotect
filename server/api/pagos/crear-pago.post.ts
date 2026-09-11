@@ -1,11 +1,14 @@
-import jwt from 'jsonwebtoken'
-
 export default defineEventHandler(async (event) => {
+  const user = verifyToken(event)
   const body = await readBody(event)
   const { id_paciente, id_plan, monto, moneda, provedor, metodo_pago } = body
 
   if (!id_paciente || !monto || !provedor) {
     throw createError({ statusCode: 400, message: 'id_paciente, monto y provedor son requeridos' })
+  }
+
+  if (user.tipo !== 'admin' && user.id !== id_paciente) {
+    throw createError({ statusCode: 403, message: 'No puedes crear pagos para otro paciente' })
   }
 
   const pool = useDbPool(event)

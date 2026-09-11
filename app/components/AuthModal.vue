@@ -105,7 +105,7 @@ async function validarCURP() {
     curpDatos.value = data.response
 
     // Guardar CURP en localStorage para persistir
-    localStorage.setItem('pending_curp', curp)
+    try { localStorage.setItem('pending_curp', curp) } catch {}
 
     // Guardar pre-registro con datos CURP
     const s = curpDatos.value.Solicitante || {}

@@ -1,11 +1,7 @@
-import jwt from 'jsonwebtoken'
 import { probarSmtp } from '../../utils/email.js'
 
 export default defineEventHandler(async (event) => {
-  const token = getHeader(event, 'authorization')?.replace('Bearer ', '') || getCookie(event, 'admin_token')
-  if (!token) throw createError({ statusCode: 401, message: 'No autorizado' })
-  try { jwt.verify(token, process.env.JWT_SECRET || 'mediprotect_jwt_secret_key_2026') }
-  catch { throw createError({ statusCode: 401, message: 'Token inválido' }) }
+const _user = verifyAdminToken(event)
 
   const body = await readBody(event)
   const to = (body?.to || '').trim().toLowerCase()

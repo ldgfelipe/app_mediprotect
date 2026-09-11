@@ -1,5 +1,9 @@
 export default defineEventHandler(async (event) => {
-  const { slug } = getRouterParams(event)
+  try {
+  const { slug 
+  } catch (err: any) {
+    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
+  }} = getRouterParams(event)
   const pool = useDbPool(event)
 
   const result = await pool.query(`
