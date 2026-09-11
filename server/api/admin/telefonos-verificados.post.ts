@@ -13,7 +13,7 @@ const decoded = _user
     throw createError({ statusCode: 400, message: 'El telefono debe tener al menos 10 digitos' })
   }
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
   try {
     await pool.query(
       'INSERT INTO telefonos_verificados (telefono, descripcion, verificado_por) VALUES ($1, $2, $3)',

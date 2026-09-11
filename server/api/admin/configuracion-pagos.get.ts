@@ -2,7 +2,7 @@
 export default defineEventHandler(async (event) => {
 const _user = verifyAdminOrAsistenteToken(event)
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
   const result = await pool.query(
     `SELECT clave, valor, valor_encriptado, descripcion, categoria, tipo, updated_at
      FROM configuracion_sistema

@@ -3,7 +3,7 @@ export default defineEventHandler(async (event) => {
 const _user = verifyAdminToken(event)
 
   const body = await readBody(event)
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
 
   const result = await pool.query(
     'INSERT INTO paquetes (nombre, descripcion, precio, duracion_dias) VALUES ($1,$2,$3,$4) RETURNING *',

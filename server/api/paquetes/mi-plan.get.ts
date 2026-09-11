@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, message: 'Token inv�lido' })
   }
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
   const result = await pool.query(`
     SELECT p.id, p.nombre, p.slug, p.precio, p.descripcion,
            pp.fecha_inicio, pp.fecha_fin, pp.activo as suscripcion_activa,

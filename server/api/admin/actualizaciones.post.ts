@@ -8,7 +8,7 @@ const decoded = _user
 
   if (!titulo) throw createError({ statusCode: 400, message: 'El titulo es requerido' })
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
   const result = await pool.query(
     `INSERT INTO actualizaciones_sistema (titulo, descripcion, tipo, version, estado, creado_por)
      VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,

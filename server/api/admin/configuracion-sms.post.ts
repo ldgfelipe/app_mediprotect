@@ -9,7 +9,7 @@ const _user = verifyAdminToken(event)
     throw createError({ statusCode: 400, message: 'Se esperaba un array de configuraciones' })
   }
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
   let actualizados = 0
 
   for (const config of configuraciones) {

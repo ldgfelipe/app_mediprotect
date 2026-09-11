@@ -30,7 +30,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Tipo invalido' })
   }
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
 
   // Verificar si el telefono esta en la lista de verificados por admin
   const telVerificado = await pool.query(

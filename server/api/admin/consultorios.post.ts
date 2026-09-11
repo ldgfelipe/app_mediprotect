@@ -7,7 +7,7 @@ const _user = verifyAdminToken(event)
 
   if (!id_medico) throw createError({ statusCode: 400, message: 'id_medico requerido' })
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
 
   if (es_principal) {
     await pool.query('UPDATE consultorios SET es_principal = false WHERE id_medico = $1', [id_medico])

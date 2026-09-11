@@ -2,7 +2,7 @@
 export default defineEventHandler(async (event) => {
 const _user = verifyAdminToken(event)
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
   const buscar = getQuery(event).buscar as string | undefined
 
   let query = `

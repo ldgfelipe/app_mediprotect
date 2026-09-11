@@ -9,7 +9,7 @@ const _user = verifyAdminToken(event)
     throw createError({ statusCode: 400, message: 'Configuración inválida' })
   }
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
 
   const upsert = async (clave: string, valor: string, tipo: string) => {
     const result = await pool.query(

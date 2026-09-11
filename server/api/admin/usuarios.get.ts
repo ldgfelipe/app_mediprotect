@@ -1,7 +1,7 @@
 export default defineEventHandler(async (event) => {
   const _user = verifyAdminToken(event)
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
 
   const result = await pool.query(
     `SELECT u.id, u.nombre, u.email, u.id_rol, u.activo, u.created_at, r.nombre as rol_nombre

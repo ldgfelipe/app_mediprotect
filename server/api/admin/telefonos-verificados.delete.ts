@@ -7,7 +7,7 @@ const _user = verifyAdminToken(event)
 
   if (!id) throw createError({ statusCode: 400, message: 'ID requerido' })
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
   const result = await pool.query('DELETE FROM telefonos_verificados WHERE id = $1', [id])
 
   if (result.rowCount === 0) {

@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
   }}
 
   const { id } = getRouterParams(event)
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
 
   const result = await pool.query(
     `DELETE FROM disponibilidad_medico WHERE id = $1 AND id_medico = $2 RETURNING id`,

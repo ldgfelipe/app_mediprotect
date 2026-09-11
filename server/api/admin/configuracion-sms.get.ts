@@ -2,7 +2,7 @@
 export default defineEventHandler(async (event) => {
 const _user = verifyAdminToken(event)
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
 
   const result = await pool.query(
     "SELECT clave, valor, valor_encriptado, descripcion, tipo FROM configuracion_sistema WHERE categoria = 'sms'"

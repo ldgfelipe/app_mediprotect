@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'pago_id es requerido' })
   }
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
 
   const result = await pool.query(
     `SELECT p.*, paq.nombre as plan_nombre, pa.nombre as paciente_nombre, pa.email as paciente_email

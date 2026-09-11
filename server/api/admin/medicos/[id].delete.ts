@@ -2,7 +2,7 @@
 export default defineEventHandler(async (event) => {
 const _user = verifyAdminToken(event)
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
   const id = getRouterParam(event, 'id')
 
   const existing = await pool.query('SELECT id FROM medicos WHERE id = $1', [id])

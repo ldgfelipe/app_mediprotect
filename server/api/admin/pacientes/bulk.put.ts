@@ -9,7 +9,7 @@ const _user = verifyAdminToken(event)
     throw createError({ statusCode: 400, message: 'Al menos uno de los campos es requerido: curp, genero, estado_civil' })
   }
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
 
   // Obtener todos los pacientes
   const allPatients = await pool.query('SELECT id FROM pacientes ORDER BY created_at')

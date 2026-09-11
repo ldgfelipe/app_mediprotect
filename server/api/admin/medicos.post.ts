@@ -28,7 +28,7 @@ const _user = verifyAdminToken(event)
     throw createError({ statusCode: 400, message: 'El c�digo postal debe tener 5 d�gitos' })
   }
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
 
   if (email) {
     const existing = await pool.query('SELECT id FROM medicos WHERE email = $1', [email])

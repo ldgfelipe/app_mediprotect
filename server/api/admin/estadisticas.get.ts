@@ -1,7 +1,7 @@
 
 export default defineEventHandler(async (event) => {
   const _user = verifyAdminToken(event)
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
 
   const [pacientes, medicos, citas, ingresos, empresas, pagos, planes, roles] = await Promise.all([
     pool.query('SELECT COUNT(*) FROM pacientes'),

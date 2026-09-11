@@ -3,7 +3,7 @@ import { verifyToken } from '../../utils/auth'
 export default defineEventHandler(async (event) => {
   try {
   const decoded = verifyToken(event)
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
   const { id, tipo 
   } catch (err: any) {
     throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })

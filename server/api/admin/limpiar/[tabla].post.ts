@@ -13,7 +13,7 @@ const _user = verifyAdminToken(event)
     })
   }
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
   const safe = /^[a-z_]+$/.test(tabla)
   if (!safe) throw createError({ statusCode: 400, message: 'Nombre de tabla inválido' })
 

@@ -7,7 +7,7 @@ const _user = verifyAdminToken(event)
 
   if (!nombre) throw createError({ statusCode: 400, message: 'El nombre es requerido' })
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
 
   // Si se marca como preferida, quitar preferida de las demas
   if (preferida) {

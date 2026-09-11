@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
   if (!telefono) throw createError({ statusCode: 400, message: 'Telefono requerido' })
 
   const telefonoLimpio = telefono.replace(/[^0-9]/g, '')
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
 
   const result = await pool.query(
     'SELECT id FROM telefonos_verificados WHERE telefono LIKE $1 OR telefono = $2',

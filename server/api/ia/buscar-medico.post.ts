@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'La informaci�n del m�dico es requerida (m�nimo 20 caracteres)' })
   }
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
 
   // Obtener configuraci�n de IA
   const configResult = await pool.query(

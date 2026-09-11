@@ -5,7 +5,7 @@ export default defineEventHandler(async (event) => {
   } catch (err: any) {
     throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
   }} = getRouterParams(event)
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
 
   const cita = await pool.query(
     'SELECT id, id_paciente, id_medico, estado FROM citas WHERE id = $1', [id]

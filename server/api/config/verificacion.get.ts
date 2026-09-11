@@ -1,6 +1,6 @@
 export default defineEventHandler(async (event) => {
   try {
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
   const result = await pool.query(
     "SELECT clave, valor FROM configuracion_sistema WHERE clave IN ('require_phone_verification', 'require_email_verification')"
   )

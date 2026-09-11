@@ -2,7 +2,7 @@
 export default defineEventHandler(async (event) => {
 const _user = verifyAdminToken(event)
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
   const result = await pool.query(`
     SELECT paq.*, COALESCE(json_agg(json_build_object('id', pb.id, 'beneficio', pb.beneficio)) FILTER (WHERE pb.id IS NOT NULL), '[]') as beneficios
     FROM paquetes paq

@@ -6,7 +6,7 @@ const _user = verifyAdminToken(event)
   const body = await readBody(event)
   const { nombre, direccion, codigo_postal, colonia, ciudad, estado, hospital_consultorio, google_maps_url, es_principal, activo } = body
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
 
   if (es_principal) {
     const consultorio = await pool.query('SELECT id_medico FROM consultorios WHERE id = $1', [id])

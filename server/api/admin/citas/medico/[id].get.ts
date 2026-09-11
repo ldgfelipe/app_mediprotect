@@ -1,7 +1,7 @@
 export default defineEventHandler(async (event) => {
   const _user = verifyAdminOrAsistenteToken(event)
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
   const { id } = getRouterParams(event)
 
   const medico = await pool.query(

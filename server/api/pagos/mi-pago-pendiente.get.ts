@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
     user = jwt.verify(authHeader, process.env.JWT_SECRET || 'mediprotect_jwt_secret_key_2026')
   } catch { throw createError({ statusCode: 401, message: 'Token inválido' }) }
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
 
   const result = await pool.query(
     `SELECT p.id, p.monto, p.estado, p.created_at, p.id_plan,

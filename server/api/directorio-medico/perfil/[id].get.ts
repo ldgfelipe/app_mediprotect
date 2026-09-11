@@ -1,7 +1,7 @@
 export default defineEventHandler(async (event) => {
   try {
   const id = getRouterParam(event, 'id')
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
 
   if (!id) {
     throw createError({ statusCode: 400, message: 'ID o slug requerido' })

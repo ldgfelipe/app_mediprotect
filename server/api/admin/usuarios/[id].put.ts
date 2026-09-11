@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event)
   const { nombre, email, password, id_rol, activo } = body
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
 
   let passwordHash = null
   if (password) {

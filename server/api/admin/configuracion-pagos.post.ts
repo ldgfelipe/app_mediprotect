@@ -9,7 +9,7 @@ const _user = verifyAdminToken(event)
     throw createError({ statusCode: 400, message: 'Formato inv�lido' })
   }
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
   const resultados: any[] = []
 
   for (const config of configuraciones) {

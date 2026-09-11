@@ -23,7 +23,7 @@ const _user = verifyAdminToken(event)
     throw createError({ statusCode: 400, message: 'El código postal debe tener 5 dígitos' })
   }
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
 
   const existing = await pool.query('SELECT id FROM pacientes WHERE email = $1', [email])
   if (existing.rows.length > 0) {

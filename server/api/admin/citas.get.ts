@@ -2,7 +2,7 @@
 export default defineEventHandler(async (event) => {
 const _user = verifyAdminOrAsistenteToken(event)
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
   const result = await pool.query(`
     SELECT c.id, c.fecha_hora, c.estado, c.created_at, c.notas_paciente, c.notas_asistente,
            CONCAT(p.nombre, ' ', p.apellido) as paciente_nombre,

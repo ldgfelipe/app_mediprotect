@@ -3,7 +3,7 @@ export default defineEventHandler(async (event) => {
 const _user = verifyAdminToken(event)
 
   const id = getRouterParam(event, 'id')
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
 
   const result = await pool.query(`
     SELECT ep.*, p.nombre, p.apellido, p.email, p.telefono

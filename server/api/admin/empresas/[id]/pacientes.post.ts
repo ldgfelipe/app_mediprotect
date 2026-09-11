@@ -8,7 +8,7 @@ const _user = verifyAdminToken(event)
 
   if (!id_paciente) throw createError({ statusCode: 400, message: 'id_paciente es requerido' })
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
 
   const existing = await pool.query(
     'SELECT id FROM empresa_pacientes WHERE id_empresa = $1 AND id_paciente = $2',

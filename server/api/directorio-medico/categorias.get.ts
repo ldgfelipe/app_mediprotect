@@ -1,6 +1,6 @@
 export default defineEventHandler(async (event) => {
   try {
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
 
   const result = await pool.query(`
     SELECT

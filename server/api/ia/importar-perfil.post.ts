@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // Llamar a la API de directorio para obtener el perfil
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
 
   try {
     // Buscar m�dico por slug en nuestra DB

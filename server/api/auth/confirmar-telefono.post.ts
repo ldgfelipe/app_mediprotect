@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Tipo invalido' })
   }
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
   const telefonoLimpio = telefono.replace(/[^0-9+]/g, '')
 
   // Buscar token valido

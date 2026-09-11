@@ -78,7 +78,7 @@ const _user = verifyAdminToken(event)
     throw createError({ statusCode: 400, message: 'Nombre de tabla inválido' })
   }
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
 
   const colRes = await pool.query(
     `SELECT column_name, data_type FROM information_schema.columns WHERE table_name=$1 ORDER BY ordinal_position`,

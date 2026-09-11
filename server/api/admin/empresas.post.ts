@@ -3,7 +3,7 @@ export default defineEventHandler(async (event) => {
 const _user = verifyAdminToken(event)
 
   const body = await readBody(event)
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
 
   const result = await pool.query(`
     INSERT INTO empresas (nombre, rfc, email, telefono, contacto_nombre, direccion, ciudad, estado, google_maps_url)

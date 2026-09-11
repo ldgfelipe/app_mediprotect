@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const table = decoded.tipo === 'medico' ? 'medicos' : 'pacientes'
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
 
   const existente = await pool.query(
     `SELECT id FROM ${table} WHERE email = $1 AND id <> $2`,

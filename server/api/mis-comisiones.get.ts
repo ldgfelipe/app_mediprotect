@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
   const fechaInicio = new Date(year, month - 1, 1)
   const fechaFin = new Date(year, month, 0, 23, 59, 59)
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
   const [stats, detalle, comisionQuery] = await Promise.all([
     pool.query(
       `SELECT COUNT(*)::int as total_citas,

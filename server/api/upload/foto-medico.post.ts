@@ -5,7 +5,7 @@ import { randomUUID } from 'crypto'
 
 export default defineEventHandler(async (event) => {
   const decoded = verifyToken(event)
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
   
   // Solo médicos y admin pueden subir fotos
   if (!['medico', 'admin'].includes(decoded.tipo)) {

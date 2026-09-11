@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'El c�digo postal debe tener 5 d�gitos' })
   }
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
   const existing = await pool.query('SELECT id FROM medicos WHERE email = $1', [email])
   if (existing.rows.length > 0) {
     throw createError({ statusCode: 400, message: 'El email ya est� registrado' })

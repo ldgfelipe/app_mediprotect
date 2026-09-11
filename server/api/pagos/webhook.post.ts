@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const provedor = query.provedor as string || 'mercadopago'
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
 
   try {
     let pagoId: string | null = null

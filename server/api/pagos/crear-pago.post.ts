@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, message: 'No puedes crear pagos para otro paciente' })
   }
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
 
   // Obtener configuración del provedor
   const configResult = await pool.query(

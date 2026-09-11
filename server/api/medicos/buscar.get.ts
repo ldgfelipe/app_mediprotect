@@ -21,7 +21,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'El término de búsqueda debe tener al menos 2 caracteres' })
   }
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
 
   // Búsqueda flexible: ignora "Dr.", "Dra.", espacios extra, y busca parcial
   const terminoLimpio = termino

@@ -20,7 +20,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Se requiere nombre o ID del médico' })
   }
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
 
   let medicoData = null
   let costoConsulta = null

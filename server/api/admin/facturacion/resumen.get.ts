@@ -1,7 +1,7 @@
 export default defineEventHandler(async (event) => {
   const _user = verifyAdminToken(event)
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
   const query = getQuery(event)
   const periodo = query.periodo || new Date().toISOString().slice(0, 7)
   const [year, month] = periodo.split('-').map(Number)

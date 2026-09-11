@@ -5,7 +5,7 @@ const _user = verifyAdminToken(event)
   const query = getQuery(event)
   const categoria = query.categoria as string
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
   let result
   if (categoria) {
     result = await pool.query(

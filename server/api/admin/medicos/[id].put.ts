@@ -15,7 +15,7 @@ const _user = verifyAdminToken(event)
     comision_tipo
   } = body
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
 
   const existing = await pool.query('SELECT id FROM medicos WHERE id = $1', [id])
   if (existing.rowCount === 0) {

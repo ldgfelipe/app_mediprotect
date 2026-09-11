@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Nombre, email, contraseña y rol son requeridos' })
   }
 
-  const pool = useDbPool(event)
+  const pool = await useDbPool(event)
 
   const existing = await pool.query('SELECT id FROM usuarios_sistema WHERE email = $1', [email])
   if (existing.rows.length > 0) {
