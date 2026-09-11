@@ -62,12 +62,21 @@ export default defineEventHandler(async (event) => {
     ? `${notasFinales || ''}\n[Médico: ${medico_nombre}]`.trim()
     : notasFinales
 
+  let asistenteId = null
+  if (user.tipo?.toLowerCase() === 'asistente') {
+    const asistenteCheck = await pool.query('SELECT id FROM asistentes WHERE id = $1', [user.id])
+    if (asistenteCheck.rows.length === 0) {
+      throw createError({ statusCode: 404, message: 'Registro de asistente no encontrado' })
+    }
+    asistenteId = user.id
+  }
+
   // Create the cita
   const result = await pool.query(
     `INSERT INTO citas (id_paciente, id_medico, fecha_hora, notas_paciente, notas_asistente, asistente_id, estado)
      VALUES ($1, $2, COALESCE($3::timestamptz, NOW()), $4, $5, $6, 'pendiente')
      RETURNING *`,
-    [id_paciente, id_medico || null, fecha_hora, notas_paciente || null, notasConMedico, user.id]
+    [id_paciente, id_medico || null, fecha_hora, notas_paciente || null, notasConMedico, asistenteId]
   )
 
   const cita = result.rows[0]
