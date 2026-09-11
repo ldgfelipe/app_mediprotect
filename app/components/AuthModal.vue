@@ -116,7 +116,7 @@ async function validarCURP() {
           curp: curp,
           nombre: s.Nombres || null,
           apellido_paterno: s.ApellidoPaterno || null,
-          apellido_materno: s.AvellidoMaterno || null,
+          apellido_materno: s.ApellidoMaterno || null,
           fecha_nacimiento: s.FechaNacimiento || null,
           genero: s.ClaveSexo === 'H' ? 'masculino' : s.ClaveSexo === 'M' ? 'femenino' : null,
           doctor_nombre: props.doctorName || null

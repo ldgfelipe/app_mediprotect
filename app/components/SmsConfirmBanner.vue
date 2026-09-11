@@ -10,12 +10,20 @@ const success = ref(false)
 const error = ref('')
 const countdown = ref(0)
 const canResend = ref(true)
+let countdownTimer: ReturnType<typeof setInterval> | null = null
 
 const needsConfirmation = computed(() => {
   return verifConfig.value.requirePhone && usuario.value && !usuario.value.telefono_confirmado && usuario.value.telefono
 })
 
 onMounted(() => { loadVerifConfig() })
+
+onBeforeUnmount(() => {
+  if (countdownTimer) {
+    clearInterval(countdownTimer)
+    countdownTimer = null
+  }
+})
 
 function formatPhone(value: string) {
   return value.replace(/[^0-9]/g, '').substring(0, 10)
@@ -43,11 +51,12 @@ async function enviarCodigo() {
     step.value = 'code'
     canResend.value = false
     countdown.value = 60
-    const timer = setInterval(() => {
+    countdownTimer = setInterval(() => {
       countdown.value--
       if (countdown.value <= 0) {
         canResend.value = true
-        clearInterval(timer)
+        clearInterval(countdownTimer!)
+        countdownTimer = null
       }
     }, 1000)
   } catch (e: any) {

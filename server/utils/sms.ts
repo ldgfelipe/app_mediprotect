@@ -1,7 +1,5 @@
 let transporter: any = null
 
-const pool = getPool()
-
 export interface SmsConexion {
   id: number
   nombre: string
@@ -28,6 +26,7 @@ export interface SmsConfig {
 }
 
 async function getConexionesActivas(): Promise<SmsConexion[]> {
+  const pool = getPool()
   const result = await pool.query(
     'SELECT id, nombre, proveedor, account_sid, auth_token, from_number, api_url, metodo, modo, activa, preferida, prioridad FROM sms_conexiones WHERE activa = true ORDER BY preferida DESC, prioridad ASC, created_at ASC'
   )
@@ -41,6 +40,7 @@ async function getSmsConfig(): Promise<SmsConfig> {
     return { provider: c.proveedor, account_sid: c.account_sid, auth_token: c.auth_token, from_number: c.from_number, api_url: c.api_url, metodo: c.metodo || 'POST', modo: c.modo }
   }
   // Fallback a configuracion antigua
+  const pool = getPool()
   const result = await pool.query(
     "SELECT clave, valor FROM configuracion_sistema WHERE categoria = 'sms' AND clave IN ('sms_provider', 'sms_twilio_account_sid', 'sms_twilio_auth_token', 'sms_twilio_from_number', 'sms_modo')"
   )
@@ -180,6 +180,7 @@ async function enviarSmsConConexion(
 }
 
 export async function enviarSms(telefono: string, mensaje: string): Promise<{ success: boolean; sid?: string; error?: string }> {
+  const pool = getPool()
   const telefonoNormalizado = normalizarTelefonoMX(telefono)
   const conexiones = await getConexionesActivas()
 
@@ -226,6 +227,7 @@ export async function enviarSms(telefono: string, mensaje: string): Promise<{ su
 }
 
 export async function enviarSmsConId(conexionId: number, telefono: string, mensaje: string): Promise<{ success: boolean; sid?: string; error?: string }> {
+  const pool = getPool()
   const result = await pool.query('SELECT * FROM sms_conexiones WHERE id = $1 AND activa = true', [conexionId])
   if (result.rows.length === 0) {
     return { success: false, error: 'Conexion no encontrada o inactiva' }
