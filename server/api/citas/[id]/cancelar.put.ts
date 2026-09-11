@@ -1,10 +1,7 @@
 export default defineEventHandler(async (event) => {
   try {
   const decoded = verifyToken(event)
-  const { id 
-  } catch (err: any) {
-    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
-  }} = getRouterParams(event)
+  const { id } = getRouterParams(event)
   const pool = await useDbPool(event)
 
   const cita = await pool.query(
@@ -27,4 +24,8 @@ export default defineEventHandler(async (event) => {
 
   await pool.query('UPDATE citas SET estado = $1, updated_at = NOW() WHERE id = $2', ['cancelada', id])
   return { mensaje: 'Cita cancelada exitosamente' }
+
+  } catch (err: any) {
+    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
+  }
 })

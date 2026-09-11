@@ -4,10 +4,7 @@ export default defineEventHandler(async (event) => {
   try {
   const decoded = verifyToken(event)
   const pool = await useDbPool(event)
-  const { id, tipo 
-  } catch (err: any) {
-    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
-  }} = decoded
+  const { id, tipo } = decoded
 
   if (tipo === 'medico') {
     const result = await pool.query(
@@ -29,4 +26,8 @@ export default defineEventHandler(async (event) => {
   )
   if (result.rows.length === 0) throw createError({ statusCode: 404, message: 'No encontrado' })
   return { usuario: { ...result.rows[0], tipo } }
+
+  } catch (err: any) {
+    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
+  }
 })

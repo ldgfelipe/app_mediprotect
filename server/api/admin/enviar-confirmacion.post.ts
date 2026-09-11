@@ -4,6 +4,10 @@ import { enviarCorreo } from '../../utils/email.js'
 export default defineEventHandler(async (event) => {
   const user = verifyAdminOrAsistenteToken(event)
 
+  if (user.tipo !== 'admin' && user.rol !== 'admin' && user.tipo !== 'asistente') {
+    throw createError({ statusCode: 403, message: 'Solo administradores y asistentes pueden enviar confirmaciones' })
+  }
+
   const body = await readBody(event)
   const { id, tipo } = body
 

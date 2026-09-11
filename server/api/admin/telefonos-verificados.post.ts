@@ -1,7 +1,10 @@
 
 export default defineEventHandler(async (event) => {
-const _user = verifyAdminToken(event)
-const decoded = _user
+  const token = getHeader(event, 'authorization')?.replace('Bearer ', '') || getCookie(event, 'admin_token')
+  if (!token) throw createError({ statusCode: 401, message: 'No autorizado' })
+  let decoded: any
+  try { decoded = jwt.verify(token, process.env.JWT_SECRET || 'mediprotect_jwt_secret_key_2026') }
+  catch { throw createError({ statusCode: 401, message: 'Token invalido' }) }
 
   const body = await readBody(event)
   const { telefono, descripcion } = body

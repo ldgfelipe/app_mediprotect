@@ -1,13 +1,7 @@
-import jwt from 'jsonwebtoken'
 
 export default defineEventHandler(async (event) => {
-  const authHeader = getHeader(event, 'authorization')?.replace('Bearer ', '')
-  if (!authHeader) throw createError({ statusCode: 401, message: 'No autorizado' })
-
-  let user: any
-  try {
-    user = jwt.verify(authHeader, process.env.JWT_SECRET || 'mediprotect_jwt_secret_key_2026')
-  } catch { throw createError({ statusCode: 401, message: 'Token inválido' }) }
+const _user = verifyAdminOrAsistenteToken(event)
+const user = _user
 
   if (!['admin', 'asistente', 'Administrador'].includes(user.tipo)) {
     throw createError({ statusCode: 403, message: 'Acceso no autorizado' })

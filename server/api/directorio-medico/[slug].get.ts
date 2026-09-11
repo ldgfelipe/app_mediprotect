@@ -1,9 +1,6 @@
 export default defineEventHandler(async (event) => {
   try {
-  const { slug 
-  } catch (err: any) {
-    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
-  }} = getRouterParams(event)
+  const { slug } = getRouterParams(event)
   const pool = await useDbPool(event)
 
   const result = await pool.query(`
@@ -88,5 +85,9 @@ export default defineEventHandler(async (event) => {
       } : null,
       especialidades_adicionales: r.especialidades_adicionales || [],
     }
+  }
+
+  } catch (err: any) {
+    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
   }
 })

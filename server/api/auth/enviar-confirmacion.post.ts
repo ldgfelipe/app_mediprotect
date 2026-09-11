@@ -1,5 +1,4 @@
 import crypto from 'crypto'
-import jwt from 'jsonwebtoken'
 import { enviarCorreo } from '../../utils/email.js'
 
 export default defineEventHandler(async (event) => {

@@ -1,9 +1,6 @@
 export default defineEventHandler(async (event) => {
   try {
-  const { id_medico 
-  } catch (err: any) {
-    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
-  }} = getRouterParams(event)
+  const { id_medico } = getRouterParams(event)
   const pool = await useDbPool(event)
 
   const result = await pool.query(
@@ -28,4 +25,8 @@ export default defineEventHandler(async (event) => {
   }
 
   return { disponibilidad: Object.values(agrupado) }
+
+  } catch (err: any) {
+    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
+  }
 })

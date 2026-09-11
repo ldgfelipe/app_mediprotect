@@ -1,4 +1,3 @@
-import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
 import { enviarSms, generarCodigoVerificacion, getConexionesActivas } from '../../utils/sms.js'
 

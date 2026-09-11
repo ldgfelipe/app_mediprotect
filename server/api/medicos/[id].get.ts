@@ -1,9 +1,6 @@
 export default defineEventHandler(async (event) => {
   try {
-  const { id 
-  } catch (err: any) {
-    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
-  }} = getRouterParams(event)
+  const { id } = getRouterParams(event)
   const pool = await useDbPool(event)
 
   const result = await pool.query(
@@ -18,4 +15,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, message: 'Médico no encontrado' })
   }
   return { medico: result.rows[0] }
+
+  } catch (err: any) {
+    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
+  }
 })

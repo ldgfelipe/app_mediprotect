@@ -11,10 +11,7 @@ export default defineEventHandler(async (event) => {
     mercadopago: false,
     stripe: false,
     paypal: false
-  
-  } catch (err: any) {
-    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
-  }}
+  }
 
   for (const row of result.rows) {
     if (row.clave === 'pago_mercadopago_key' && row.valor) proveedores.mercadopago = true
@@ -25,4 +22,8 @@ export default defineEventHandler(async (event) => {
   const configurado = Object.values(proveedores).some(v => v)
 
   return { configurado, proveedores }
+
+  } catch (err: any) {
+    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
+  }
 })
