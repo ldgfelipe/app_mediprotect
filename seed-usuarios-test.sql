@@ -3,10 +3,22 @@
 -- Ejecutar en Supabase SQL Editor (test DB)
 -- ============================================
 
--- Agregar UNIQUE constraint si no existe (requerido para ON CONFLICT)
+-- Agregar UNIQUE constraint si no existe
 DO $$ BEGIN
   ALTER TABLE roles ADD CONSTRAINT roles_nombre_unique UNIQUE (nombre);
-EXCEPTION WHEN duplicate_table THEN NULL;
+EXCEPTION WHEN duplicate_table THEN NULL; WHEN duplicate_object THEN NULL;
+END $$;
+
+-- Agregar columna activo si no existe
+DO $$ BEGIN
+  ALTER TABLE pacientes ADD COLUMN activo BOOLEAN DEFAULT true;
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+
+-- Agregar UNIQUE en usuarios_sistema.email si no existe
+DO $$ BEGIN
+  ALTER TABLE usuarios_sistema ADD CONSTRAINT usuarios_sistema_email_unique UNIQUE (email);
+EXCEPTION WHEN duplicate_table THEN NULL; WHEN duplicate_object THEN NULL;
 END $$;
 
 -- ============================================
