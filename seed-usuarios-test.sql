@@ -3,11 +3,27 @@
 -- Ejecutar en Supabase SQL Editor (test DB)
 -- ============================================
 
+-- Agregar UNIQUE constraint si no existe (requerido para ON CONFLICT)
+DO $$ BEGIN
+  ALTER TABLE roles ADD CONSTRAINT roles_nombre_unique UNIQUE (nombre);
+EXCEPTION WHEN duplicate_table THEN NULL;
+END $$;
+
 -- ============================================
--- 1. ASEGURAR ROLES EXISTAN (mayusculas y minusculas)
+-- 1. ASEGURAR ROLES EXISTAN
 -- ============================================
-INSERT INTO roles (nombre) VALUES ('Administrador'), ('Editor'), ('Visualizador') ON CONFLICT (nombre) DO NOTHING;
-INSERT INTO roles (nombre) VALUES ('admin'), ('editor'), ('visualizador') ON CONFLICT (nombre) DO NOTHING;
+INSERT INTO roles (nombre)
+SELECT 'admin' WHERE NOT EXISTS (SELECT 1 FROM roles WHERE nombre = 'admin');
+INSERT INTO roles (nombre)
+SELECT 'editor' WHERE NOT EXISTS (SELECT 1 FROM roles WHERE nombre = 'editor');
+INSERT INTO roles (nombre)
+SELECT 'visualizador' WHERE NOT EXISTS (SELECT 1 FROM roles WHERE nombre = 'visualizador');
+INSERT INTO roles (nombre)
+SELECT 'Administrador' WHERE NOT EXISTS (SELECT 1 FROM roles WHERE nombre = 'Administrador');
+INSERT INTO roles (nombre)
+SELECT 'Editor' WHERE NOT EXISTS (SELECT 1 FROM roles WHERE nombre = 'Editor');
+INSERT INTO roles (nombre)
+SELECT 'Visualizador' WHERE NOT EXISTS (SELECT 1 FROM roles WHERE nombre = 'Visualizador');
 
 -- ============================================
 -- 2. ADMINISTRADORES
