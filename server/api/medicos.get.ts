@@ -18,10 +18,7 @@ export default defineEventHandler(async (event) => {
   if (query.especialidad) {
     sql += ` AND e.id = $${idx++}`
     params.push(query.especialidad)
-  
-  } catch (err: any) {
-    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
-  }}
+  }
   if (query.ciudad) {
     sql += ` AND LOWER(m.consultorio_ciudad) LIKE LOWER($${idx++})`
     params.push(`%${query.ciudad}%`)
@@ -40,4 +37,8 @@ export default defineEventHandler(async (event) => {
 
   const result = await pool.query(sql, params)
   return { medicos: result.rows }
+
+  } catch (err: any) {
+    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
+  }
 })

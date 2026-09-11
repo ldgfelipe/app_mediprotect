@@ -3,10 +3,7 @@ export default defineEventHandler(async (event) => {
   const decoded = verifyToken(event)
   if (decoded.tipo !== 'medico') {
     throw createError({ statusCode: 403, message: 'Solo médicos pueden gestionar disponibilidad' })
-  
-  } catch (err: any) {
-    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
-  }}
+  }
 
   const body = await readBody(event)
   const pool = await useDbPool(event)
@@ -20,4 +17,8 @@ export default defineEventHandler(async (event) => {
 
   setResponseStatus(event, 201)
   return { disponibilidad: result.rows[0] }
+
+  } catch (err: any) {
+    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
+  }
 })

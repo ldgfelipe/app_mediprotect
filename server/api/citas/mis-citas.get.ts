@@ -3,10 +3,7 @@ export default defineEventHandler(async (event) => {
   const decoded = verifyToken(event)
   if (decoded.tipo !== 'paciente') {
     throw createError({ statusCode: 403, message: 'Acceso solo para pacientes' })
-  
-  } catch (err: any) {
-    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
-  }}
+  }
 
   const pool = await useDbPool(event)
   const result = await pool.query(
@@ -21,4 +18,8 @@ export default defineEventHandler(async (event) => {
      ORDER BY c.fecha_hora DESC`, [decoded.id]
   )
   return { citas: result.rows }
+
+  } catch (err: any) {
+    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
+  }
 })

@@ -25,13 +25,14 @@ export default defineEventHandler(async (event) => {
         OR LOWER(e.nombre) ILIKE '%' || $1 || '%'
       )
     `
-  
-  } catch (err: any) {
-    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
-  }}
+  }
 
   sql += ' ORDER BY m.nombre, m.apellido LIMIT 50'
 
   const result = await pool.query(sql, params)
   return { medicos: result.rows }
+
+  } catch (err: any) {
+    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
+  }
 })

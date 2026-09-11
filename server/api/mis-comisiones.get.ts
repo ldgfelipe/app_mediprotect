@@ -3,10 +3,7 @@ export default defineEventHandler(async (event) => {
   const decoded = verifyToken(event)
   if (decoded.tipo !== 'medico') {
     throw createError({ statusCode: 403, message: 'Acceso solo para médicos' })
-  
-  } catch (err: any) {
-    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
-  }}
+  }
 
   const query = getQuery(event)
   const periodo = String(query.periodo || new Date().toISOString().slice(0, 7))
@@ -70,5 +67,9 @@ export default defineEventHandler(async (event) => {
       comision: ['confirmada', 'asistida'].includes(c.estado) ? comisionUnitaria : 0
     })),
     periodo
+  }
+
+  } catch (err: any) {
+    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
   }
 })

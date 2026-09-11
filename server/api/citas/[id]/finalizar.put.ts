@@ -3,10 +3,7 @@ export default defineEventHandler(async (event) => {
   const decoded = verifyToken(event)
   if (decoded.tipo !== 'medico') {
     throw createError({ statusCode: 403, message: 'Solo médicos pueden finalizar citas' })
-  
-  } catch (err: any) {
-    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
-  }}
+  }
 
   const { id } = getRouterParams(event)
   const { resultado } = await readBody(event)
@@ -36,4 +33,8 @@ export default defineEventHandler(async (event) => {
     [resultado, resultado === 'asistida' ? 'coincide_asistio' : 'coincide_no_asistio', id]
   )
   return { mensaje: `Cita marcada como ${resultado}` }
+
+  } catch (err: any) {
+    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
+  }
 })

@@ -3,10 +3,7 @@ export default defineEventHandler(async (event) => {
   const decoded = verifyToken(event)
   if (decoded.tipo !== 'medico') {
     throw createError({ statusCode: 403, message: 'Solo médicos pueden gestionar disponibilidad' })
-  
-  } catch (err: any) {
-    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
-  }}
+  }
 
   const { id } = getRouterParams(event)
   const pool = await useDbPool(event)
@@ -19,4 +16,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, message: 'Disponibilidad no encontrada' })
   }
   return { mensaje: 'Disponibilidad eliminada' }
+
+  } catch (err: any) {
+    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
+  }
 })

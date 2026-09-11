@@ -5,10 +5,7 @@ export default defineEventHandler(async (event) => {
 
   if (!path) {
     throw createError({ statusCode: 400, message: 'Parámetro "path" requerido. Ejemplo: /perfil-dr-erasmo-aaron-vega' })
-  
-  } catch (err: any) {
-    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
-  }}
+  }
 
   const pool = await useDbPool(event)
 
@@ -94,5 +91,9 @@ export default defineEventHandler(async (event) => {
       } : null,
       especialidades_adicionales: r.especialidades_adicionales || [],
     }
+  }
+
+  } catch (err: any) {
+    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
   }
 })

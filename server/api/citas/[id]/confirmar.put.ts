@@ -3,10 +3,7 @@ export default defineEventHandler(async (event) => {
   const decoded = verifyToken(event)
   if (decoded.tipo !== 'medico') {
     throw createError({ statusCode: 403, message: 'Solo médicos pueden confirmar citas' })
-  
-  } catch (err: any) {
-    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
-  }}
+  }
 
   const { id } = getRouterParams(event)
   const pool = await useDbPool(event)
@@ -28,4 +25,8 @@ export default defineEventHandler(async (event) => {
 
   await pool.query('UPDATE citas SET estado = $1, updated_at = NOW() WHERE id = $2', ['confirmada', id])
   return { mensaje: 'Cita confirmada exitosamente' }
+
+  } catch (err: any) {
+    throw createError({ statusCode: 500, message: err?.message || 'Error interno del servidor' })
+  }
 })
