@@ -78,39 +78,6 @@
               <small class="field-hint">URL del proyecto de Supabase que usa este sistema (base de datos, auth, storage, etc.)</small>
             </div>
           </div>
-
-          <!-- Base de datos activa -->
-          <div class="form-row">
-            <div class="form-group flex-1">
-              <label>Base de Datos Activa</label>
-              <div class="mode-switcher">
-                <div class="mode-option" :class="{ active: sistema.db_activa === 'produccion' }" @click="cambiarDB('produccion')">
-                  <div class="mode-icon mode-icon--prod">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><ellipse cx="12" cy="6" rx="8" ry="3" stroke="currentColor" stroke-width="2"/><path d="M4 6v6c0 1.657 3.582 3 8 3s8-1.343 8-3V6" stroke="currentColor" stroke-width="2"/><path d="M4 12v6c0 1.657 3.582 3 8 3s8-1.343 8-3v-6" stroke="currentColor" stroke-width="2"/></svg>
-                  </div>
-                  <div class="mode-info">
-                    <strong>Producción</strong>
-                    <span>mruezojnfgkdhtgxwgmv.supabase.co</span>
-                  </div>
-                  <div class="mode-radio" :class="{ checked: sistema.db_activa === 'produccion' }"></div>
-                </div>
-
-                <div class="mode-option" :class="{ active: sistema.db_activa === 'pruebas' }" @click="cambiarDB('pruebas')">
-                  <div class="mode-icon mode-icon--test">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><ellipse cx="12" cy="6" rx="8" ry="3" stroke="currentColor" stroke-width="2"/><path d="M4 6v6c0 1.657 3.582 3 8 3s8-1.343 8-3V6" stroke="currentColor" stroke-width="2"/><path d="M4 12v6c0 1.657 3.582 3 8 3s8-1.343 8-3v-6" stroke="currentColor" stroke-width="2"/></svg>
-                  </div>
-                  <div class="mode-info">
-                    <strong>Pruebas</strong>
-                    <span>dhadacgebhdiantlhllz.supabase.co</span>
-                  </div>
-                  <div class="mode-radio" :class="{ checked: sistema.db_activa === 'pruebas' }"></div>
-                </div>
-              </div>
-              <div class="db-warning" v-if="sistema.db_activa === 'pruebas'">
-                ⚠️ Estás usando la base de datos de <strong>pruebas</strong>. Los datos no son los de producción.
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -961,13 +928,7 @@ const providers = ref([
 const sistema = ref({
   modo: 'produccion',
   firebaseUrl: '',
-  db_activa: 'produccion',
 })
-
-const cambiarDB = (nueva: string) => {
-  sistema.value.db_activa = nueva
-  markDirty()
-}
 
 const general = ref({
   preferido: 'openai',
@@ -1193,7 +1154,6 @@ const loadConfig = async () => {
     // Sistema config
     sistema.value.modo = configMap['sistema_modo'] || 'produccion'
     sistema.value.firebaseUrl = configMap['sistema_firebase_url'] || ''
-    sistema.value.db_activa = configMap['sistema_db_activa'] || 'produccion'
 
     // SMS config - load from new connections table
     sms.value.enabled = configMap['sms_enabled'] !== 'false'
@@ -1241,7 +1201,6 @@ const saveConfig = async () => {
     // Sistema config
     configuraciones.push({ clave: 'sistema_modo', valor: sistema.value.modo })
     configuraciones.push({ clave: 'sistema_firebase_url', valor: sistema.value.firebaseUrl || '' })
-    configuraciones.push({ clave: 'sistema_db_activa', valor: sistema.value.db_activa })
 
     await $fetch('/api/admin/configuracion', {
       method: 'POST',

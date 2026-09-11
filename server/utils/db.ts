@@ -6,7 +6,7 @@ let prodPool: Pool | null = null
 
 function getProdPool(): Pool {
   if (!prodPool) {
-    prodPool = new Pool({ connectionString: PROD_URL, ssl: { rejectUnauthorized: false } })
+    prodPool = new Pool({ connectionString: PROD_URL, ssl: { rejectUnauthorized: false }, family: 4 })
     prodPool.on('error', (err) => console.error('Pool error:', err))
   }
   return prodPool
