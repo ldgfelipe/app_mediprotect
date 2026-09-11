@@ -1,5 +1,4 @@
 import { Pool } from 'pg'
-import { getRequestHost } from 'h3'
 
 const PROD_URL = process.env.DATABASE_URL || 'postgresql://postgres:Mobiltoo111213@db.mruezojnfgkdhtgxwgmv.supabase.co:5432/postgres'
 const TEST_URL = process.env.TEST_DATABASE_URL || 'postgresql://postgres:mediprotect2026%40@db.dhadacgebhdiantlhllz.supabase.co:5432/postgres'
@@ -57,39 +56,33 @@ export function getPool(): Pool {
   return getProdPool()
 }
 
-// Auto-detect via event context: localhost → test, producción → prod
-// Lee el toggle sistema_db_activa de la DB de produccion para redirigir
+// Auto-detect via event context: lee el toggle sistema_db_activa de produccion
+// Si test DB falla, fallback a produccion
 export async function useDbPool(event?: any): Promise<Pool> {
-  // localhost siempre usa test
-  if (event) {
-    try {
-      const host = getRequestHost(event) || ''
-      if (host.includes('localhost') || host.includes('127.0.0.1')) {
-        return getTestPool()
-      }
-    } catch {}
-  }
-
-  // En produccion: verificar toggle sistema_db_activa
+  // Todos leen el toggle de producción
   const mode = await getDbModeFromProd()
   if (mode === 'pruebas') {
-    return getTestPool()
+    try {
+      // Probar si test DB es alcanzable
+      const pool = getTestPool()
+      await pool.query('SELECT 1')
+      return pool
+    } catch {
+      console.warn('Test DB unreachable, falling back to production')
+      return getProdPool()
+    }
   }
   return getProdPool()
 }
 
-// Version sincrona para casos donde no se puede usar await
+// Version sincrona: siempre retorna pool de produccion
 export function useDbPoolSync(event?: any): Pool {
-  if (event) {
-    try {
-      const host = getRequestHost(event) || ''
-      if (host.includes('localhost') || host.includes('127.0.0.1')) {
-        return getTestPool()
-      }
-    } catch {}
-  }
   if (dbMode === 'pruebas') {
-    return getTestPool()
+    try {
+      return getTestPool()
+    } catch {
+      return getProdPool()
+    }
   }
   return getProdPool()
 }
