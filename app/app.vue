@@ -7,7 +7,9 @@
 </template>
 
 <script setup>
-useSocket()
+if (import.meta.client) {
+  useSocket()
+}
 </script>
 
 <style>
