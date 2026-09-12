@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { useSocket } from '~/composables/useSocket'
+import { useNotifications } from '~/composables/useNotifications'
+
 definePageMeta({ middleware: 'auth' })
 
 const token = useCookie('token')

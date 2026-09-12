@@ -1,4 +1,7 @@
 <script setup>
+import { useSocket } from '~/composables/useSocket'
+import { useNotifications } from '~/composables/useNotifications'
+
 definePageMeta({ layout: false })
 
 const usuario = ref(null)

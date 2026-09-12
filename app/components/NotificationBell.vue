@@ -41,6 +41,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useNotifications } from '~/composables/useNotifications'
 
 const { notificaciones, noLeidas, marcarLeidas, marcarUnaLeida } = useNotifications()
 const open = ref(false)

@@ -28,6 +28,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { usePush } from '~/composables/usePush'
 
 const show = ref(false)
 const { isSupported, permission, requestPermission, subscribeUser } = usePush()

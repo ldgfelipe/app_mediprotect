@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { useSocket } from '~/composables/useSocket'
+import { useNotifications } from '~/composables/useNotifications'
+
 definePageMeta({ middleware: 'admin-auth' })
 const adminToken = useCookie('admin_token')
 const citas = ref<any[]>([])
