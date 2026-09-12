@@ -56,10 +56,16 @@ export default defineEventHandler(async (event) => {
   await pool.query(`UPDATE citas SET ${updates.join(', ')} WHERE id = $${paramIdx}`, params)
 
   const eventName = estado === 'confirmada' ? 'cita:confirmed' : estado === 'cancelada' ? 'cita:cancelled' : 'cita:updated'
+
+  const pacienteRow = await pool.query('SELECT nombre FROM pacientes WHERE id = $1', [cita.paciente_id])
+  const medicoRow = cita.id_medico ? await pool.query('SELECT nombre, apellido FROM medicos WHERE id = $1', [cita.id_medico]) : null
+
   emitCitaEvento(eventName, {
     id,
     paciente_id: cita.paciente_id,
     medico_id: cita.id_medico,
+    paciente_nombre: pacienteRow.rows[0]?.nombre || '',
+    medico_nombre: medicoRow ? `${medicoRow.rows[0]?.nombre} ${medicoRow.rows[0]?.apellido}` : '',
     estado,
     estado_anterior: estadoAnterior,
   })

@@ -1,5 +1,5 @@
 <template>
-  <div v-if="isAuthenticated" class="notif-bell" ref="bellRef">
+  <div v-if="isAuthenticated" class="notif-bell-global" ref="bellRef">
     <button class="notif-bell-btn" @click="toggleDropdown">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
@@ -40,7 +40,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useNotifications } from '~/composables/useNotifications'
 
 const { notificaciones, noLeidas, marcarLeidas, marcarUnaLeida } = useNotifications()
@@ -88,29 +88,33 @@ function timeAgo(date) {
   return `Hace ${Math.floor(diff / 86400)}d`
 }
 
-if (import.meta.client) {
-  document.addEventListener('click', (e) => {
-    if (bellRef.value && !bellRef.value.contains(e.target)) open.value = false
-  })
+function onClickOutside(e) {
+  if (bellRef.value && !bellRef.value.contains(e.target)) open.value = false
 }
+
+onMounted(() => { document.addEventListener('click', onClickOutside) })
+onUnmounted(() => { document.removeEventListener('click', onClickOutside) })
 </script>
 
 <style scoped>
-.notif-bell { position: relative; }
-.notif-bell-btn {
-  background: none; border: none; cursor: pointer; position: relative;
-  padding: 0.5rem; border-radius: 8px; color: #636e72; transition: all 0.2s;
+.notif-bell-global {
+  position: fixed; top: 12px; right: 24px; z-index: 9999;
 }
-.notif-bell-btn:hover { background: #f5f5f5; color: #2d3436; }
+.notif-bell-btn {
+  background: white; border: 1.5px solid #e0e0e0; cursor: pointer; position: relative;
+  padding: 0.5rem; border-radius: 10px; color: #636e72; transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.notif-bell-btn:hover { background: #f5f5f5; color: #2d3436; border-color: #ccc; }
 .notif-badge {
-  position: absolute; top: 2px; right: 2px; background: #d63031; color: white;
+  position: absolute; top: -4px; right: -4px; background: #d63031; color: white;
   font-size: 0.65rem; font-weight: 700; padding: 1px 5px; border-radius: 10px;
   min-width: 16px; text-align: center;
 }
 .notif-dropdown {
-  position: absolute; top: 100%; right: 0; width: 360px; max-height: 420px;
+  position: absolute; top: 110%; right: 0; width: 360px; max-height: 420px;
   background: white; border-radius: 12px; border: 1px solid #eaeaea;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.12); z-index: 1000; overflow: hidden;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.15); z-index: 10000; overflow: hidden;
 }
 .notif-header {
   display: flex; justify-content: space-between; align-items: center;
@@ -145,6 +149,7 @@ if (import.meta.client) {
 .dropdown-enter-from, .dropdown-leave-to { opacity: 0; transform: translateY(-8px); }
 
 @media (max-width: 480px) {
+  .notif-bell-global { top: 8px; right: 12px; }
   .notif-dropdown { width: calc(100vw - 2rem); right: -1rem; }
 }
 </style>

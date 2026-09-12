@@ -3,9 +3,17 @@
     <NuxtPage />
   </NuxtLayout>
   <PermissionModal />
+  <NotificationBell />
 </template>
 
 <script setup>
+import { useSocket } from '~/composables/useSocket'
+import { useSocketNotifications } from '~/composables/useSocketNotifications'
+
+if (import.meta.client) {
+  useSocket()
+  useSocketNotifications()
+}
 </script>
 
 <style>

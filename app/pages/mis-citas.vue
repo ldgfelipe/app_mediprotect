@@ -115,7 +115,6 @@ function cerrarSesion() {
           <NuxtLink to="/mis-citas" class="router-link-active">Mis Citas</NuxtLink>
         </nav>
         <div class="user-info">
-          <NotificationBell />
           <span>{{ usuario?.nombre }} {{ usuario?.apellido }}</span>
           <button @click="cerrarSesion" class="btn-logout">Salir</button>
         </div>

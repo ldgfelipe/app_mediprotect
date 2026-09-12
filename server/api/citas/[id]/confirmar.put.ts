@@ -25,10 +25,15 @@ export default defineEventHandler(async (event) => {
 
   await pool.query('UPDATE citas SET estado = $1, updated_at = NOW() WHERE id = $2', ['confirmada', id])
 
+  const pacienteRow = await pool.query('SELECT nombre FROM pacientes WHERE id = $1', [c.id_paciente])
+  const medicoRow = await pool.query('SELECT nombre, apellido FROM medicos WHERE id = $1', [decoded.id])
+
   emitCitaEvento('cita:confirmed', {
     id,
     paciente_id: c.id_paciente,
     medico_id: decoded.id,
+    paciente_nombre: pacienteRow.rows[0]?.nombre || '',
+    medico_nombre: medicoRow.rows[0] ? `${medicoRow.rows[0].nombre} ${medicoRow.rows[0].apellido}` : '',
     estado: 'confirmada',
   })
 

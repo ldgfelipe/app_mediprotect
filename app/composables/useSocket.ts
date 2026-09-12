@@ -8,53 +8,38 @@ let eventHandlers: Record<string, Function[]> = {}
 
 function getToken(): string {
   if (!import.meta.client) return ''
-
   const adminToken = useCookie('admin_token').value
   if (adminToken) return adminToken
-
   const token = useCookie('token').value
   if (token) return token
-
   const asistenteLocal = localStorage.getItem('usuario')
   if (asistenteLocal) {
-    try {
-      const parsed = JSON.parse(asistenteLocal)
-      if (parsed.token) return parsed.token
-    } catch {}
+    try { return JSON.parse(asistenteLocal).token || '' } catch {}
   }
-
   return ''
 }
 
 function getTipo(): string {
   if (!import.meta.client) return ''
-
   const adminToken = useCookie('admin_token').value
   if (adminToken) return 'admin'
-
   const usuarioCookie = useCookie('usuario').value
   if (usuarioCookie?.tipo) return usuarioCookie.tipo
-
   const token = useCookie('token').value
   if (token) return 'paciente'
-
   const asistenteLocal = localStorage.getItem('usuario')
   if (asistenteLocal) {
-    try {
-      const parsed = JSON.parse(asistenteLocal)
-      if (parsed.tipo) return parsed.tipo
-    } catch {}
+    try { return JSON.parse(asistenteLocal).tipo || 'paciente' } catch {}
   }
-
   return 'paciente'
 }
 
 function connect() {
-  if (!import.meta.client || initialized) return
+  if (!import.meta.client) return
+  if (initialized && socket.value && socket.value.readyState <= 1) return
   const token = getToken()
   if (!token) return
   initialized = true
-
   doConnect(token)
 }
 
@@ -72,15 +57,13 @@ function doConnect(token: string) {
   ws.onmessage = (event) => {
     try {
       const msg = JSON.parse(event.data)
-
       if (msg.type === 'connected') {
         connected.value = true
         return
       }
-
       if (msg.type && eventHandlers[msg.type]) {
         for (const handler of eventHandlers[msg.type]) {
-          handler(msg.data)
+          handler(msg.data || msg)
         }
       }
     } catch {}
@@ -96,9 +79,7 @@ function doConnect(token: string) {
     }, 3000)
   }
 
-  ws.onerror = () => {
-    ws.close()
-  }
+  ws.onerror = () => { ws.close() }
 }
 
 function on(event: string, handler: Function) {
@@ -114,24 +95,27 @@ function off(event: string, handler: Function) {
 
 function disconnect() {
   if (reconnectTimer) clearTimeout(reconnectTimer)
-  if (socket.value) {
-    socket.value.close()
-    socket.value = null
-  }
+  if (socket.value) { socket.value.close(); socket.value = null }
   connected.value = false
   initialized = false
   eventHandlers = {}
 }
 
 export function useSocket() {
-  onMounted(() => connect())
-  onUnmounted(() => {})
+  const myHandlers: Array<{ event: string; handler: Function }> = []
 
-  return {
-    socket,
-    connected,
-    on,
-    off,
-    disconnect,
+  function registerOn(event: string, handler: Function) {
+    on(event, handler)
+    myHandlers.push({ event, handler })
   }
+
+  onMounted(() => connect())
+  onUnmounted(() => {
+    for (const { event, handler } of myHandlers) {
+      off(event, handler)
+    }
+    myHandlers.length = 0
+  })
+
+  return { socket, connected, on: registerOn, off, disconnect }
 }
