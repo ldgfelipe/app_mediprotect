@@ -1,4 +1,11 @@
 <template>
+  <!-- DEBUG: SIEMPRE mostrar indicador para verificar -->
+  <div class="ws-debug" v-if="isClient">
+    <span class="ws-dot" :class="wsConnected ? 'ws-on' : 'ws-off'"></span>
+    <span class="ws-label">WS {{ wsConnected ? 'ON' : 'OFF' }}</span>
+    <span v-if="noLeidas > 0" class="ws-notif-count">{{ noLeidas }}</span>
+  </div>
+
   <div v-if="isAuthenticated" class="notif-bell-global" ref="bellRef">
     <button class="notif-bell-btn" @click="toggleDropdown">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -42,14 +49,23 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useNotifications } from '~/composables/useNotifications'
+import { useSocket } from '~/composables/useSocket'
 
 const { notificaciones, noLeidas, marcarLeidas, marcarUnaLeida } = useNotifications()
+const { connected: wsConnected } = useSocket()
 const open = ref(false)
 const bellRef = ref(null)
+const isClient = ref(false)
 
 const isAuthenticated = computed(() => {
   if (!import.meta.client) return false
-  return !!(useCookie('token').value || useCookie('admin_token').value || localStorage.getItem('usuario'))
+  const hasToken = !!(useCookie('token').value || useCookie('admin_token').value || localStorage.getItem('usuario'))
+  console.log('[Bell] isAuthenticated:', hasToken, {
+    token: !!useCookie('token').value,
+    admin_token: !!useCookie('admin_token').value,
+    localStorage: !!localStorage.getItem('usuario'),
+  })
+  return hasToken
 })
 
 function toggleDropdown() {
@@ -92,13 +108,37 @@ function onClickOutside(e) {
   if (bellRef.value && !bellRef.value.contains(e.target)) open.value = false
 }
 
-onMounted(() => { document.addEventListener('click', onClickOutside) })
+onMounted(() => {
+  isClient.value = true
+  console.log('[Bell] Montado. isAuthenticated:', isAuthenticated.value, 'wsConnected:', wsConnected.value)
+  document.addEventListener('click', onClickOutside)
+})
 onUnmounted(() => { document.removeEventListener('click', onClickOutside) })
 </script>
 
 <style scoped>
+/* Debug indicator - always visible */
+.ws-debug {
+  position: fixed; top: 12px; right: 24px; z-index: 99999;
+  display: flex; align-items: center; gap: 6px;
+  background: #2d3436; color: white; padding: 6px 12px; border-radius: 20px;
+  font-size: 0.75rem; font-weight: 600; font-family: monospace;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+}
+.ws-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+}
+.ws-on { background: #00b894; box-shadow: 0 0 6px #00b894; }
+.ws-off { background: #d63031; box-shadow: 0 0 6px #d63031; }
+.ws-label { letter-spacing: 1px; }
+.ws-notif-count {
+  background: #d63031; color: white; padding: 1px 6px; border-radius: 8px;
+  font-size: 0.7rem; margin-left: 4px;
+}
+
+/* Bell */
 .notif-bell-global {
-  position: fixed; top: 12px; right: 24px; z-index: 9999;
+  position: fixed; top: 12px; right: 120px; z-index: 9999;
 }
 .notif-bell-btn {
   background: white; border: 1.5px solid #e0e0e0; cursor: pointer; position: relative;
@@ -149,7 +189,7 @@ onUnmounted(() => { document.removeEventListener('click', onClickOutside) })
 .dropdown-enter-from, .dropdown-leave-to { opacity: 0; transform: translateY(-8px); }
 
 @media (max-width: 480px) {
-  .notif-bell-global { top: 8px; right: 12px; }
+  .notif-bell-global { top: 8px; right: 100px; }
   .notif-dropdown { width: calc(100vw - 2rem); right: -1rem; }
 }
 </style>

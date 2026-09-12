@@ -36,9 +36,16 @@ function getTipo(): string {
 
 function connect() {
   if (!import.meta.client) return
-  if (initialized && socket.value && socket.value.readyState <= 1) return
+  if (initialized && socket.value && socket.value.readyState <= 1) {
+    console.log('[WS] Ya conectado, ignorando')
+    return
+  }
   const token = getToken()
-  if (!token) return
+  if (!token) {
+    console.log('[WS] No hay token, no se conecta')
+    return
+  }
+  console.log('[WS] Conectando...', { tipo: getTipo() })
   initialized = true
   doConnect(token)
 }
@@ -46,30 +53,40 @@ function connect() {
 function doConnect(token: string) {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
   const wsUrl = `${protocol}//${window.location.host}/ws`
+  console.log('[WS] URL:', wsUrl)
 
   const ws = new WebSocket(wsUrl)
   socket.value = ws
 
   ws.onopen = () => {
+    console.log('[WS] Conexión abierta, enviando auth...')
     ws.send(JSON.stringify({ type: 'auth', token }))
   }
 
   ws.onmessage = (event) => {
     try {
       const msg = JSON.parse(event.data)
+      console.log('[WS] Mensaje:', msg.type, msg)
+
       if (msg.type === 'connected') {
         connected.value = true
+        console.log('[WS] ✅ Autenticado como', msg.tipo, 'id:', msg.userId)
         return
       }
+
       if (msg.type && eventHandlers[msg.type]) {
+        console.log(`[WS] Ejecutando ${eventHandlers[msg.type].length} handlers para "${msg.type}"`)
         for (const handler of eventHandlers[msg.type]) {
           handler(msg.data || msg)
         }
       }
-    } catch {}
+    } catch (e) {
+      console.error('[WS] Error parseando mensaje:', e)
+    }
   }
 
-  ws.onclose = () => {
+  ws.onclose = (e) => {
+    console.log('[WS] Conexión cerrada:', e.code, e.reason)
     connected.value = false
     socket.value = null
     if (reconnectTimer) clearTimeout(reconnectTimer)
@@ -79,7 +96,10 @@ function doConnect(token: string) {
     }, 3000)
   }
 
-  ws.onerror = () => { ws.close() }
+  ws.onerror = (e) => {
+    console.error('[WS] Error:', e)
+    ws.close()
+  }
 }
 
 function on(event: string, handler: Function) {
@@ -109,7 +129,10 @@ export function useSocket() {
     myHandlers.push({ event, handler })
   }
 
-  onMounted(() => connect())
+  onMounted(() => {
+    console.log('[WS] useSocket montado en', window.location.pathname)
+    connect()
+  })
   onUnmounted(() => {
     for (const { event, handler } of myHandlers) {
       off(event, handler)
