@@ -37,6 +37,9 @@ onMounted(() => {
   if (!isSupported.value) return
   if (permission.value === 'granted') return
 
+  const hasAuth = useCookie('token').value || useCookie('admin_token').value || localStorage.getItem('usuario')
+  if (!hasAuth) return
+
   const dismissed = localStorage.getItem('mp_push_dismissed')
   if (dismissed) return
 
