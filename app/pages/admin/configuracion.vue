@@ -81,6 +81,35 @@
         </div>
       </div>
 
+      <!-- ========== PRUEBA WEBSOCKET ========== -->
+      <div class="config-section">
+        <h2>🔌 WebSocket - Prueba en Tiempo Real</h2>
+        <p style="color:#636e72;font-size:0.9rem;margin-bottom:1rem">
+          Verifica que el WebSocket está funcionando. Al enviar prueba, todos los usuarios conectados recibirán una notificación.
+        </p>
+        <div class="form-row" style="align-items:center">
+          <div class="form-group">
+            <div style="display:flex;gap:0.5rem;align-items:center">
+              <span style="display:inline-block;width:10px;height:10px;border-radius:50%"
+                :style="{ background: wsConnected ? '#00b894' : '#d63031' }"></span>
+              <span style="font-size:0.9rem;font-weight:600">{{ wsConnected ? 'Conectado' : 'Desconectado' }}</span>
+            </div>
+          </div>
+          <div class="form-group" style="display:flex;gap:0.5rem">
+            <button class="btn-primary" style="width:auto;padding:0.5rem 1.5rem" @click="testWebSocket" :disabled="wsSending">
+              {{ wsSending ? 'Enviando...' : 'Enviar Prueba' }}
+            </button>
+            <button class="btn-outline" style="width:auto;padding:0.5rem 1rem;font-size:0.85rem" @click="reconnectWs">
+              Reconectar
+            </button>
+          </div>
+        </div>
+        <div v-if="wsTestResult" style="margin-top:0.75rem;padding:0.5rem 1rem;border-radius:6px;font-size:0.85rem"
+          :style="{ background: wsTestResult.ok ? '#d4edda' : '#ffd7d7', color: wsTestResult.ok ? '#00b894' : '#d63031' }">
+          {{ wsTestResult.message }}
+        </div>
+      </div>
+
       <!-- Estado de proveedores -->
       <div class="providers-status">
         <div
@@ -930,6 +959,32 @@ const sistema = ref({
   firebaseUrl: '',
 })
 
+// WebSocket test state
+const wsConnected = ref(false)
+const wsSending = ref(false)
+const wsTestResult = ref<{ ok: boolean; message: string } | null>(null)
+
+async function testWebSocket() {
+  wsSending.value = true
+  wsTestResult.value = null
+  try {
+    const res = await $fetch('/api/admin/websocket-test', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${useCookie('admin_token').value}` }
+    })
+    wsTestResult.value = { ok: true, message: '✅ Evento enviado! Si el WebSocket funciona, verás la notificación arriba.' }
+  } catch (e: any) {
+    wsTestResult.value = { ok: false, message: '❌ Error: ' + (e.data?.message || e.message) }
+  }
+  wsSending.value = false
+}
+
+async function reconnectWs() {
+  wsTestResult.value = null
+  wsConnected.value = false
+  window.location.reload()
+}
+
 const general = ref({
   preferido: 'openai',
   idioma: 'es',
@@ -1514,6 +1569,19 @@ onMounted(() => {
   cargarTelefonosVerificados()
   loadSmtpConfig()
   loadTokens()
+
+  // WebSocket connection test
+  const wsToken = useCookie('admin_token').value
+  if (wsToken && import.meta.client) {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const ws = new WebSocket(`${protocol}//${window.location.host}/ws`)
+    ws.onopen = () => {
+      wsConnected.value = true
+      ws.send(JSON.stringify({ type: 'auth', token: wsToken }))
+    }
+    ws.onclose = () => { wsConnected.value = false }
+    ws.onerror = () => { wsConnected.value = false }
+  }
 })
 </script>
 
