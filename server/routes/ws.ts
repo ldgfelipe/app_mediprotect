@@ -4,6 +4,22 @@ import { peers, rooms } from '../utils/ws-peers'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'mediprotect_jwt_secret_key_2026'
 
+function joinRoom(peer: any, room: string) {
+  peer.subscribe(room)
+  if (!rooms.has(room)) rooms.set(room, new Set())
+  rooms.get(room)!.add(peer.id)
+}
+
+function leaveAllRooms(peer: any) {
+  for (const [room, peerIds] of rooms) {
+    if (peerIds.has(peer.id)) {
+      peerIds.delete(peer.id)
+      peer.unsubscribe(room)
+      if (peerIds.size === 0) rooms.delete(room)
+    }
+  }
+}
+
 export default defineWebSocketHandler({
   open(peer) {
     peers.set(peer.id, peer)
@@ -18,10 +34,10 @@ export default defineWebSocketHandler({
         const ctx = { userId: decoded.id, tipo: decoded.tipo?.toLowerCase() }
         peer.ctx = ctx
 
-        if (ctx.tipo === 'admin') peer.join('admins')
-        if (ctx.tipo === 'asistente') peer.join('asistentes')
-        if (ctx.tipo === 'paciente') peer.join(`paciente:${ctx.userId}`)
-        if (ctx.tipo === 'medico') peer.join(`medico:${ctx.userId}`)
+        if (ctx.tipo === 'admin') joinRoom(peer, 'admins')
+        if (ctx.tipo === 'asistente') joinRoom(peer, 'asistentes')
+        if (ctx.tipo === 'paciente') joinRoom(peer, `paciente:${ctx.userId}`)
+        if (ctx.tipo === 'medico') joinRoom(peer, `medico:${ctx.userId}`)
 
         peer.send(JSON.stringify({ type: 'connected', userId: ctx.userId, tipo: ctx.tipo }))
       }
@@ -31,10 +47,7 @@ export default defineWebSocketHandler({
   },
 
   close(peer) {
-    for (const [room, peerIds] of rooms) {
-      peerIds.delete(peer.id)
-      if (peerIds.size === 0) rooms.delete(room)
-    }
+    leaveAllRooms(peer)
     peers.delete(peer.id)
   },
 })
