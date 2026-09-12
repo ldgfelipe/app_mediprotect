@@ -81,6 +81,15 @@ export default defineEventHandler(async (event) => {
 
   const cita = result.rows[0]
 
+  emitCitaEvento('cita:created', {
+    id: cita.id,
+    paciente_id: id_paciente,
+    medico_id: id_medico || null,
+    paciente_nombre: paciente.rows[0].nombre,
+    medico_nombre: medicoDesc,
+    estado: 'pendiente',
+  })
+
   const medicoDesc = medicoData
     ? `${medicoData.nombre} ${medicoData.apellido}`
     : medico_nombre || 'No especificado'

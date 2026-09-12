@@ -39,7 +39,30 @@ async function cargarDatos() {
   }
 }
 
-onMounted(cargarDatos)
+const { socket } = useSocket()
+const { agregar } = useNotifications()
+
+onMounted(() => {
+  cargarDatos()
+
+  if (socket.value) {
+    socket.value.on('cita:created', (cita) => {
+      cargarDatos()
+      agregar({ tipo: 'cita_created', titulo: 'Nueva cita', mensaje: `Nueva cita: ${cita.paciente_nombre || 'Paciente'}`, timestamp: new Date() })
+    })
+    socket.value.on('cita:confirmed', (cita) => {
+      cargarDatos()
+      agregar({ tipo: 'cita_confirmed', titulo: 'Cita confirmada', mensaje: `Cita confirmada: ${cita.paciente_nombre || 'Paciente'}`, timestamp: new Date() })
+    })
+    socket.value.on('cita:cancelled', (cita) => {
+      cargarDatos()
+      agregar({ tipo: 'cita_cancelled', titulo: 'Cita cancelada', mensaje: `Cita cancelada: ${cita.paciente_nombre || 'Paciente'}`, timestamp: new Date() })
+    })
+    socket.value.on('cita:updated', (cita) => {
+      cargarDatos()
+    })
+  }
+})
 
 async function confirmar(id: string) {
   actionLoading.value = id

@@ -23,6 +23,14 @@ export default defineEventHandler(async (event) => {
   }
 
   await pool.query('UPDATE citas SET estado = $1, updated_at = NOW() WHERE id = $2', ['cancelada', id])
+
+  emitCitaEvento('cita:cancelled', {
+    id,
+    paciente_id: c.id_paciente,
+    medico_id: c.id_medico,
+    estado: 'cancelada',
+  })
+
   return { mensaje: 'Cita cancelada exitosamente' }
 
   } catch (err: any) {

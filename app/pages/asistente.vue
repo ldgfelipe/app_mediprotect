@@ -83,12 +83,34 @@ function pasoAnterior() {
   if (pasoActual.value > 1) pasoActual.value--
 }
 
+const { socket } = useSocket()
+const { agregar } = useNotifications()
+
 onMounted(() => {
   const saved = localStorage.getItem('usuario')
   if (!saved) { navigateTo('/login-asistente'); return }
   usuario.value = JSON.parse(saved)
   cargarCitas()
   $fetch('/api/paquetes').then(d => { paquetesLista.value = d?.paquetes || [] }).catch(() => {})
+
+  if (socket.value) {
+    socket.value.on('cita:created', (cita) => {
+      cargarCitas()
+      agregar({ tipo: 'cita_created', titulo: 'Nueva cita', mensaje: `${cita.paciente_nombre || 'Paciente'} - ${cita.medico_nombre || 'Médico por asignar'}`, timestamp: new Date() })
+    })
+    socket.value.on('cita:updated', (cita) => {
+      cargarCitas()
+      agregar({ tipo: 'cita_updated', titulo: 'Cita actualizada', mensaje: `${cita.paciente_nombre || 'Paciente'} - Estado: ${cita.estado}`, timestamp: new Date() })
+    })
+    socket.value.on('cita:confirmed', (cita) => {
+      cargarCitas()
+      agregar({ tipo: 'cita_confirmed', titulo: 'Cita confirmada', mensaje: `${cita.paciente_nombre || 'Paciente'} confirmada`, timestamp: new Date() })
+    })
+    socket.value.on('cita:cancelled', (cita) => {
+      cargarCitas()
+      agregar({ tipo: 'cita_cancelled', titulo: 'Cita cancelada', mensaje: `${cita.paciente_nombre || 'Paciente'} cancelada`, timestamp: new Date() })
+    })
+  }
 })
 
 async function cargarCitas() {

@@ -55,6 +55,15 @@ export default defineEventHandler(async (event) => {
   params.push(id)
   await pool.query(`UPDATE citas SET ${updates.join(', ')} WHERE id = $${paramIdx}`, params)
 
+  const eventName = estado === 'confirmada' ? 'cita:confirmed' : estado === 'cancelada' ? 'cita:cancelled' : 'cita:updated'
+  emitCitaEvento(eventName, {
+    id,
+    paciente_id: cita.paciente_id,
+    medico_id: cita.id_medico,
+    estado,
+    estado_anterior: estadoAnterior,
+  })
+
   // Log in bitácora
   await pool.query(
     `INSERT INTO citas_bitacora (id_cita, id_usuario, tipo_usuario, accion, estado_anterior, estado_nuevo, descripcion, created_at)

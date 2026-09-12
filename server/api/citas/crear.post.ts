@@ -51,6 +51,15 @@ export default defineEventHandler(async (event) => {
 
   const cita = result.rows[0]
 
+  emitCitaEvento('cita:created', {
+    id: cita.id,
+    paciente_id: user.id,
+    medico_id: id_medico || null,
+    paciente_nombre: paciente.rows[0]?.nombre || '',
+    medico_nombre: medicoData ? `${medicoData.nombre} ${medicoData.apellido}` : medico_nombre || '',
+    estado: 'pendiente',
+  })
+
   const paciente = await pool.query('SELECT nombre, apellido FROM pacientes WHERE id = $1', [user.id])
 
   await pool.query(
