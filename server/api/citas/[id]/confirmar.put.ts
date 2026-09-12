@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
   const pool = await useDbPool(event)
 
   const cita = await pool.query(
-    'SELECT id, id_medico, paciente_id, estado FROM citas WHERE id = $1', [id]
+    'SELECT id, id_medico, id_paciente, estado FROM citas WHERE id = $1', [id]
   )
   if (cita.rows.length === 0) {
     throw createError({ statusCode: 404, message: 'Cita no encontrada' })
@@ -27,7 +27,7 @@ export default defineEventHandler(async (event) => {
 
   emitCitaEvento('cita:confirmed', {
     id,
-    paciente_id: c.paciente_id,
+    paciente_id: c.id_paciente,
     medico_id: decoded.id,
     estado: 'confirmada',
   })

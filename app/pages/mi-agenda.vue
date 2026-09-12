@@ -42,29 +42,27 @@ async function cargarDatos() {
   }
 }
 
-const { socket } = useSocket()
+const { on } = useSocket()
 const { agregar } = useNotifications()
 
 onMounted(() => {
   cargarDatos()
 
-  if (socket.value) {
-    socket.value.on('cita:created', (cita) => {
-      cargarDatos()
-      agregar({ tipo: 'cita_created', titulo: 'Nueva cita', mensaje: `Nueva cita: ${cita.paciente_nombre || 'Paciente'}`, timestamp: new Date() })
-    })
-    socket.value.on('cita:confirmed', (cita) => {
-      cargarDatos()
-      agregar({ tipo: 'cita_confirmed', titulo: 'Cita confirmada', mensaje: `Cita confirmada: ${cita.paciente_nombre || 'Paciente'}`, timestamp: new Date() })
-    })
-    socket.value.on('cita:cancelled', (cita) => {
-      cargarDatos()
-      agregar({ tipo: 'cita_cancelled', titulo: 'Cita cancelada', mensaje: `Cita cancelada: ${cita.paciente_nombre || 'Paciente'}`, timestamp: new Date() })
-    })
-    socket.value.on('cita:updated', (cita) => {
-      cargarDatos()
-    })
-  }
+  on('cita:created', (cita) => {
+    cargarDatos()
+    agregar({ tipo: 'cita_created', titulo: 'Nueva cita', mensaje: `Nueva cita: ${cita.paciente_nombre || 'Paciente'}`, timestamp: new Date() })
+  })
+  on('cita:confirmed', (cita) => {
+    cargarDatos()
+    agregar({ tipo: 'cita_confirmed', titulo: 'Cita confirmada', mensaje: `Cita confirmada: ${cita.paciente_nombre || 'Paciente'}`, timestamp: new Date() })
+  })
+  on('cita:cancelled', (cita) => {
+    cargarDatos()
+    agregar({ tipo: 'cita_cancelled', titulo: 'Cita cancelada', mensaje: `Cita cancelada: ${cita.paciente_nombre || 'Paciente'}`, timestamp: new Date() })
+  })
+  on('cita:updated', (cita) => {
+    cargarDatos()
+  })
 })
 
 async function confirmar(id: string) {
@@ -168,6 +166,7 @@ function cerrarSesion() {
           <NuxtLink to="/mis-comisiones">Comisiones</NuxtLink>
         </nav>
         <div class="user-info">
+          <NotificationBell />
           <span>Dr. {{ usuario?.nombre }} {{ usuario?.apellido }}</span>
           <button @click="cerrarSesion" class="btn-logout">Salir</button>
         </div>

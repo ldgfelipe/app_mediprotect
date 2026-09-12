@@ -1,5 +1,4 @@
-import type { Server } from 'socket.io'
-import { getIO } from '../plugins/websocket'
+import { peers, rooms } from './ws-peers'
 
 interface CitaEvento {
   id: string
@@ -9,10 +8,25 @@ interface CitaEvento {
 }
 
 export function emitCitaEvento(evento: string, payload: CitaEvento) {
-  const io = getIO()
-  if (!io) return
+  const message = JSON.stringify({ type: evento, data: payload })
 
-  io.to('admins').to('asistentes').emit(evento, payload)
-  if (payload.paciente_id) io.to(`paciente:${payload.paciente_id}`).emit(evento, payload)
-  if (payload.medico_id) io.to(`medico:${payload.medico_id}`).emit(evento, payload)
+  const targetRooms = ['admins', 'asistentes']
+  if (payload.paciente_id) targetRooms.push(`paciente:${payload.paciente_id}`)
+  if (payload.medico_id) targetRooms.push(`medico:${payload.medico_id}`)
+
+  const sentTo = new Set<string>()
+
+  for (const room of targetRooms) {
+    const peerIds = rooms.get(room)
+    if (!peerIds) continue
+
+    for (const peerId of peerIds) {
+      if (sentTo.has(peerId)) continue
+      sentTo.add(peerId)
+      const peer = peers.get(peerId)
+      if (peer) {
+        try { peer.send(message) } catch {}
+      }
+    }
+  }
 }

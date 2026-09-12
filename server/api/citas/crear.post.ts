@@ -51,6 +51,8 @@ export default defineEventHandler(async (event) => {
 
   const cita = result.rows[0]
 
+  const paciente = await pool.query('SELECT nombre, apellido FROM pacientes WHERE id = $1', [user.id])
+
   emitCitaEvento('cita:created', {
     id: cita.id,
     paciente_id: user.id,
@@ -59,8 +61,6 @@ export default defineEventHandler(async (event) => {
     medico_nombre: medicoData ? `${medicoData.nombre} ${medicoData.apellido}` : medico_nombre || '',
     estado: 'pendiente',
   })
-
-  const paciente = await pool.query('SELECT nombre, apellido FROM pacientes WHERE id = $1', [user.id])
 
   await pool.query(
     `INSERT INTO citas_bitacora (id_cita, id_usuario, tipo_usuario, accion, estado_nuevo, descripcion, created_at)

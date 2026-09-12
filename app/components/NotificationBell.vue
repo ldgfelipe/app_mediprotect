@@ -96,7 +96,7 @@ if (import.meta.client) {
 </script>
 
 <style scoped>
-.notif-bell { position: fixed; top: 1rem; right: 1rem; z-index: 9999; }
+.notif-bell { position: relative; }
 .notif-bell-btn {
   background: none; border: none; cursor: pointer; position: relative;
   padding: 0.5rem; border-radius: 8px; color: #636e72; transition: all 0.2s;

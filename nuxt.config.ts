@@ -5,6 +5,11 @@ export default defineNuxtConfig({
     validaCurpToken: process.env.VALIDA_CURP_TOKEN || 'pruebas',
     vapidPublicKey: process.env.VAPID_PUBLIC_KEY || 'BE8PbPyCNWpbe0iBTusqGluzp0BNN03PSwHBs3HCyCQqsxLHFltHrfxGghsNdiVTzdZpsPAEJMdTjj5o7DWIffM',
   },
+  nitro: {
+    experimental: {
+      websocket: true,
+    },
+  },
   app: {
     head: {
       link: [

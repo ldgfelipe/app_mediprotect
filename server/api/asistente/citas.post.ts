@@ -81,6 +81,10 @@ export default defineEventHandler(async (event) => {
 
   const cita = result.rows[0]
 
+  const medicoDesc = medicoData
+    ? `${medicoData.nombre} ${medicoData.apellido}`
+    : medico_nombre || 'No especificado'
+
   emitCitaEvento('cita:created', {
     id: cita.id,
     paciente_id: id_paciente,
@@ -89,10 +93,6 @@ export default defineEventHandler(async (event) => {
     medico_nombre: medicoDesc,
     estado: 'pendiente',
   })
-
-  const medicoDesc = medicoData
-    ? `${medicoData.nombre} ${medicoData.apellido}`
-    : medico_nombre || 'No especificado'
 
   // Log in bitácora
   await pool.query(

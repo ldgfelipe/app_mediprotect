@@ -86,7 +86,7 @@ function pasoAnterior() {
   if (pasoActual.value > 1) pasoActual.value--
 }
 
-const { socket } = useSocket()
+const { on } = useSocket()
 const { agregar } = useNotifications()
 
 onMounted(() => {
@@ -96,24 +96,22 @@ onMounted(() => {
   cargarCitas()
   $fetch('/api/paquetes').then(d => { paquetesLista.value = d?.paquetes || [] }).catch(() => {})
 
-  if (socket.value) {
-    socket.value.on('cita:created', (cita) => {
-      cargarCitas()
-      agregar({ tipo: 'cita_created', titulo: 'Nueva cita', mensaje: `${cita.paciente_nombre || 'Paciente'} - ${cita.medico_nombre || 'Médico por asignar'}`, timestamp: new Date() })
-    })
-    socket.value.on('cita:updated', (cita) => {
-      cargarCitas()
-      agregar({ tipo: 'cita_updated', titulo: 'Cita actualizada', mensaje: `${cita.paciente_nombre || 'Paciente'} - Estado: ${cita.estado}`, timestamp: new Date() })
-    })
-    socket.value.on('cita:confirmed', (cita) => {
-      cargarCitas()
-      agregar({ tipo: 'cita_confirmed', titulo: 'Cita confirmada', mensaje: `${cita.paciente_nombre || 'Paciente'} confirmada`, timestamp: new Date() })
-    })
-    socket.value.on('cita:cancelled', (cita) => {
-      cargarCitas()
-      agregar({ tipo: 'cita_cancelled', titulo: 'Cita cancelada', mensaje: `${cita.paciente_nombre || 'Paciente'} cancelada`, timestamp: new Date() })
-    })
-  }
+  on('cita:created', (cita) => {
+    cargarCitas()
+    agregar({ tipo: 'cita_created', titulo: 'Nueva cita', mensaje: `${cita.paciente_nombre || 'Paciente'} - ${cita.medico_nombre || 'Médico por asignar'}`, timestamp: new Date() })
+  })
+  on('cita:updated', (cita) => {
+    cargarCitas()
+    agregar({ tipo: 'cita_updated', titulo: 'Cita actualizada', mensaje: `${cita.paciente_nombre || 'Paciente'} - Estado: ${cita.estado}`, timestamp: new Date() })
+  })
+  on('cita:confirmed', (cita) => {
+    cargarCitas()
+    agregar({ tipo: 'cita_confirmed', titulo: 'Cita confirmada', mensaje: `${cita.paciente_nombre || 'Paciente'} confirmada`, timestamp: new Date() })
+  })
+  on('cita:cancelled', (cita) => {
+    cargarCitas()
+    agregar({ tipo: 'cita_cancelled', titulo: 'Cita cancelada', mensaje: `${cita.paciente_nombre || 'Paciente'} cancelada`, timestamp: new Date() })
+  })
 })
 
 async function cargarCitas() {
@@ -933,6 +931,7 @@ async function crearPacienteParaEmpresa() {
           <button :class="{ active: activeTab === 'empresas' }" @click="activeTab = 'empresas'">Empresas</button>
         </nav>
         <div class="user-info">
+          <NotificationBell />
           <span>{{ usuario.nombre }} {{ usuario.apellido }}</span>
           <button @click="cerrarSesion" class="btn-logout">Salir</button>
         </div>

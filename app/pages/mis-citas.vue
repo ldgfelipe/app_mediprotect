@@ -10,7 +10,7 @@ const citas = ref<any[]>([])
 const loading = ref(true)
 const error = ref('')
 const cancelando = ref<string | null>(null)
-const { socket } = useSocket()
+const { on, off } = useSocket()
 const { agregar } = useNotifications()
 
 const estados: Record<string, string> = {
@@ -47,29 +47,27 @@ async function cargarCitas() {
 onMounted(() => {
   cargarCitas()
 
-  if (socket.value) {
-    socket.value.on('cita:updated', (cita: any) => {
-      const idx = citas.value.findIndex(c => c.id === cita.id)
-      if (idx !== -1) {
-        citas.value[idx] = { ...citas.value[idx], ...cita }
-        agregar({ tipo: 'cita_updated', titulo: 'Cita actualizada', mensaje: `${cita.paciente_nombre || 'Tu cita'} - Estado: ${estados[cita.estado] || cita.estado}`, timestamp: new Date() })
-      }
-    })
-    socket.value.on('cita:confirmed', (cita: any) => {
-      const idx = citas.value.findIndex(c => c.id === cita.id)
-      if (idx !== -1) {
-        citas.value[idx] = { ...citas.value[idx], ...cita, estado: 'confirmada' }
-        agregar({ tipo: 'cita_confirmed', titulo: 'Cita confirmada', mensaje: `Tu cita con ${cita.medico_nombre || 'el médico'} ha sido confirmada`, timestamp: new Date() })
-      }
-    })
-    socket.value.on('cita:cancelled', (cita: any) => {
-      const idx = citas.value.findIndex(c => c.id === cita.id)
-      if (idx !== -1) {
-        citas.value[idx] = { ...citas.value[idx], ...cita, estado: 'cancelada' }
-        agregar({ tipo: 'cita_cancelled', titulo: 'Cita cancelada', mensaje: `Tu cita ha sido cancelada`, timestamp: new Date() })
-      }
-    })
-  }
+  on('cita:updated', (cita: any) => {
+    const idx = citas.value.findIndex(c => c.id === cita.id)
+    if (idx !== -1) {
+      citas.value[idx] = { ...citas.value[idx], ...cita }
+      agregar({ tipo: 'cita_updated', titulo: 'Cita actualizada', mensaje: `${cita.paciente_nombre || 'Tu cita'} - Estado: ${estados[cita.estado] || cita.estado}`, timestamp: new Date() })
+    }
+  })
+  on('cita:confirmed', (cita: any) => {
+    const idx = citas.value.findIndex(c => c.id === cita.id)
+    if (idx !== -1) {
+      citas.value[idx] = { ...citas.value[idx], ...cita, estado: 'confirmada' }
+      agregar({ tipo: 'cita_confirmed', titulo: 'Cita confirmada', mensaje: `Tu cita con ${cita.medico_nombre || 'el médico'} ha sido confirmada`, timestamp: new Date() })
+    }
+  })
+  on('cita:cancelled', (cita: any) => {
+    const idx = citas.value.findIndex(c => c.id === cita.id)
+    if (idx !== -1) {
+      citas.value[idx] = { ...citas.value[idx], ...cita, estado: 'cancelada' }
+      agregar({ tipo: 'cita_cancelled', titulo: 'Cita cancelada', mensaje: `Tu cita ha sido cancelada`, timestamp: new Date() })
+    }
+  })
 })
 
 async function cancelar(id: string) {
@@ -117,6 +115,7 @@ function cerrarSesion() {
           <NuxtLink to="/mis-citas" class="router-link-active">Mis Citas</NuxtLink>
         </nav>
         <div class="user-info">
+          <NotificationBell />
           <span>{{ usuario?.nombre }} {{ usuario?.apellido }}</span>
           <button @click="cerrarSesion" class="btn-logout">Salir</button>
         </div>

@@ -17,8 +17,6 @@
     "nuxt": "^4.4.8",
     "oxc-parser": "^0.137.0",
     "pg": "^8.22.0",
-    "socket.io": "^4.8.3",
-    "socket.io-client": "^4.8.3",
     "twilio": "^6.1.0",
     "vue": "^3.5.35",
     "vue-router": "^5.1.0",

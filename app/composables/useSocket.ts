@@ -1,117 +1,137 @@
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 
-const socket = ref<any>(null)
+const socket = ref<WebSocket | null>(null)
 const connected = ref(false)
-const notificaciones = ref<any[]>([])
 let initialized = false
+let reconnectTimer: any = null
+let eventHandlers: Record<string, Function[]> = {}
+
+function getToken(): string {
+  if (!import.meta.client) return ''
+
+  const adminToken = useCookie('admin_token').value
+  if (adminToken) return adminToken
+
+  const token = useCookie('token').value
+  if (token) return token
+
+  const asistenteLocal = localStorage.getItem('usuario')
+  if (asistenteLocal) {
+    try {
+      const parsed = JSON.parse(asistenteLocal)
+      if (parsed.token) return parsed.token
+    } catch {}
+  }
+
+  return ''
+}
+
+function getTipo(): string {
+  if (!import.meta.client) return ''
+
+  const adminToken = useCookie('admin_token').value
+  if (adminToken) return 'admin'
+
+  const usuarioCookie = useCookie('usuario').value
+  if (usuarioCookie?.tipo) return usuarioCookie.tipo
+
+  const token = useCookie('token').value
+  if (token) return 'paciente'
+
+  const asistenteLocal = localStorage.getItem('usuario')
+  if (asistenteLocal) {
+    try {
+      const parsed = JSON.parse(asistenteLocal)
+      if (parsed.tipo) return parsed.tipo
+    } catch {}
+  }
+
+  return 'paciente'
+}
+
+function connect() {
+  if (!import.meta.client || initialized) return
+  const token = getToken()
+  if (!token) return
+  initialized = true
+
+  doConnect(token)
+}
+
+function doConnect(token: string) {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const wsUrl = `${protocol}//${window.location.host}/ws`
+
+  const ws = new WebSocket(wsUrl)
+  socket.value = ws
+
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ type: 'auth', token }))
+  }
+
+  ws.onmessage = (event) => {
+    try {
+      const msg = JSON.parse(event.data)
+
+      if (msg.type === 'connected') {
+        connected.value = true
+        return
+      }
+
+      if (msg.type && eventHandlers[msg.type]) {
+        for (const handler of eventHandlers[msg.type]) {
+          handler(msg.data)
+        }
+      }
+    } catch {}
+  }
+
+  ws.onclose = () => {
+    connected.value = false
+    socket.value = null
+    if (reconnectTimer) clearTimeout(reconnectTimer)
+    reconnectTimer = setTimeout(() => {
+      initialized = false
+      connect()
+    }, 3000)
+  }
+
+  ws.onerror = () => {
+    ws.close()
+  }
+}
+
+function on(event: string, handler: Function) {
+  if (!eventHandlers[event]) eventHandlers[event] = []
+  eventHandlers[event].push(handler)
+}
+
+function off(event: string, handler: Function) {
+  if (eventHandlers[event]) {
+    eventHandlers[event] = eventHandlers[event].filter(h => h !== handler)
+  }
+}
+
+function disconnect() {
+  if (reconnectTimer) clearTimeout(reconnectTimer)
+  if (socket.value) {
+    socket.value.close()
+    socket.value = null
+  }
+  connected.value = false
+  initialized = false
+  eventHandlers = {}
+}
 
 export function useSocket() {
-  function init() {
-    if (initialized || !import.meta.client) return
-    initialized = true
-
-    let token = ''
-    let tipo = ''
-
-    const tokenCookie = useCookie('token').value
-    const adminTokenCookie = useCookie('admin_token').value
-    const usuarioCookie = useCookie('usuario').value
-    const adminUsuarioCookie = useCookie('admin_usuario').value
-    const asistenteLocal = localStorage.getItem('usuario')
-
-    if (adminTokenCookie) {
-      token = adminTokenCookie
-      tipo = adminUsuarioCookie?.tipo || 'admin'
-    } else if (tokenCookie) {
-      token = tokenCookie
-      tipo = usuarioCookie?.tipo || 'paciente'
-    } else if (asistenteLocal) {
-      try {
-        const parsed = JSON.parse(asistenteLocal)
-        token = parsed.token || ''
-        tipo = parsed.tipo || 'asistente'
-      } catch {}
-    }
-
-    if (!token) return
-
-    import('socket.io-client').then(({ io }) => {
-      const wsUrl = window.location.origin
-      socket.value = io(wsUrl, {
-        auth: { token },
-        path: '/ws',
-        transports: ['websocket', 'polling'],
-        reconnection: true,
-        reconnectionDelay: 1000,
-        reconnectionAttempts: 50,
-      })
-
-      socket.value.on('connect', () => {
-        connected.value = true
-      })
-
-      socket.value.on('disconnect', () => {
-        connected.value = false
-      })
-
-      socket.value.on('cita:created', (cita: any) => {
-        addNotificacion({
-          tipo: 'cita_created',
-          titulo: 'Nueva cita',
-          mensaje: `Cita creada: ${cita.paciente_nombre || 'Paciente'} - ${cita.medico_nombre || 'Médico por confirmar'}`,
-          timestamp: new Date(),
-          cita,
-        })
-      })
-
-      socket.value.on('cita:updated', (cita: any) => {
-        addNotificacion({
-          tipo: 'cita_updated',
-          titulo: 'Cita actualizada',
-          mensaje: `Cita actualizada - Estado: ${cita.estado}`,
-          timestamp: new Date(),
-          cita,
-        })
-      })
-
-      socket.value.on('cita:confirmed', (cita: any) => {
-        addNotificacion({
-          tipo: 'cita_confirmed',
-          titulo: 'Cita confirmada',
-          mensaje: `Cita confirmada: ${cita.paciente_nombre || 'Paciente'}`,
-          timestamp: new Date(),
-          cita,
-        })
-      })
-
-      socket.value.on('cita:cancelled', (cita: any) => {
-        addNotificacion({
-          tipo: 'cita_cancelled',
-          titulo: 'Cita cancelada',
-          mensaje: `Cita cancelada: ${cita.paciente_nombre || 'Paciente'}`,
-          timestamp: new Date(),
-          cita,
-        })
-      })
-    })
-  }
-
-  function addNotificacion(notif: any) {
-    notificaciones.value.unshift(notif)
-    if (notificaciones.value.length > 50) notificaciones.value.pop()
-  }
-
-  function clearNotificaciones() {
-    notificaciones.value = []
-  }
-
-  onMounted(() => init())
+  onMounted(() => connect())
+  onUnmounted(() => {})
 
   return {
     socket,
     connected,
-    notificaciones,
-    clearNotificaciones,
-    addNotificacion,
+    on,
+    off,
+    disconnect,
   }
 }

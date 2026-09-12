@@ -2,16 +2,10 @@
   <NuxtLayout>
     <NuxtPage />
   </NuxtLayout>
-  <NotificationBell />
   <PermissionModal />
 </template>
 
 <script setup>
-import { useSocket } from '~/composables/useSocket'
-
-if (import.meta.client) {
-  useSocket()
-}
 </script>
 
 <style>
