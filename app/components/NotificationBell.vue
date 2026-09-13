@@ -1,9 +1,8 @@
 <template>
-  <!-- DEBUG: SIEMPRE mostrar indicador para verificar -->
   <div class="ws-debug" v-if="isClient">
-    <span class="ws-dot" :class="wsConnected ? 'ws-on' : 'ws-off'"></span>
+    <span class="ws-dot" :class="[wsConnected ? 'ws-on' : 'ws-off', flashing ? 'ws-flash' : '']"></span>
     <span class="ws-label">WS {{ wsConnected ? 'ON' : 'OFF' }}</span>
-    <span v-if="noLeidas > 0" class="ws-notif-count">{{ noLeidas }}</span>
+    <span v-if="noLeidas > 0" class="ws-notif-count">{{ noLeidas > 99 ? '99+' : noLeidas }}</span>
   </div>
 
   <div v-if="isAuthenticated" class="notif-bell-global" ref="bellRef">
@@ -47,7 +46,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useNotifications } from '~/composables/useNotifications'
 import { useSocket } from '~/composables/useSocket'
 
@@ -56,17 +55,21 @@ const { connected: wsConnected } = useSocket()
 const open = ref(false)
 const bellRef = ref(null)
 const isClient = ref(false)
+const flashing = ref(false)
+let flashTimer = null
 
 const isAuthenticated = computed(() => {
   if (!import.meta.client) return false
-  const hasToken = !!(useCookie('token').value || useCookie('admin_token').value || localStorage.getItem('usuario'))
-  console.log('[Bell] isAuthenticated:', hasToken, {
-    token: !!useCookie('token').value,
-    admin_token: !!useCookie('admin_token').value,
-    localStorage: !!localStorage.getItem('usuario'),
-  })
-  return hasToken
+  return !!(useCookie('token').value || useCookie('admin_token').value || localStorage.getItem('usuario'))
 })
+
+function triggerFlash() {
+  flashing.value = true
+  if (flashTimer) clearTimeout(flashTimer)
+  flashTimer = setTimeout(() => { flashing.value = false }, 1500)
+}
+
+watch(noLeidas, () => { triggerFlash() })
 
 function toggleDropdown() {
   open.value = !open.value
@@ -110,33 +113,41 @@ function onClickOutside(e) {
 
 onMounted(() => {
   isClient.value = true
-  console.log('[Bell] Montado. isAuthenticated:', isAuthenticated.value, 'wsConnected:', wsConnected.value)
   document.addEventListener('click', onClickOutside)
 })
 onUnmounted(() => { document.removeEventListener('click', onClickOutside) })
 </script>
 
 <style scoped>
-/* Debug indicator - always visible */
 .ws-debug {
   position: fixed; top: 12px; right: 24px; z-index: 99999;
   display: flex; align-items: center; gap: 6px;
   background: #2d3436; color: white; padding: 6px 12px; border-radius: 20px;
   font-size: 0.75rem; font-weight: 600; font-family: monospace;
   box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  transition: background 0.3s;
 }
 .ws-dot {
   width: 8px; height: 8px; border-radius: 50%;
+  transition: background 0.3s, box-shadow 0.3s;
 }
 .ws-on { background: #00b894; box-shadow: 0 0 6px #00b894; }
 .ws-off { background: #d63031; box-shadow: 0 0 6px #d63031; }
+.ws-flash {
+  background: #fdcb6e !important;
+  box-shadow: 0 0 16px 4px #fdcb6e !important;
+  animation: ws-pulse 0.3s ease 3;
+}
+@keyframes ws-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.5); }
+}
 .ws-label { letter-spacing: 1px; }
 .ws-notif-count {
   background: #d63031; color: white; padding: 1px 6px; border-radius: 8px;
   font-size: 0.7rem; margin-left: 4px;
 }
 
-/* Bell */
 .notif-bell-global {
   position: fixed; top: 12px; right: 120px; z-index: 9999;
 }
