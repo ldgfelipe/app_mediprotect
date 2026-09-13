@@ -61,6 +61,7 @@ function cerrarSesion() {
           <NuxtLink to="/mis-comisiones">Comisiones</NuxtLink>
         </nav>
         <div class="user-info">
+          <NotificationBell />
           <span>Dr. {{ usuario?.nombre }} {{ usuario?.apellido }}</span>
           <button @click="cerrarSesion" class="btn-logout">Salir</button>
         </div>

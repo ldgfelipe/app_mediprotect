@@ -3,7 +3,6 @@
     <NuxtPage />
   </NuxtLayout>
   <PermissionModal />
-  <NotificationBell />
 </template>
 
 <script setup>

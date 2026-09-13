@@ -98,6 +98,7 @@ async function toggleActivo(u) {
           <NuxtLink to="/admin/pacientes">Pacientes</NuxtLink>
         </nav>
         <div class="user-info">
+          <NotificationBell />
           <button @click="$router.push('/admin')" class="btn-logout">Volver</button>
         </div>
       </div>

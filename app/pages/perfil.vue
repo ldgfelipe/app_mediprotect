@@ -337,6 +337,7 @@ async function enviarConfirmacionEmail() {
           <NuxtLink to="/perfil" class="router-link-active">Mi Perfil</NuxtLink>
         </nav>
         <div class="user-info">
+          <NotificationBell />
           <span>{{ esMedico ? 'Dr. ' : '' }}{{ usuario?.nombre }} {{ usuario?.apellido }}</span>
           <button @click="cerrarSesion" class="btn-logout">Salir</button>
         </div>

@@ -931,6 +931,7 @@ async function crearPacienteParaEmpresa() {
           <button :class="{ active: activeTab === 'empresas' }" @click="activeTab = 'empresas'">Empresas</button>
         </nav>
         <div class="user-info">
+          <NotificationBell />
           <span>{{ usuario.nombre }} {{ usuario.apellido }}</span>
           <button @click="cerrarSesion" class="btn-logout">Salir</button>
         </div>
