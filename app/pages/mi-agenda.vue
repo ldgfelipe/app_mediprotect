@@ -68,14 +68,13 @@ onMounted(() => {
 async function confirmar(id: string) {
   actionLoading.value = id
   try {
-    await useFetch(`/api/citas/${id}/confirmar`, {
+    await $fetch(`/api/citas/${id}/confirmar`, {
       method: 'PUT',
       headers: { Authorization: `Bearer ${token.value}` },
     })
-    const c = citas.value.find(x => x.id === id)
-    if (c) c.estado = 'confirmada'
+    await cargarDatos()
   } catch (e: any) {
-    error.value = e.message || 'Error al confirmar'
+    error.value = e.data?.message || e.message || 'Error al confirmar'
   } finally {
     actionLoading.value = null
   }
@@ -84,14 +83,13 @@ async function confirmar(id: string) {
 async function cancelar(id: string) {
   actionLoading.value = id
   try {
-    await useFetch(`/api/citas/${id}/cancelar`, {
+    await $fetch(`/api/citas/${id}/cancelar`, {
       method: 'PUT',
       headers: { Authorization: `Bearer ${token.value}` },
     })
-    const c = citas.value.find(x => x.id === id)
-    if (c) c.estado = 'cancelada'
+    await cargarDatos()
   } catch (e: any) {
-    error.value = e.message || 'Error al cancelar'
+    error.value = e.data?.message || e.message || 'Error al cancelar'
   } finally {
     actionLoading.value = null
   }
@@ -100,15 +98,14 @@ async function cancelar(id: string) {
 async function finalizar(id: string, resultado: string) {
   actionLoading.value = id
   try {
-    await useFetch(`/api/citas/${id}/finalizar`, {
+    await $fetch(`/api/citas/${id}/finalizar`, {
       method: 'PUT',
       headers: { Authorization: `Bearer ${token.value}` },
       body: { resultado },
     })
-    const c = citas.value.find(x => x.id === id)
-    if (c) c.estado = resultado
+    await cargarDatos()
   } catch (e: any) {
-    error.value = e.message || 'Error al finalizar'
+    error.value = e.data?.message || e.message || 'Error al finalizar'
   } finally {
     actionLoading.value = null
   }
