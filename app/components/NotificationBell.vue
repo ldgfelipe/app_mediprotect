@@ -1,5 +1,5 @@
 <template>
-  <div class="ws-debug" v-if="isClient">
+  <div v-if="isClient && wsDebugMode" class="ws-debug">
     <span class="ws-dot" :class="[wsConnected ? 'ws-on' : 'ws-off', flashing ? 'ws-flash' : '']"></span>
     <span class="ws-label">WS {{ wsConnected ? 'ON' : 'OFF' }}</span>
     <span v-if="noLeidas > 0" class="ws-notif-count">{{ noLeidas > 99 ? '99+' : noLeidas }}</span>
@@ -61,6 +61,11 @@ let flashTimer = null
 const isAuthenticated = computed(() => {
   if (!import.meta.client) return false
   return !!(useCookie('token').value || useCookie('admin_token').value || localStorage.getItem('usuario'))
+})
+
+const wsDebugMode = computed(() => {
+  if (!import.meta.client) return false
+  return localStorage.getItem('ws_debug') === 'true'
 })
 
 function triggerFlash() {

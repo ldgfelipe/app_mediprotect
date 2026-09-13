@@ -108,6 +108,13 @@
           :style="{ background: wsTestResult.ok ? '#d4edda' : '#ffd7d7', color: wsTestResult.ok ? '#00b894' : '#d63031' }">
           {{ wsTestResult.message }}
         </div>
+        <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid #f0f0f0;display:flex;align-items:center;gap:1rem">
+          <label style="font-size:0.9rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:0.5rem">
+            <input type="checkbox" :checked="wsDebugMode" @change="toggleWsDebug" style="width:18px;height:18px;cursor:pointer" />
+            Mostrar indicador WS flotante
+          </label>
+          <small style="color:#b2bec3">Muestra el badge "WS ON/OFF" en la esquina superior derecha de todas las páginas</small>
+        </div>
       </div>
 
       <!-- Estado de proveedores -->
@@ -983,6 +990,15 @@ async function reconnectWs() {
   wsTestResult.value = null
   wsConnected.value = false
   window.location.reload()
+}
+
+const wsDebugMode = ref(import.meta.client ? localStorage.getItem('ws_debug') === 'true' : false)
+
+function toggleWsDebug() {
+  wsDebugMode.value = !wsDebugMode.value
+  if (import.meta.client) {
+    localStorage.setItem('ws_debug', String(wsDebugMode.value))
+  }
 }
 
 const general = ref({
