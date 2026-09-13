@@ -10,7 +10,7 @@ const citas = ref<any[]>([])
 const loading = ref(true)
 const error = ref('')
 const cancelando = ref<string | null>(null)
-const { on, off } = useSocket()
+const { on } = useSocket()
 const { agregar } = useNotifications()
 
 const estados: Record<string, string> = {
@@ -20,6 +20,8 @@ const estados: Record<string, string> = {
   cancelada: 'Cancelada',
   asistida: 'Asistida',
   no_asistida: 'No Asistida',
+  paciente_llego: 'Paciente llegó',
+  en_atencion: 'En atención',
 }
 
 const colores: Record<string, string> = {
@@ -29,14 +31,16 @@ const colores: Record<string, string> = {
   cancelada: '#d63031',
   asistida: '#00b894',
   no_asistida: '#636e72',
+  paciente_llego: '#e17055',
+  en_atencion: '#6c5ce7',
 }
 
 async function cargarCitas() {
   try {
-    const { data } = await useFetch('/api/citas/mis-citas', {
+    const res: any = await $fetch('/api/citas/mis-citas', {
       headers: { Authorization: `Bearer ${token.value}` },
     })
-    citas.value = (data.value as any)?.citas || []
+    citas.value = res?.citas || []
   } catch (e: any) {
     error.value = e.message || 'Error al cargar citas'
   } finally {
@@ -47,38 +51,32 @@ async function cargarCitas() {
 onMounted(() => {
   cargarCitas()
 
-  on('cita:updated', (cita: any) => {
-    const idx = citas.value.findIndex(c => c.id === cita.id)
-    if (idx !== -1) {
-      citas.value[idx] = { ...citas.value[idx], ...cita }
-      agregar({ tipo: 'cita_updated', titulo: 'Cita actualizada', mensaje: `${cita.paciente_nombre || 'Tu cita'} - Estado: ${estados[cita.estado] || cita.estado}`, timestamp: new Date() })
-    }
+  on('cita:created', () => {
+    console.log('[MisCitas] Nueva cita recibida, refrescando...')
+    cargarCitas()
   })
-  on('cita:confirmed', (cita: any) => {
-    const idx = citas.value.findIndex(c => c.id === cita.id)
-    if (idx !== -1) {
-      citas.value[idx] = { ...citas.value[idx], ...cita, estado: 'confirmada' }
-      agregar({ tipo: 'cita_confirmed', titulo: 'Cita confirmada', mensaje: `Tu cita con ${cita.medico_nombre || 'el médico'} ha sido confirmada`, timestamp: new Date() })
-    }
+  on('cita:confirmed', (data: any) => {
+    console.log('[MisCitas] Cita confirmada:', data?.id)
+    cargarCitas()
   })
-  on('cita:cancelled', (cita: any) => {
-    const idx = citas.value.findIndex(c => c.id === cita.id)
-    if (idx !== -1) {
-      citas.value[idx] = { ...citas.value[idx], ...cita, estado: 'cancelada' }
-      agregar({ tipo: 'cita_cancelled', titulo: 'Cita cancelada', mensaje: `Tu cita ha sido cancelada`, timestamp: new Date() })
-    }
+  on('cita:cancelled', (data: any) => {
+    console.log('[MisCitas] Cita cancelada:', data?.id)
+    cargarCitas()
+  })
+  on('cita:updated', (data: any) => {
+    console.log('[MisCitas] Cita actualizada:', data?.id)
+    cargarCitas()
   })
 })
 
 async function cancelar(id: string) {
   cancelando.value = id
   try {
-    await useFetch(`/api/citas/${id}/cancelar`, {
+    await $fetch(`/api/citas/${id}/cancelar`, {
       method: 'PUT',
       headers: { Authorization: `Bearer ${token.value}` },
     })
-    const cita = citas.value.find(c => c.id === id)
-    if (cita) cita.estado = 'cancelada'
+    await cargarCitas()
   } catch (e: any) {
     error.value = e.message || 'Error al cancelar'
   } finally {
@@ -138,7 +136,7 @@ function cerrarSesion() {
           <div class="cita-header">
             <div class="cita-medico">
               <strong v-if="cita.medico_nombre">{{ cita.medico_nombre }} {{ cita.medico_apellido }}</strong>
-              <strong v-else class="medico-pendiente">Médico por confirmar</strong>
+              <strong v-else class="medico-pendiente">Médico por asignar</strong>
               <span class="especialidad" v-if="cita.especialidad">{{ cita.especialidad }}</span>
             </div>
             <span class="cita-estado" :style="{ background: colores[cita.estado] || '#636e72' }">

@@ -101,44 +101,21 @@ function cerrarSesion() {
   navigateTo('/')
 }
 
-// ========== CITA PENDIENTE: AGENDAR O CERRAR ==========
+// ========== CITA PENDIENTE: NOTIFICAR AL ASISTENTE ==========
 async function agendarCitaPendiente() {
   creandoCitaPendiente.value = true
-  try {
-    // Crear la cita en la BD
-    await $fetch('/api/citas/crear', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token.value}` },
-      body: { medico_nombre: citaPendienteDoctor.value }
-    })
-
-    // Abrir WhatsApp con datos del médico y paciente
-    const nombre = usuario.value ? `${usuario.value.nombre} ${usuario.value.apellido}` : ''
-    const userId = usuario.value?.id || ''
-    const msg = `Hola, quiero una cita con el médico ${citaPendienteDoctor.value}.\n\nMi nombre es: ${nombre}\nMi ID de usuario es: ${userId}`
-    window.open(`https://wa.me/522228021933?text=${encodeURIComponent(msg)}`, '_blank')
-
-    limpiarCitaPendiente()
-  } catch (e: any) {
-    console.error('Error al agendar cita:', e)
-  }
+  const nombre = usuario.value ? `${usuario.value.nombre} ${usuario.value.apellido}` : ''
+  const userId = usuario.value?.id || ''
+  const email = usuario.value?.email || ''
+  const tel = usuario.value?.telefono || ''
+  const msg = `Hola MediProtect, soy ${nombre} y solicito una cita con el médico ${citaPendienteDoctor.value}.\n\n📧 Email: ${email}\n📱 Teléfono: ${tel}\n🆔 ID: ${userId}\n\nPor favor, confirmen disponibilidad.`
+  window.open(`https://wa.me/522228021933?text=${encodeURIComponent(msg)}`, '_blank')
+  limpiarCitaPendiente()
   creandoCitaPendiente.value = false
 }
 
 async function cerrarCitaPendiente() {
-  creandoCitaPendiente.value = true
-  try {
-    // Crear la cita como pendiente (sin WhatsApp)
-    await $fetch('/api/citas/crear', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token.value}` },
-      body: { medico_nombre: citaPendienteDoctor.value }
-    })
-    limpiarCitaPendiente()
-  } catch (e: any) {
-    console.error('Error al guardar cita:', e)
-  }
-  creandoCitaPendiente.value = false
+  limpiarCitaPendiente()
 }
 
 function limpiarCitaPendiente() {
