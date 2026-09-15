@@ -134,60 +134,52 @@ async function parsearMensaje() {
   if (!text.trim()) return
   parseando.value = true
   errorCita.value = ''
-  console.log('[Asistente] Parseando mensaje:', text.substring(0, 200))
+  console.log('[Asistente] Parseando mensaje:', text.substring(0, 300))
 
   // Extract doctor name
   const medicoMatch = text.match(/(?:con\s+(?:el\s+)?|atención\s+(?:con\s+)?)?(?:médico|doctor|dra?\.?)\s+([^\n.,;]+)/i)
   if (medicoMatch) {
-    const nombreMedico = medicoMatch[1].trim()
-    const nombreLimpio = nombreMedico.replace(/^(dra?\.?\s*)/i, '').trim()
+    const nombreLimpio = medicoMatch[1].trim().replace(/^(dra?\.?\s*)/i, '').trim()
     nuevaCita.value.medico_search = nombreLimpio
     await buscarMedicoConDisponibilidadDirecto(nombreLimpio)
   }
 
-  // 1) Try email
-  const emailMatch = text.match(/(?:correo|email|e-mail)\s*[:=]\s*([^\s\n]+@[^\s\n]+)/i) || text.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i)
-  if (emailMatch) {
-    console.log('[Asistente] Email encontrado:', emailMatch[1])
-    nuevaCita.value.paciente_search = emailMatch[1].trim()
+  // Extract ALL possible patient identifiers from the text
+  const busquedas = []
+
+  // Email
+  const emailMatch = text.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i)
+  if (emailMatch) busquedas.push(emailMatch[1].trim())
+
+  // UUID
+  const uuidMatch = text.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i)
+  if (uuidMatch) busquedas.push(uuidMatch[1].trim())
+
+  // Phone (10 digits)
+  const phoneMatch = text.match(/(\d{10})/)
+  if (phoneMatch) busquedas.push(phoneMatch[1].trim())
+
+  // Name
+  const nombreMatch = text.match(/nombre\s*(?:es|:)\s*(.+?)(?:\.|\n|$)/i)
+  if (nombreMatch) busquedas.push(nombreMatch[1].trim())
+
+  console.log('[Asistente] Busquedas extraídas:', busquedas)
+
+  // Try each search until we find a patient
+  for (const termino of busquedas) {
+    if (pacienteSeleccionado.value) break
+    if (termino.length < 2) continue
+    console.log('[Asistente] Buscando:', termino)
+    nuevaCita.value.paciente_search = termino
     await buscarPacientesById()
-  }
-
-  // 2) Try ID
-  if (!pacienteSeleccionado.value) {
-    const idMatch = text.match(/ID\s+de\s+usuario\s+es:\s*([a-f0-9-]+)/i) || text.match(/ID\s*[:=]\s*([a-f0-9-]+)/i)
-    if (idMatch) {
-      console.log('[Asistente] ID encontrado:', idMatch[1])
-      nuevaCita.value.paciente_search = idMatch[1].trim()
-      await buscarPacientesById()
-    }
-  }
-
-  // 3) Try phone
-  if (!pacienteSeleccionado.value) {
-    const phoneMatch = text.match(/(?:teléfono|telefono|tel|celular|cel)\s*[:=]\s*(\d{10})/i)
-    if (phoneMatch) {
-      console.log('[Asistente] Teléfono encontrado:', phoneMatch[1])
-      nuevaCita.value.paciente_search = phoneMatch[1].trim()
-      await buscarPacientesById()
-    }
-  }
-
-  // 4) Try name
-  if (!pacienteSeleccionado.value) {
-    const nombreMatch = text.match(/nombre\s+es:\s*(.+?)(?:\.|\n|$)/i) || text.match(/nombre\s*[:=]\s*(.+?)(?:\.|\n|$)/i)
-    if (nombreMatch) {
-      console.log('[Asistente] Nombre encontrado:', nombreMatch[1])
-      nuevaCita.value.paciente_search = nombreMatch[1].trim()
-      await buscarPacientes()
-    }
   }
 
   parseando.value = false
   if (pacienteSeleccionado.value) {
     pasoActual.value = 2
+    console.log('[Asistente] Paciente seleccionado:', pacienteSeleccionado.value.nombre, pacienteSeleccionado.value.apellido)
   } else {
-    console.log('[Asistente] No se encontró paciente')
+    console.log('[Asistente] No se encontró paciente con:', busquedas)
   }
 }
 
