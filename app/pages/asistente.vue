@@ -134,6 +134,7 @@ async function parsearMensaje() {
   if (!text.trim()) return
   parseando.value = true
   errorCita.value = ''
+  console.log('[Asistente] Parseando mensaje:', text.substring(0, 200))
 
   // Extract doctor name
   const medicoMatch = text.match(/(?:con\s+(?:el\s+)?|atención\s+(?:con\s+)?)?(?:médico|doctor|dra?\.?)\s+([^\n.,;]+)/i)
@@ -144,9 +145,10 @@ async function parsearMensaje() {
     await buscarMedicoConDisponibilidadDirecto(nombreLimpio)
   }
 
-  // 1) Try email first
+  // 1) Try email
   const emailMatch = text.match(/(?:correo|email|e-mail)\s*[:=]\s*([^\s\n]+@[^\s\n]+)/i) || text.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i)
   if (emailMatch) {
+    console.log('[Asistente] Email encontrado:', emailMatch[1])
     nuevaCita.value.paciente_search = emailMatch[1].trim()
     await buscarPacientesById()
   }
@@ -155,6 +157,7 @@ async function parsearMensaje() {
   if (!pacienteSeleccionado.value) {
     const idMatch = text.match(/ID\s+de\s+usuario\s+es:\s*([a-f0-9-]+)/i) || text.match(/ID\s*[:=]\s*([a-f0-9-]+)/i)
     if (idMatch) {
+      console.log('[Asistente] ID encontrado:', idMatch[1])
       nuevaCita.value.paciente_search = idMatch[1].trim()
       await buscarPacientesById()
     }
@@ -164,6 +167,7 @@ async function parsearMensaje() {
   if (!pacienteSeleccionado.value) {
     const phoneMatch = text.match(/(?:teléfono|telefono|tel|celular|cel)\s*[:=]\s*(\d{10})/i)
     if (phoneMatch) {
+      console.log('[Asistente] Teléfono encontrado:', phoneMatch[1])
       nuevaCita.value.paciente_search = phoneMatch[1].trim()
       await buscarPacientesById()
     }
@@ -173,6 +177,7 @@ async function parsearMensaje() {
   if (!pacienteSeleccionado.value) {
     const nombreMatch = text.match(/nombre\s+es:\s*(.+?)(?:\.|\n|$)/i) || text.match(/nombre\s*[:=]\s*(.+?)(?:\.|\n|$)/i)
     if (nombreMatch) {
+      console.log('[Asistente] Nombre encontrado:', nombreMatch[1])
       nuevaCita.value.paciente_search = nombreMatch[1].trim()
       await buscarPacientes()
     }
@@ -181,20 +186,28 @@ async function parsearMensaje() {
   parseando.value = false
   if (pacienteSeleccionado.value) {
     pasoActual.value = 2
+  } else {
+    console.log('[Asistente] No se encontró paciente')
   }
 }
 
 async function buscarPacientesById() {
-  if (!nuevaCita.value.paciente_search.trim()) { pacientesSearch.value = []; return }
+  const termino = nuevaCita.value.paciente_search.trim()
+  if (!termino) { pacientesSearch.value = []; return }
+  console.log('[Asistente] Buscando paciente por:', termino)
   try {
-    const data = await $fetch('/api/asistente/pacientes?search=' + encodeURIComponent(nuevaCita.value.paciente_search), {
+    const data = await $fetch('/api/asistente/pacientes?search=' + encodeURIComponent(termino), {
       headers: { Authorization: 'Bearer ' + authToken.value }
     })
+    console.log('[Asistente] Pacientes encontrados:', data.pacientes?.length, data.pacientes)
     pacientesSearch.value = data.pacientes || []
     if (pacientesSearch.value.length === 1) {
       seleccionarPaciente(pacientesSearch.value[0])
     }
-  } catch (e) { pacientesSearch.value = [] }
+  } catch (e) {
+    console.error('[Asistente] Error buscando paciente:', e)
+    pacientesSearch.value = []
+  }
 }
 
 let pacienteSearchTimeout = null

@@ -17,16 +17,28 @@ export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const search = (query.search as string || '').trim()
 
+  console.log('[AsistentePacientes] Search query:', JSON.stringify(search))
+
   let sql = 'SELECT id, nombre, apellido, email, telefono, created_at FROM pacientes'
   const params = []
 
   if (search) {
-    sql += ' WHERE nombre ILIKE $1 OR apellido ILIKE $1 OR email ILIKE $1 OR telefono ILIKE $1 OR id::text ILIKE $1'
+    sql += ` WHERE 
+      nombre ILIKE $1 
+      OR apellido ILIKE $1 
+      OR email ILIKE $1 
+      OR telefono ILIKE $1 
+      OR id::text ILIKE $1
+      OR (nombre || ' ' || apellido) ILIKE $1`
     params.push('%' + search + '%')
   }
 
   sql += ' ORDER BY created_at DESC LIMIT 20'
 
+  console.log('[AsistentePacientes] SQL:', sql, 'params:', params)
+
   const result = await pool.query(sql, params)
+  console.log('[AsistentePacientes] Results:', result.rows.length, 'pacientes found')
+
   return { pacientes: result.rows }
 })
