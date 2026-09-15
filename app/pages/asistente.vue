@@ -387,17 +387,27 @@ async function abrirCita(cita) {
   } catch (e) { console.error(e) }
 }
 
+const actionLoading = ref(null)
+const actionSuccess = ref('')
+
 async function cambiarEstado(estado, descripcion) {
   if (!citaSeleccionada.value) return
+  actionLoading.value = estado
+  actionSuccess.value = ''
   try {
     await $fetch('/api/asistente/citas/' + citaSeleccionada.value.id + '/estado', {
       method: 'PUT',
       headers: { Authorization: 'Bearer ' + authToken.value },
       body: { estado, descripcion }
     })
+    actionSuccess.value = `✓ ${estado === 'confirmada' ? 'Cita confirmada' : estado === 'cancelada' ? 'Cita cancelada' : 'Estado actualizado'}`
+    setTimeout(() => { actionSuccess.value = '' }, 3000)
     await abrirCita(citaSeleccionada.value)
     await cargarCitas()
-  } catch (e) { alert(e.data?.message || 'Error') }
+  } catch (e) {
+    alert(e.data?.message || 'Error al cambiar estado')
+  }
+  actionLoading.value = null
 }
 
 async function agregarNota() {
@@ -1530,14 +1540,28 @@ async function crearPacienteParaEmpresa() {
             </div>
           </div>
 
+          <div v-if="actionSuccess" style="background:#d4edda;color:#00b894;padding:0.5rem 1rem;border-radius:6px;font-size:0.85rem;font-weight:600;margin-bottom:0.75rem">
+            {{ actionSuccess }}
+          </div>
+
           <div class="acciones">
             <h3>Acciones</h3>
             <div class="btn-group">
-              <button v-if="citaSeleccionada.estado === 'pendiente'" @click="cambiarEstado('confirmada', 'Confirmada por asistente')" class="btn-action btn-confirm">Confirmar</button>
-              <button v-if="citaSeleccionada.estado === 'confirmada'" @click="cambiarEstado('paciente_llego', 'Paciente llegó (reportado por asistente)')" class="btn-action btn-arrival">Paciente Llegó</button>
-              <button v-if="citaSeleccionada.estado === 'paciente_llego'" @click="cambiarEstado('en_atencion', 'Iniciando atención')" class="btn-action btn-attention">Iniciar Atención</button>
-              <button v-if="['en_atencion','paciente_llego'].includes(citaSeleccionada.estado)" @click="cambiarEstado('asistida', 'Cita completada')" class="btn-action btn-success">Marcar Asistida</button>
-              <button v-if="['pendiente','confirmada','paciente_llego'].includes(citaSeleccionada.estado)" @click="cambiarEstado('cancelada', 'Cancelada por asistente')" class="btn-action btn-cancel">Cancelar</button>
+              <button v-if="citaSeleccionada.estado === 'pendiente'" @click="cambiarEstado('confirmada', 'Confirmada por asistente')" class="btn-action btn-confirm" :disabled="actionLoading">
+                {{ actionLoading === 'confirmada' ? 'Confirmando...' : 'Confirmar' }}
+              </button>
+              <button v-if="citaSeleccionada.estado === 'confirmada'" @click="cambiarEstado('paciente_llego', 'Paciente llegó (reportado por asistente)')" class="btn-action btn-arrival" :disabled="actionLoading">
+                {{ actionLoading === 'paciente_llego' ? 'Procesando...' : 'Paciente Llegó' }}
+              </button>
+              <button v-if="citaSeleccionada.estado === 'paciente_llego'" @click="cambiarEstado('en_atencion', 'Iniciando atención')" class="btn-action btn-attention" :disabled="actionLoading">
+                {{ actionLoading === 'en_atencion' ? 'Procesando...' : 'Iniciar Atención' }}
+              </button>
+              <button v-if="['en_atencion','paciente_llego'].includes(citaSeleccionada.estado)" @click="cambiarEstado('asistida', 'Cita completada')" class="btn-action btn-success" :disabled="actionLoading">
+                {{ actionLoading === 'asistida' ? 'Procesando...' : 'Marcar Asistida' }}
+              </button>
+              <button v-if="['pendiente','confirmada','paciente_llego'].includes(citaSeleccionada.estado)" @click="cambiarEstado('cancelada', 'Cancelada por asistente')" class="btn-action btn-cancel" :disabled="actionLoading">
+                {{ actionLoading === 'cancelada' ? 'Cancelando...' : 'Cancelar' }}
+              </button>
             </div>
           </div>
 
@@ -1873,7 +1897,8 @@ h1 { font-size: 1.5rem; color: #2d3436; }
 .acciones { margin-bottom: 1.5rem; }
 .acciones h3, .nota-section h3, .bitacora-section h3, .wa-section h3 { font-size: 1rem; margin-bottom: 0.8rem; color: #2d3436; }
 .btn-group { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-.btn-action { padding: 0.5rem 1rem; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; color: white; }
+.btn-action { padding: 0.5rem 1rem; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; color: white; transition: opacity 0.2s; }
+.btn-action:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-confirm { background: #0984e3; }
 .btn-arrival { background: #00b894; }
 .btn-attention { background: #6c5ce7; }
