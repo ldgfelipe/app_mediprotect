@@ -135,30 +135,49 @@ async function parsearMensaje() {
   parseando.value = true
   errorCita.value = ''
 
-  // Extract doctor name — match多种 patterns: "médico X", "doctor X", "Dr. X", "Dra. X", "con Dr X", "con el médico X"
+  // Extract doctor name
   const medicoMatch = text.match(/(?:con\s+(?:el\s+)?|atención\s+(?:con\s+)?)?(?:médico|doctor|dra?\.?)\s+([^\n.,;]+)/i)
   if (medicoMatch) {
     const nombreMedico = medicoMatch[1].trim()
-    // Limpiar "Dr." o "Dra." del inicio si está presente
     const nombreLimpio = nombreMedico.replace(/^(dra?\.?\s*)/i, '').trim()
     nuevaCita.value.medico_search = nombreLimpio
-    // Buscar médico con disponibilidad
     await buscarMedicoConDisponibilidadDirecto(nombreLimpio)
   }
 
-  // Extract patient ID
-  const idMatch = text.match(/ID\s+de\s+usuario\s+es:\s*([a-f0-9-]+)/i) || text.match(/ID\s*[:=]\s*([a-f0-9-]+)/i)
-  if (idMatch) {
-    nuevaCita.value.paciente_search = idMatch[1].trim()
+  // 1) Try email first
+  const emailMatch = text.match(/(?:correo|email|e-mail)\s*[:=]\s*([^\s\n]+@[^\s\n]+)/i) || text.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i)
+  if (emailMatch) {
+    nuevaCita.value.paciente_search = emailMatch[1].trim()
     await buscarPacientesById()
-  } else {
-    // Try name
+  }
+
+  // 2) Try ID
+  if (!pacienteSeleccionado.value) {
+    const idMatch = text.match(/ID\s+de\s+usuario\s+es:\s*([a-f0-9-]+)/i) || text.match(/ID\s*[:=]\s*([a-f0-9-]+)/i)
+    if (idMatch) {
+      nuevaCita.value.paciente_search = idMatch[1].trim()
+      await buscarPacientesById()
+    }
+  }
+
+  // 3) Try phone
+  if (!pacienteSeleccionado.value) {
+    const phoneMatch = text.match(/(?:teléfono|telefono|tel|celular|cel)\s*[:=]\s*(\d{10})/i)
+    if (phoneMatch) {
+      nuevaCita.value.paciente_search = phoneMatch[1].trim()
+      await buscarPacientesById()
+    }
+  }
+
+  // 4) Try name
+  if (!pacienteSeleccionado.value) {
     const nombreMatch = text.match(/nombre\s+es:\s*(.+?)(?:\.|\n|$)/i) || text.match(/nombre\s*[:=]\s*(.+?)(?:\.|\n|$)/i)
     if (nombreMatch) {
       nuevaCita.value.paciente_search = nombreMatch[1].trim()
       await buscarPacientes()
     }
   }
+
   parseando.value = false
   if (pacienteSeleccionado.value) {
     pasoActual.value = 2
