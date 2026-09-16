@@ -707,6 +707,122 @@
           </div>
         </div>
 
+        <!-- Configuración WhatsApp API -->
+        <div class="config-section">
+          <div class="section-header">
+            <div class="section-title">
+              <span class="provider-icon-lg">💬</span>
+              <div>
+                <h3>WhatsApp Business API</h3>
+                <p class="section-desc">Webhook, credenciales y flujo de citas por WhatsApp</p>
+              </div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" v-model="whatsapp.enabled" @change="markDirty">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="section-body" v-if="whatsapp.enabled">
+            <!-- Estado del webhook -->
+            <div class="smtp-status" :class="whatsapp.configurado ? 'smtp-status-ok' : 'smtp-status-warn'">
+              <strong>{{ whatsapp.configurado ? '✓ Webhook WhatsApp configurado' : 'Webhook sin configurar' }}</strong>
+              <span>{{ whatsapp.configurado ? 'Credenciales activas — webhook operativo' : 'Ingresa las credenciales de Meta para activar' }}</span>
+            </div>
+
+            <!-- URL del webhook (read-only) -->
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label>URL del Webhook (Meta)</label>
+                <div class="readonly-field">https://app.mediprotect.com.mx/whook/wame</div>
+                <small class="field-hint">Copia esta URL en el panel de Meta Developer Console → WhatsApp → Configuration → Webhook</small>
+              </div>
+            </div>
+
+            <!-- Verify Token -->
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label>Verify Token (tú lo inventas)</label>
+                <div class="input-with-action">
+                  <input
+                    :type="whatsapp.showVerify ? 'text' : 'password'"
+                    v-model="whatsapp.verifyToken"
+                    placeholder="Ej: mediprotect_wa_verify_2026"
+                    @input="markDirty"
+                  >
+                  <button class="btn-icon" @click="whatsapp.showVerify = !whatsapp.showVerify">
+                    {{ whatsapp.showVerify ? '🙈' : '👁️' }}
+                  </button>
+                </div>
+                <small class="field-hint">Es una contraseña secreta que tú defines. Debe coincidir exactamente con lo que pongas en el panel de Meta</small>
+              </div>
+            </div>
+
+            <!-- WhatsApp Token -->
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label>WhatsApp Token (Meta Cloud API)</label>
+                <div class="input-with-action">
+                  <input
+                    :type="whatsapp.showToken ? 'text' : 'password'"
+                    v-model="whatsapp.token"
+                    placeholder="EAAxxxxx..."
+                    @input="markDirty"
+                  >
+                  <button class="btn-icon" @click="whatsapp.showToken = !whatsapp.showToken">
+                    {{ whatsapp.showToken ? '🙈' : '👁️' }}
+                  </button>
+                </div>
+                <small class="field-hint">Token de acceso de tu app de Meta (temporary o permanent). Lo encuentras en Dashboard → System Users</small>
+              </div>
+            </div>
+
+            <!-- Phone Number ID + App Secret -->
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label>Phone Number ID</label>
+                <input
+                  type="text"
+                  v-model="whatsapp.phoneNumberId"
+                  placeholder="Ej: 1234567890"
+                  @input="markDirty"
+                >
+                <small class="field-hint">ID del número de WhatsApp Business. Lo encuentras en WhatsApp → Phone Numbers</small>
+              </div>
+              <div class="form-group flex-1">
+                <label>App Secret</label>
+                <div class="input-with-action">
+                  <input
+                    :type="whatsapp.showSecret ? 'text' : 'password'"
+                    v-model="whatsapp.appSecret"
+                    placeholder="abc123..."
+                    @input="markDirty"
+                  >
+                  <button class="btn-icon" @click="whatsapp.showSecret = !whatsapp.showSecret">
+                    {{ whatsapp.showSecret ? '🙈' : '👁️' }}
+                  </button>
+                </div>
+                <small class="field-hint">Secret de tu app de Meta. Lo encuentras en App Settings → Basic</small>
+              </div>
+            </div>
+
+            <div class="provider-info">
+              <p><strong>Pasos para configurar:</strong></p>
+              <p>1. Copia la URL del webhook y pégala en Meta Developer Console → WhatsApp → Configuration</p>
+              <p>2. Ingresa el Verify Token que definiste arriba en el campo "Identificador de verificación"</p>
+              <p>3. Suscribe los campos: <code>messages</code> y <code>message_template_status</code></p>
+              <p>4. Haz clic en "Verify and Save"</p>
+            </div>
+
+            <div class="form-actions">
+              <button class="btn-primary" @click="guardarWhatsAppConfig" :disabled="whatsapp.saving">
+                {{ whatsapp.saving ? 'Guardando...' : 'Guardar configuración WhatsApp' }}
+              </button>
+              <span v-if="whatsapp.savedMsg" class="test-success">{{ whatsapp.savedMsg }}</span>
+            </div>
+          </div>
+        </div>
+
         <!-- Configuración general de IA -->
         <div class="config-section">
           <div class="section-header">
@@ -1045,6 +1161,61 @@ const sms = ref({
   testResult: '',
   testError: '',
 })
+
+const whatsapp = ref({
+  enabled: true,
+  verifyToken: '',
+  token: '',
+  phoneNumberId: '',
+  appSecret: '',
+  showVerify: false,
+  showToken: false,
+  showSecret: false,
+  configurado: false,
+  saving: false,
+  savedMsg: '',
+})
+
+const loadWhatsAppConfig = async () => {
+  try {
+    const data: any = await $fetch('/api/admin/whatsapp-config')
+    const config = data?.configuracion || {}
+    whatsapp.value.enabled = config.whatsapp_webhook_activo?.valor !== 'false'
+    whatsapp.value.verifyToken = config.whatsapp_verify_token?.valor || ''
+    whatsapp.value.token = config.whatsapp_token?.valor || ''
+    whatsapp.value.phoneNumberId = config.whatsapp_phone_number_id?.valor || ''
+    whatsapp.value.appSecret = config.whatsapp_app_secret?.valor || ''
+    whatsapp.value.configurado = !!(whatsapp.value.verifyToken && whatsapp.value.token && whatsapp.value.phoneNumberId)
+  } catch (e) {
+    console.error('Error cargando WhatsApp config:', e)
+  }
+}
+
+const guardarWhatsAppConfig = async () => {
+  whatsapp.value.saving = true
+  whatsapp.value.savedMsg = ''
+  try {
+    await $fetch('/api/admin/whatsapp-config', {
+      method: 'POST',
+      body: {
+        configuraciones: [
+          { clave: 'whatsapp_webhook_activo', valor: whatsapp.value.enabled ? 'true' : 'false' },
+          { clave: 'whatsapp_verify_token', valor: whatsapp.value.verifyToken },
+          { clave: 'whatsapp_token', valor: whatsapp.value.token },
+          { clave: 'whatsapp_phone_number_id', valor: whatsapp.value.phoneNumberId },
+          { clave: 'whatsapp_app_secret', valor: whatsapp.value.appSecret },
+        ]
+      }
+    })
+    whatsapp.value.configurado = !!(whatsapp.value.verifyToken && whatsapp.value.token && whatsapp.value.phoneNumberId)
+    whatsapp.value.savedMsg = 'Configuración WhatsApp guardada correctamente'
+    setTimeout(() => { whatsapp.value.savedMsg = '' }, 3000)
+  } catch (e: any) {
+    alert(e?.data?.message || 'Error guardando configuración WhatsApp')
+  } finally {
+    whatsapp.value.saving = false
+  }
+}
 
 const verificacion = ref({
   requirePhone: true,
@@ -1585,6 +1756,7 @@ onMounted(() => {
   cargarTelefonosVerificados()
   loadSmtpConfig()
   loadTokens()
+  loadWhatsAppConfig()
 
   // WebSocket connection test
   const wsToken = useCookie('admin_token').value

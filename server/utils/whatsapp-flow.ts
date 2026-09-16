@@ -1,0 +1,380 @@
+import {
+  getAvailableSpecialties,
+  getDoctorsBySpecialty,
+  getAvailableDates,
+  getAvailableHours,
+  createCitaFromWhatsApp,
+  searchPatientByPhone
+} from './whatsapp-db'
+
+interface Conversacion {
+  id: string
+  telefono: string
+  nombre_paciente: string | null
+  id_paciente: string | null
+  estado: string
+  datos_temp: any
+}
+
+interface Respuesta {
+  texto: string
+  nuevoEstado: string
+  datosTemp: any
+  lista?: { titulo_seccion: string; opciones: { id: string; titulo: string; descripcion?: string }[] }
+  botones?: { id: string; titulo: string }[]
+}
+
+const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+
+function formatFecha(fechaStr: string): string {
+  const d = new Date(fechaStr + 'T12:00:00')
+  return `${DIAS_SEMANA[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]}`
+}
+
+function formatHora(hora: string): string {
+  const [h, m] = hora.split(':')
+  const hour = parseInt(h)
+  const suffix = hour >= 12 ? 'PM' : 'AM'
+  const h12 = hour > 12 ? hour - 12 : hour
+  return `${h12}:${m} ${suffix}`
+}
+
+export async function processMessage(conv: Conversacion, texto: string, nombre: string): Promise<Respuesta | null> {
+  const state = conv.estado
+  const data = conv.datos_temp || {}
+
+  switch (state) {
+
+    case 'bienvenida': {
+      const nombrePaciente = conv.nombre_paciente || nombre || ''
+      const saludo = nombrePaciente ? `¡Hola ${nombrePaciente}! 👋` : '¡Hola! 👋'
+
+      return {
+        texto: `${saludo}\n\nSoy el asistente virtual de *MediProtect* 🏥\n¿Qué necesitas hoy?`,
+        nuevoEstado: 'menu_principal',
+        datosTemp: { ...data },
+        botones: [
+          { id: 'menu_agendar', titulo: 'Agendar cita' },
+          { id: 'menu_info', titulo: 'Información' },
+          { id: 'menu_asesor', titulo: 'Hablar con asesor' },
+        ]
+      }
+    }
+
+    case 'menu_principal': {
+      if (texto === 'menu_agendar') {
+        const especialidades = await getAvailableSpecialties(conv.telefono)
+        if (especialidades.length === 0) {
+          return {
+            texto: 'No hay especialidades disponibles en este momento. Por favor, intenta más tarde o habla con un asesor.',
+            nuevoEstado: 'bienvenida',
+            datosTemp: {}
+          }
+        }
+
+        return {
+          texto: '¿Con qué especialidad deseas tu consulta?',
+          nuevoEstado: 'seleccionando_especialidad',
+          datosTemp: { ...data },
+          lista: {
+            titulo_seccion: 'Especialidades',
+            opciones: especialidades.map((e, i) => ({
+              id: `esp_${i}_${e.toLowerCase().replace(/\s+/g, '_')}`,
+              titulo: e,
+            }))
+          }
+        }
+      }
+
+      if (texto === 'menu_info') {
+        return {
+          texto: 'MediProtect te ofrece acceso a especialistas con precios preferenciales.\n\n• Afiliación gratuita\n• Descuentos del 10% o más\n• Gestión completa de citas\n• Confirmación doble de asistencia\n\n¿Deseas agendar una cita?',
+          nuevoEstado: 'menu_principal',
+          datosTemp: { ...data },
+          botones: [
+            { id: 'menu_agendar', titulo: 'Agendar cita' },
+            { id: 'menu_asesor', titulo: 'Hablar con asesor' },
+          ]
+        }
+      }
+
+      if (texto === 'menu_asesor') {
+        return {
+          texto: 'Un asesor de MediProtect te contactará en breve.\n\n⏱️ Tiempo de respuesta estimado: 15-30 minutos\n\n¿Qué consulta necesitas? Déjanos un mensaje breve.',
+          nuevoEstado: 'esperando_asesor',
+          datosTemp: { ...data }
+        }
+      }
+
+      return {
+        texto: 'No entendí tu selección. Por favor, elige una opción:',
+        nuevoEstado: 'menu_principal',
+        datosTemp: { ...data },
+        botones: [
+          { id: 'menu_agendar', titulo: 'Agendar cita' },
+          { id: 'menu_info', titulo: 'Información' },
+          { id: 'menu_asesor', titulo: 'Hablar con asesor' },
+        ]
+      }
+    }
+
+    case 'seleccionando_especialidad': {
+      if (texto.startsWith('esp_')) {
+        const partes = texto.split('_')
+        const especialidad = partes.slice(2).join(' ')
+
+        const doctores = await getDoctorsBySpecialty(conv.telefono, especialidad)
+
+        if (doctores.length === 0) {
+          return {
+            texto: `No hay doctores disponibles para *${especialidad}* en este momento.`,
+            nuevoEstado: 'bienvenida',
+            datosTemp: {}
+          }
+        }
+
+        return {
+          texto: `Estos son los especialistas en *${especialidad}*:`,
+          nuevoEstado: 'seleccionando_doctor',
+          datosTemp: { ...data, especialidad },
+          lista: {
+            titulo_seccion: 'Médicos',
+            opciones: doctores.map((d, i) => ({
+              id: `doc_${i}_${d.id}`,
+              titulo: `Dr. ${d.nombre} ${d.apellido}`,
+              descripcion: `$${d.precio_regular || 'N/A'} MXN`,
+            }))
+          }
+        }
+      }
+
+      return {
+        texto: 'Por favor, selecciona una especialidad de la lista.',
+        nuevoEstado: 'seleccionando_especialidad',
+        datosTemp: { ...data }
+      }
+    }
+
+    case 'seleccionando_doctor': {
+      if (texto.startsWith('doc_')) {
+        const partes = texto.split('_')
+        const doctorId = partes.slice(2).join('_')
+
+        const doctores = await getDoctorsBySpecialty(conv.telefono, data.especialidad)
+        const doctor = doctores.find((d: any) => d.id === doctorId)
+
+        if (!doctor) {
+          return {
+            texto: 'Doctor no encontrado. Intenta de nuevo.',
+            nuevoEstado: 'bienvenida',
+            datosTemp: {}
+          }
+        }
+
+        const fechas = await getAvailableDates(conv.telefono, doctorId)
+
+        if (fechas.length === 0) {
+          return {
+            texto: `El Dr. ${doctor.nombre} ${doctor.apellido} no tiene disponibilidad en los próximos 14 días.\n\n¿Deseas elegir otro médico?`,
+            nuevoEstado: 'bienvenida',
+            datosTemp: {},
+            botones: [
+              { id: 'menu_agendar', titulo: 'Elegir otro médico' },
+              { id: 'menu_asesor', titulo: 'Hablar con asesor' },
+            ]
+          }
+        }
+
+        return {
+          texto: `Fechas disponibles para *Dr. ${doctor.nombre} ${doctor.apellido}*:`,
+          nuevoEstado: 'seleccionando_fecha',
+          datosTemp: { ...data, doctorId, doctorNombre: `${doctor.nombre} ${doctor.apellido}`, precioRegular: doctor.precio_regular },
+          lista: {
+            titulo_seccion: 'Fechas',
+            opciones: fechas.map((f: any, i) => ({
+              id: `fecha_${i}_${f}`,
+              titulo: formatFecha(f),
+              descripcion: f,
+            }))
+          }
+        }
+      }
+
+      return {
+        texto: 'Por favor, selecciona un doctor de la lista.',
+        nuevoEstado: 'seleccionando_doctor',
+        datosTemp: { ...data }
+      }
+    }
+
+    case 'seleccionando_fecha': {
+      if (texto.startsWith('fecha_')) {
+        const partes = texto.split('_')
+        const fecha = partes.slice(2).join('_')
+
+        const horas = await getAvailableHours(conv.telefono, data.doctorId, fecha)
+
+        if (horas.length === 0) {
+          return {
+            texto: `No hay horas disponibles para el ${formatFecha(fecha)}.\n\n¿Deseas elegir otra fecha?`,
+            nuevoEstado: 'seleccionando_fecha',
+            datosTemp: { ...data }
+          }
+        }
+
+        return {
+          texto: `Horas disponibles para el *${formatFecha(fecha)}*:`,
+          nuevoEstado: 'seleccionando_hora',
+          datosTemp: { ...data, fechaSeleccionada: fecha },
+          lista: {
+            titulo_seccion: 'Horarios',
+            opciones: horas.map((h: string, i) => ({
+              id: `hora_${i}_${h}`,
+              titulo: formatHora(h),
+              descripcion: h,
+            }))
+          }
+        }
+      }
+
+      return {
+        texto: 'Por favor, selecciona una fecha de la lista.',
+        nuevoEstado: 'seleccionando_fecha',
+        datosTemp: { ...data }
+      }
+    }
+
+    case 'seleccionando_hora': {
+      if (texto.startsWith('hora_')) {
+        const partes = texto.split('_')
+        const hora = partes.slice(2).join('_')
+
+        const descuento = 10
+        const precioConDescuento = (data.precioRegular || 1000) * (1 - descuento / 100)
+
+        return {
+          texto: `📋 *Resumen de tu cita:*\n\n👨‍⚕️ *Dr. ${data.doctorNombre}*\n📅 ${formatFecha(data.fechaSeleccionada)}\n🕐 ${formatHora(hora)}\n💰 Precio preferencial: *$${precioConDescuento} MXN*\n\n¿Confirmas esta cita?`,
+          nuevoEstado: 'confirmacion_paciente',
+          datosTemp: { ...data, horaSeleccionada: hora, precioConDescuento },
+          botones: [
+            { id: 'confirmar_cita', titulo: '✅ Confirmar' },
+            { id: 'cancelar_cita', titulo: '❌ Cancelar' },
+            { id: 'cambiar_hora', titulo: '🔄 Cambiar hora' },
+          ]
+        }
+      }
+
+      return {
+        texto: 'Por favor, selecciona una hora de la lista.',
+        nuevoEstado: 'seleccionando_hora',
+        datosTemp: { ...data }
+      }
+    }
+
+    case 'confirmacion_paciente': {
+      if (texto === 'confirmar_cita') {
+        const paciente = await searchPatientByPhone(conv.telefono)
+
+        try {
+          const cita = await createCitaFromWhatsApp(
+            conv.telefono,
+            data.doctorId,
+            paciente?.id || null,
+            data.fechaSeleccionada,
+            data.horaSeleccionada,
+            conv.telefono,
+            conv.nombre_paciente || nombre || 'Paciente WhatsApp'
+          )
+
+          const nombrePaciente = conv.nombre_paciente || nombre || 'Paciente'
+
+          return {
+            texto: `✅ *¡Cita agendada!*\n\n📌 Folio: *${cita.folio}*\n👨‍⚕️ Dr. ${data.doctorNombre}\n📅 ${formatFecha(data.fechaSeleccionada)}\n🕐 ${formatHora(data.horaSeleccionada)}\n💰 $${data.precioConDescuento} MXN\n\nTe notificaremos cuando el médico confirme tu cita.\n\n*Instrucciones:*\n• Llegar 10 min antes\n• Traer identificación oficial\n• Presentar este folio en recepción`,
+            nuevoEstado: 'cita_creada',
+            datosTemp: { ...data, citaId: cita.id, folio: cita.folio }
+          }
+        } catch (err: any) {
+          console.error('[WhatsApp Flow] Error creando cita:', err)
+          return {
+            texto: 'Hubo un error al crear tu cita. Por favor, intenta de nuevo o habla con un asesor.',
+            nuevoEstado: 'bienvenida',
+            datosTemp: {}
+          }
+        }
+      }
+
+      if (texto === 'cancelar_cita') {
+        return {
+          texto: 'Entendido. Tu cita no fue agendada.\n\n¿En qué más te puedo ayudar?',
+          nuevoEstado: 'menu_principal',
+          datosTemp: {},
+          botones: [
+            { id: 'menu_agendar', titulo: 'Agendar cita' },
+            { id: 'menu_asesor', titulo: 'Hablar con asesor' },
+          ]
+        }
+      }
+
+      if (texto === 'cambiar_hora') {
+        const horas = await getAvailableHours(conv.telefono, data.doctorId, data.fechaSeleccionada)
+
+        return {
+          texto: 'Selecciona una nueva hora:',
+          nuevoEstado: 'seleccionando_hora',
+          datosTemp: { ...data },
+          lista: {
+            titulo_seccion: 'Horarios',
+            opciones: horas.map((h: string, i) => ({
+              id: `hora_${i}_${h}`,
+              titulo: formatHora(h),
+              descripcion: h,
+            }))
+          }
+        }
+      }
+
+      return {
+        texto: 'Por favor, confirma o cancela la cita:',
+        nuevoEstado: 'confirmacion_paciente',
+        datosTemp: { ...data },
+        botones: [
+          { id: 'confirmar_cita', titulo: '✅ Confirmar' },
+          { id: 'cancelar_cita', titulo: '❌ Cancelar' },
+        ]
+      }
+    }
+
+    case 'cita_creada': {
+      return {
+        texto: 'Tu cita ya fue registrada. ¿Hay algo más en lo que te pueda ayudar?',
+        nuevoEstado: 'menu_principal',
+        datosTemp: {},
+        botones: [
+          { id: 'menu_agendar', titulo: 'Agendar otra cita' },
+          { id: 'menu_asesor', titulo: 'Hablar con asesor' },
+        ]
+      }
+    }
+
+    case 'esperando_asesor': {
+      return {
+        texto: 'Tu mensaje ha sido registrado. Un asesor te contactará pronto.\n\n¿Necesitas algo más?',
+        nuevoEstado: 'menu_principal',
+        datosTemp: {},
+        botones: [
+          { id: 'menu_agendar', titulo: 'Agendar cita' },
+          { id: 'menu_asesor', titulo: 'Hablar con asesor' },
+        ]
+      }
+    }
+
+    default: {
+      return {
+        texto: 'Disculpa, no entendí. ¿Puedes repetir tu mensaje?',
+        nuevoEstado: 'bienvenida',
+        datosTemp: {}
+      }
+    }
+  }
+}
