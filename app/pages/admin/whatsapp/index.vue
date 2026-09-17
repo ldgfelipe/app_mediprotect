@@ -15,6 +15,7 @@
         <NuxtLink to="/admin/empresas" class="nav-link">Empresas</NuxtLink>
         <NuxtLink to="/admin/asistentes" class="nav-link">Asistentes</NuxtLink>
         <NuxtLink to="/admin/whatsapp" class="nav-link active">WhatsApp</NuxtLink>
+        <NuxtLink to="/admin/whatsapp/logs" class="nav-link">WA Logs</NuxtLink>
         <NuxtLink to="/admin/configuracion" class="nav-link">Configuración</NuxtLink>
       </nav>
       <button class="btn-logout" @click="logout">Cerrar Sesión</button>
