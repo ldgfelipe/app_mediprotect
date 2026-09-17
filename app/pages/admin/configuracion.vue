@@ -801,7 +801,7 @@
                     <input
                       :type="whatsapp.showTokenSandbox ? 'text' : 'password'"
                       v-model="whatsapp.tokenSandbox"
-                      placeholder="EAAxxxxx..."
+                      :placeholder="whatsapp.tokenSandboxLoaded ? '•••••••• (ya configurado)' : 'EAAxxxxx...'"
                       @input="markDirty"
                     >
                     <button class="btn-icon" @click="whatsapp.showTokenSandbox = !whatsapp.showTokenSandbox">
@@ -837,7 +837,7 @@
                     <input
                       :type="whatsapp.showToken ? 'text' : 'password'"
                       v-model="whatsapp.token"
-                      placeholder="EAAxxxxx..."
+                      :placeholder="whatsapp.tokenLoaded ? '•••••••• (ya configurado)' : 'EAAxxxxx...'"
                       @input="markDirty"
                     >
                     <button class="btn-icon" @click="whatsapp.showToken = !whatsapp.showToken">
@@ -869,7 +869,7 @@
                   <input
                     :type="whatsapp.showSecret ? 'text' : 'password'"
                     v-model="whatsapp.appSecret"
-                    placeholder="abc123..."
+                    :placeholder="whatsapp.appSecretLoaded ? '•••••••• (ya configurado)' : 'abc123...'"
                     @input="markDirty"
                   >
                   <button class="btn-icon" @click="whatsapp.showSecret = !whatsapp.showSecret">
@@ -1252,11 +1252,16 @@ const whatsapp = ref({
   configurado: false,
   saving: false,
   savedMsg: '',
+  tokenLoaded: '',
+  tokenSandboxLoaded: '',
+  appSecretLoaded: '',
 })
 
 const loadWhatsAppConfig = async () => {
   try {
-    const data: any = await $fetch('/api/admin/whatsapp-config')
+    const data: any = await $fetch('/api/admin/whatsapp-config', {
+      headers: { Authorization: `Bearer ${useCookie('admin_token').value}` }
+    })
     const config = data?.configuracion || {}
     whatsapp.value.enabled = config.whatsapp_webhook_activo?.valor !== 'false'
     whatsapp.value.verifyToken = config.whatsapp_verify_token?.valor || ''
@@ -1266,6 +1271,9 @@ const loadWhatsAppConfig = async () => {
     whatsapp.value.modo = config.whatsapp_modo?.valor || 'sandbox'
     whatsapp.value.tokenSandbox = config.whatsapp_token_sandbox?.valor || ''
     whatsapp.value.phoneNumberIdSandbox = config.whatsapp_phone_number_id_sandbox?.valor || ''
+    whatsapp.value.tokenLoaded = config.whatsapp_token?.valor || ''
+    whatsapp.value.tokenSandboxLoaded = config.whatsapp_token_sandbox?.valor || ''
+    whatsapp.value.appSecretLoaded = config.whatsapp_app_secret?.valor || ''
 
     const activo = whatsapp.value.modo === 'sandbox'
       ? !!(whatsapp.value.verifyToken && whatsapp.value.tokenSandbox && whatsapp.value.phoneNumberIdSandbox)
@@ -1280,24 +1288,40 @@ const guardarWhatsAppConfig = async () => {
   whatsapp.value.saving = true
   whatsapp.value.savedMsg = ''
   try {
+    const configuraciones = [
+      { clave: 'whatsapp_webhook_activo', valor: whatsapp.value.enabled ? 'true' : 'false' },
+      { clave: 'whatsapp_verify_token', valor: whatsapp.value.verifyToken },
+      { clave: 'whatsapp_modo', valor: whatsapp.value.modo },
+      { clave: 'whatsapp_phone_number_id', valor: whatsapp.value.phoneNumberId },
+      { clave: 'whatsapp_phone_number_id_sandbox', valor: whatsapp.value.phoneNumberIdSandbox },
+    ]
+
+    if (whatsapp.value.token) {
+      configuraciones.push({ clave: 'whatsapp_token', valor: whatsapp.value.token })
+    } else if (whatsapp.value.tokenLoaded) {
+      configuraciones.push({ clave: 'whatsapp_token', valor: whatsapp.value.tokenLoaded })
+    }
+
+    if (whatsapp.value.tokenSandbox) {
+      configuraciones.push({ clave: 'whatsapp_token_sandbox', valor: whatsapp.value.tokenSandbox })
+    } else if (whatsapp.value.tokenSandboxLoaded) {
+      configuraciones.push({ clave: 'whatsapp_token_sandbox', valor: whatsapp.value.tokenSandboxLoaded })
+    }
+
+    if (whatsapp.value.appSecret) {
+      configuraciones.push({ clave: 'whatsapp_app_secret', valor: whatsapp.value.appSecret })
+    } else if (whatsapp.value.appSecretLoaded) {
+      configuraciones.push({ clave: 'whatsapp_app_secret', valor: whatsapp.value.appSecretLoaded })
+    }
+
     await $fetch('/api/admin/whatsapp-config', {
       method: 'POST',
-      body: {
-        configuraciones: [
-          { clave: 'whatsapp_webhook_activo', valor: whatsapp.value.enabled ? 'true' : 'false' },
-          { clave: 'whatsapp_verify_token', valor: whatsapp.value.verifyToken },
-          { clave: 'whatsapp_modo', valor: whatsapp.value.modo },
-          { clave: 'whatsapp_token', valor: whatsapp.value.token },
-          { clave: 'whatsapp_phone_number_id', valor: whatsapp.value.phoneNumberId },
-          { clave: 'whatsapp_app_secret', valor: whatsapp.value.appSecret },
-          { clave: 'whatsapp_token_sandbox', valor: whatsapp.value.tokenSandbox },
-          { clave: 'whatsapp_phone_number_id_sandbox', valor: whatsapp.value.phoneNumberIdSandbox },
-        ]
-      }
+      headers: { Authorization: `Bearer ${useCookie('admin_token').value}` },
+      body: { configuraciones }
     })
     const activo = whatsapp.value.modo === 'sandbox'
-      ? !!(whatsapp.value.verifyToken && whatsapp.value.tokenSandbox && whatsapp.value.phoneNumberIdSandbox)
-      : !!(whatsapp.value.verifyToken && whatsapp.value.token && whatsapp.value.phoneNumberId)
+      ? !!(whatsapp.value.verifyToken && (whatsapp.value.tokenSandbox || whatsapp.value.tokenSandboxLoaded) && whatsapp.value.phoneNumberIdSandbox)
+      : !!(whatsapp.value.verifyToken && (whatsapp.value.token || whatsapp.value.tokenLoaded) && whatsapp.value.phoneNumberId)
     whatsapp.value.configurado = activo
     whatsapp.value.savedMsg = 'Configuración WhatsApp guardada correctamente'
     setTimeout(() => { whatsapp.value.savedMsg = '' }, 3000)
