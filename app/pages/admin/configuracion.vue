@@ -732,6 +732,35 @@
               <span>{{ whatsapp.configurado ? 'Credenciales activas — webhook operativo' : 'Ingresa las credenciales de Meta para activar' }}</span>
             </div>
 
+            <!-- Modo Sandbox / Producción -->
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label>Modo de operación</label>
+                <div class="mode-switcher">
+                  <div class="mode-option" :class="{ active: whatsapp.modo === 'sandbox' }" @click="whatsapp.modo = 'sandbox'; markDirty()">
+                    <div class="mode-icon mode-icon--test">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    </div>
+                    <div class="mode-info">
+                      <strong>Sandbox (Pruebas)</strong>
+                      <span>Número de prueba de Meta — ideal para desarrollo</span>
+                    </div>
+                    <div class="mode-radio" :class="{ checked: whatsapp.modo === 'sandbox' }"></div>
+                  </div>
+                  <div class="mode-option" :class="{ active: whatsapp.modo === 'produccion' }" @click="whatsapp.modo = 'produccion'; markDirty()">
+                    <div class="mode-icon mode-icon--prod">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M8 12l3 3 5-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
+                    <div class="mode-info">
+                      <strong>Producción</strong>
+                      <span>Número real de WhatsApp Business — usuarios reales</span>
+                    </div>
+                    <div class="mode-radio" :class="{ checked: whatsapp.modo === 'produccion' }"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <!-- URL del webhook (read-only) -->
             <div class="form-row">
               <div class="form-group flex-1">
@@ -760,39 +789,82 @@
               </div>
             </div>
 
-            <!-- WhatsApp Token -->
-            <div class="form-row">
-              <div class="form-group flex-1">
-                <label>WhatsApp Token (Meta Cloud API)</label>
-                <div class="input-with-action">
+            <!-- Credenciales Sandbox -->
+            <div v-if="whatsapp.modo === 'sandbox'" class="sandbox-section">
+              <h4 style="margin: 1.5rem 0 1rem; color: #e65100; display: flex; align-items: center; gap: 0.5rem;">
+                🧪 Credenciales Sandbox (Pruebas)
+              </h4>
+              <div class="form-row">
+                <div class="form-group flex-1">
+                  <label>WhatsApp Token (Sandbox)</label>
+                  <div class="input-with-action">
+                    <input
+                      :type="whatsapp.showTokenSandbox ? 'text' : 'password'"
+                      v-model="whatsapp.tokenSandbox"
+                      placeholder="EAAxxxxx..."
+                      @input="markDirty"
+                    >
+                    <button class="btn-icon" @click="whatsapp.showTokenSandbox = !whatsapp.showTokenSandbox">
+                      {{ whatsapp.showTokenSandbox ? '🙈' : '👁️' }}
+                    </button>
+                  </div>
+                  <small class="field-hint">Token temporal de la app de Meta para sandbox. Lo encuentras en WhatsApp → Getting Started</small>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group flex-1">
+                  <label>Phone Number ID (Sandbox)</label>
                   <input
-                    :type="whatsapp.showToken ? 'text' : 'password'"
-                    v-model="whatsapp.token"
-                    placeholder="EAAxxxxx..."
+                    type="text"
+                    v-model="whatsapp.phoneNumberIdSandbox"
+                    placeholder="Ej: 1234567890"
                     @input="markDirty"
                   >
-                  <button class="btn-icon" @click="whatsapp.showToken = !whatsapp.showToken">
-                    {{ whatsapp.showToken ? '🙈' : '👁️' }}
-                  </button>
+                  <small class="field-hint">ID del número de prueba. Lo encuentras en WhatsApp → Phone Numbers → Test</small>
                 </div>
-                <small class="field-hint">Token de acceso de tu app de Meta (temporary o permanent). Lo encuentras en Dashboard → System Users</small>
               </div>
             </div>
 
-            <!-- Phone Number ID + App Secret -->
+            <!-- Credenciales Producción -->
+            <div v-if="whatsapp.modo === 'produccion'" class="produccion-section">
+              <h4 style="margin: 1.5rem 0 1rem; color: #2e7d32; display: flex; align-items: center; gap: 0.5rem;">
+                🚀 Credenciales Producción
+              </h4>
+              <div class="form-row">
+                <div class="form-group flex-1">
+                  <label>WhatsApp Token (Producción)</label>
+                  <div class="input-with-action">
+                    <input
+                      :type="whatsapp.showToken ? 'text' : 'password'"
+                      v-model="whatsapp.token"
+                      placeholder="EAAxxxxx..."
+                      @input="markDirty"
+                    >
+                    <button class="btn-icon" @click="whatsapp.showToken = !whatsapp.showToken">
+                      {{ whatsapp.showToken ? '🙈' : '👁️' }}
+                    </button>
+                  </div>
+                  <small class="field-hint">Token permanente de la app de Meta. Lo encuentras en Dashboard → System Users</small>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group flex-1">
+                  <label>Phone Number ID (Producción)</label>
+                  <input
+                    type="text"
+                    v-model="whatsapp.phoneNumberId"
+                    placeholder="Ej: 1234567890"
+                    @input="markDirty"
+                  >
+                  <small class="field-hint">ID del número de WhatsApp Business. Lo encuentras en WhatsApp → Phone Numbers</small>
+                </div>
+              </div>
+            </div>
+
+            <!-- App Secret (común para ambos modos) -->
             <div class="form-row">
               <div class="form-group flex-1">
-                <label>Phone Number ID</label>
-                <input
-                  type="text"
-                  v-model="whatsapp.phoneNumberId"
-                  placeholder="Ej: 1234567890"
-                  @input="markDirty"
-                >
-                <small class="field-hint">ID del número de WhatsApp Business. Lo encuentras en WhatsApp → Phone Numbers</small>
-              </div>
-              <div class="form-group flex-1">
-                <label>App Secret</label>
+                <label>App Secret (común para ambos modos)</label>
                 <div class="input-with-action">
                   <input
                     :type="whatsapp.showSecret ? 'text' : 'password'"
@@ -804,7 +876,7 @@
                     {{ whatsapp.showSecret ? '🙈' : '👁️' }}
                   </button>
                 </div>
-                <small class="field-hint">Secret de tu app de Meta. Lo encuentras en App Settings → Basic</small>
+                <small class="field-hint">Secret de tu app de Meta. Lo encuentras en App Settings → Basic. Es el mismo para sandbox y producción</small>
               </div>
             </div>
 
@@ -1170,9 +1242,13 @@ const whatsapp = ref({
   token: '',
   phoneNumberId: '',
   appSecret: '',
+  modo: 'sandbox',
+  tokenSandbox: '',
+  phoneNumberIdSandbox: '',
   showVerify: false,
   showToken: false,
   showSecret: false,
+  showTokenSandbox: false,
   configurado: false,
   saving: false,
   savedMsg: '',
@@ -1187,7 +1263,14 @@ const loadWhatsAppConfig = async () => {
     whatsapp.value.token = config.whatsapp_token?.valor || ''
     whatsapp.value.phoneNumberId = config.whatsapp_phone_number_id?.valor || ''
     whatsapp.value.appSecret = config.whatsapp_app_secret?.valor || ''
-    whatsapp.value.configurado = !!(whatsapp.value.verifyToken && whatsapp.value.token && whatsapp.value.phoneNumberId)
+    whatsapp.value.modo = config.whatsapp_modo?.valor || 'sandbox'
+    whatsapp.value.tokenSandbox = config.whatsapp_token_sandbox?.valor || ''
+    whatsapp.value.phoneNumberIdSandbox = config.whatsapp_phone_number_id_sandbox?.valor || ''
+
+    const activo = whatsapp.value.modo === 'sandbox'
+      ? !!(whatsapp.value.verifyToken && whatsapp.value.tokenSandbox && whatsapp.value.phoneNumberIdSandbox)
+      : !!(whatsapp.value.verifyToken && whatsapp.value.token && whatsapp.value.phoneNumberId)
+    whatsapp.value.configurado = activo
   } catch (e) {
     console.error('Error cargando WhatsApp config:', e)
   }
@@ -1203,13 +1286,19 @@ const guardarWhatsAppConfig = async () => {
         configuraciones: [
           { clave: 'whatsapp_webhook_activo', valor: whatsapp.value.enabled ? 'true' : 'false' },
           { clave: 'whatsapp_verify_token', valor: whatsapp.value.verifyToken },
+          { clave: 'whatsapp_modo', valor: whatsapp.value.modo },
           { clave: 'whatsapp_token', valor: whatsapp.value.token },
           { clave: 'whatsapp_phone_number_id', valor: whatsapp.value.phoneNumberId },
           { clave: 'whatsapp_app_secret', valor: whatsapp.value.appSecret },
+          { clave: 'whatsapp_token_sandbox', valor: whatsapp.value.tokenSandbox },
+          { clave: 'whatsapp_phone_number_id_sandbox', valor: whatsapp.value.phoneNumberIdSandbox },
         ]
       }
     })
-    whatsapp.value.configurado = !!(whatsapp.value.verifyToken && whatsapp.value.token && whatsapp.value.phoneNumberId)
+    const activo = whatsapp.value.modo === 'sandbox'
+      ? !!(whatsapp.value.verifyToken && whatsapp.value.tokenSandbox && whatsapp.value.phoneNumberIdSandbox)
+      : !!(whatsapp.value.verifyToken && whatsapp.value.token && whatsapp.value.phoneNumberId)
+    whatsapp.value.configurado = activo
     whatsapp.value.savedMsg = 'Configuración WhatsApp guardada correctamente'
     setTimeout(() => { whatsapp.value.savedMsg = '' }, 3000)
   } catch (e: any) {

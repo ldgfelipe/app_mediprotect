@@ -1,12 +1,17 @@
 interface WhatsAppConfig {
   token: string
   phoneNumberId: string
+  modo: string
 }
 
 export async function getWhatsAppConfig(pool: any): Promise<WhatsAppConfig> {
   const result = await pool.query(
     `SELECT clave, valor FROM configuracion_sistema
-     WHERE clave IN ('whatsapp_token', 'whatsapp_phone_number_id')
+     WHERE clave IN (
+       'whatsapp_token', 'whatsapp_phone_number_id',
+       'whatsapp_token_sandbox', 'whatsapp_phone_number_id_sandbox',
+       'whatsapp_modo'
+     )
      AND categoria = 'whatsapp'`
   )
 
@@ -15,9 +20,20 @@ export async function getWhatsAppConfig(pool: any): Promise<WhatsAppConfig> {
     config[row.clave] = row.valor
   }
 
+  const modo = config['whatsapp_modo'] || 'sandbox'
+
+  if (modo === 'produccion') {
+    return {
+      token: config['whatsapp_token'] || '',
+      phoneNumberId: config['whatsapp_phone_number_id'] || '',
+      modo,
+    }
+  }
+
   return {
-    token: config['whatsapp_token'] || '',
-    phoneNumberId: config['whatsapp_phone_number_id'] || '',
+    token: config['whatsapp_token_sandbox'] || '',
+    phoneNumberId: config['whatsapp_phone_number_id_sandbox'] || '',
+    modo,
   }
 }
 
