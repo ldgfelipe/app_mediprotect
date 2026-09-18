@@ -162,7 +162,9 @@ async function parsearMensaje() {
   if (phoneMatch) busquedas.push(phoneMatch[1].trim())
 
   // Name patterns: "soy [Name]", "nombre es: [Name]", "nombre: [Name]", "paciente: [Name]"
-  const nombreMatch = text.match(/(?:soy|paciente(?:\s+es)?|nombre\s*(?:es|:))\s+(.+?)(?:\.|,|\n| y solicita| y requiere|$)/i)
+  const nombreMatch = text.match(/soy\s+([A-ZÁÉÍÓÚÑa-záéíóúñ\s]+?)(?:\s+y\s+(?:solicita|requiere))/i)
+    || text.match(/(?:nombre\s*(?:es|:))\s+([^\n.,]+)/i)
+    || text.match(/paciente:\s*([^\n.,]+)/i)
   if (nombreMatch) busquedas.push(nombreMatch[1].trim())
 
   console.log('[Asistente] Busquedas extraídas:', busquedas)
