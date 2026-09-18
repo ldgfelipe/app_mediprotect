@@ -137,7 +137,8 @@ async function parsearMensaje() {
   console.log('[Asistente] Parseando mensaje:', text.substring(0, 300))
 
   // Extract doctor name
-  const medicoMatch = text.match(/(?:con\s+(?:el\s+)?|atención\s+(?:con\s+)?)?(?:médico|doctor|dra?\.?)\s+([^\n.,;]+)/i)
+  const medicoMatch = text.match(/(?:con\s+(?:el\s+)?(?:médico|doctor|dra?\.?)\s+)([^\n.,;]+)/i)
+    || text.match(/(?:médico|doctor|dra?\.?)\s+(?:es\s+|:?\s*)([^\n.,;]+)/i)
   if (medicoMatch) {
     const nombreLimpio = medicoMatch[1].trim().replace(/^(dra?\.?\s*)/i, '').trim()
     nuevaCita.value.medico_search = nombreLimpio
@@ -155,12 +156,13 @@ async function parsearMensaje() {
   const uuidMatch = text.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i)
   if (uuidMatch) busquedas.push(uuidMatch[1].trim())
 
-  // Phone (10 digits)
-  const phoneMatch = text.match(/(\d{10})/)
+  // Phone (10-12 digits)
+  const phoneMatch = text.match(/(?:tel(?:[eé]fono)?|cel(?:ular)?)[:\s]*(\d{10,12})/i)
+    || text.match(/(\d{10})/)
   if (phoneMatch) busquedas.push(phoneMatch[1].trim())
 
-  // Name
-  const nombreMatch = text.match(/nombre\s*(?:es|:)\s*(.+?)(?:\.|\n|$)/i)
+  // Name patterns: "soy [Name]", "nombre es: [Name]", "nombre: [Name]", "paciente: [Name]"
+  const nombreMatch = text.match(/(?:soy|paciente(?:\s+es)?|nombre\s*(?:es|:))\s+(.+?)(?:\.|,|\n| y solicita| y requiere|$)/i)
   if (nombreMatch) busquedas.push(nombreMatch[1].trim())
 
   console.log('[Asistente] Busquedas extraídas:', busquedas)
