@@ -77,7 +77,7 @@ async function processIncomingMessage(msg: any, contacts: any[], pool: any) {
   await logMensaje(pool, telefono, 'in', texto, tipo, msg.id)
 
   const conv = await getOrCreateConversation(pool, telefono, nombre)
-  const respuesta = await processMessage(conv, texto, nombre)
+  const respuesta = await processMessage(conv, texto, nombre, pool)
 
   if (respuesta) {
     const config = await getWhatsAppConfig(pool)

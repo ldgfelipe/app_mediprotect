@@ -40,7 +40,7 @@ function formatHora(hora: string): string {
   return `${h12}:${m} ${suffix}`
 }
 
-export async function processMessage(conv: Conversacion, texto: string, nombre: string): Promise<Respuesta | null> {
+export async function processMessage(conv: Conversacion, texto: string, nombre: string, pool: any): Promise<Respuesta | null> {
   const state = conv.estado
   const data = conv.datos_temp || {}
 
@@ -64,7 +64,7 @@ export async function processMessage(conv: Conversacion, texto: string, nombre: 
 
     case 'menu_principal': {
       if (texto === 'menu_agendar') {
-        const especialidades = await getAvailableSpecialties(conv.telefono)
+        const especialidades = await getAvailableSpecialties(pool)
         if (especialidades.length === 0) {
           return {
             texto: 'No hay especialidades disponibles en este momento. Por favor, intenta más tarde o habla con un asesor.',
@@ -124,7 +124,7 @@ export async function processMessage(conv: Conversacion, texto: string, nombre: 
         const partes = texto.split('_')
         const especialidad = partes.slice(2).join(' ')
 
-        const doctores = await getDoctorsBySpecialty(conv.telefono, especialidad)
+        const doctores = await getDoctorsBySpecialty(pool, especialidad)
 
         if (doctores.length === 0) {
           return {
@@ -161,7 +161,7 @@ export async function processMessage(conv: Conversacion, texto: string, nombre: 
         const partes = texto.split('_')
         const doctorId = partes.slice(2).join('_')
 
-        const doctores = await getDoctorsBySpecialty(conv.telefono, data.especialidad)
+        const doctores = await getDoctorsBySpecialty(pool, data.especialidad)
         const doctor = doctores.find((d: any) => d.id === doctorId)
 
         if (!doctor) {
@@ -172,7 +172,7 @@ export async function processMessage(conv: Conversacion, texto: string, nombre: 
           }
         }
 
-        const fechas = await getAvailableDates(conv.telefono, doctorId)
+        const fechas = await getAvailableDates(pool, doctorId)
 
         if (fechas.length === 0) {
           return {
@@ -213,7 +213,7 @@ export async function processMessage(conv: Conversacion, texto: string, nombre: 
         const partes = texto.split('_')
         const fecha = partes.slice(2).join('_')
 
-        const horas = await getAvailableHours(conv.telefono, data.doctorId, fecha)
+        const horas = await getAvailableHours(pool, data.doctorId, fecha)
 
         if (horas.length === 0) {
           return {
@@ -274,11 +274,11 @@ export async function processMessage(conv: Conversacion, texto: string, nombre: 
 
     case 'confirmacion_paciente': {
       if (texto === 'confirmar_cita') {
-        const paciente = await searchPatientByPhone(conv.telefono)
+        const paciente = await searchPatientByPhone(pool, conv.telefono)
 
         try {
           const cita = await createCitaFromWhatsApp(
-            conv.telefono,
+            pool,
             data.doctorId,
             paciente?.id || null,
             data.fechaSeleccionada,
@@ -317,7 +317,7 @@ export async function processMessage(conv: Conversacion, texto: string, nombre: 
       }
 
       if (texto === 'cambiar_hora') {
-        const horas = await getAvailableHours(conv.telefono, data.doctorId, data.fechaSeleccionada)
+        const horas = await getAvailableHours(pool, data.doctorId, data.fechaSeleccionada)
 
         return {
           texto: 'Selecciona una nueva hora:',
