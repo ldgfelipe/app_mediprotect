@@ -86,7 +86,7 @@ function pasoAnterior() {
   if (pasoActual.value > 1) pasoActual.value--
 }
 
-const { on } = useSocket()
+const { on, onReconnect } = useSocket()
 const { agregar } = useNotifications()
 
 onMounted(() => {
@@ -98,7 +98,7 @@ onMounted(() => {
 
   on('cita:created', (cita) => {
     cargarCitas()
-    agregar({ tipo: 'cita_created', titulo: 'Nueva cita', mensaje: `${cita.paciente_nombre || 'Paciente'} - ${cita.medico_nombre || 'Médico por asignar'}`, timestamp: new Date() })
+    agregar({ tipo: 'cita_created', titulo: 'Nueva cita', mensaje: `${cita.paciente_nombre || 'Paciente'} - ${cita.medico_nombre || 'M\u00e9dico por asignar'}`, timestamp: new Date() })
   })
   on('cita:updated', (cita) => {
     cargarCitas()
@@ -111,6 +111,22 @@ onMounted(() => {
   on('cita:cancelled', (cita) => {
     cargarCitas()
     agregar({ tipo: 'cita_cancelled', titulo: 'Cita cancelada', mensaje: `${cita.paciente_nombre || 'Paciente'} cancelada`, timestamp: new Date() })
+  })
+  on('paciente:created', (data) => {
+    cargarCitas()
+    agregar({ tipo: 'paciente_created', titulo: 'Nuevo paciente', mensaje: `${data.nombre || ''} ${data.apellido || ''}`, timestamp: new Date() })
+  })
+  on('paciente:updated', (data) => {
+    cargarCitas()
+    agregar({ tipo: 'paciente_updated', titulo: 'Paciente actualizado', mensaje: `${data.nombre || ''} ${data.apellido || ''}`, timestamp: new Date() })
+  })
+  on('medico:created', (data) => {
+    cargarCitas()
+    agregar({ tipo: 'medico_created', titulo: 'Nuevo m\u00e9dico', mensaje: `${data.nombre || ''} ${data.apellido || ''}`, timestamp: new Date() })
+  })
+  onReconnect(() => {
+    console.log('[WS] Reconectado, recargando datos...')
+    cargarCitas()
   })
 })
 
@@ -647,13 +663,8 @@ function buscarPacientesAdmin() {
     if (!q || q.length < 2) { resultadosPacientes.value = []; return }
     loadingSearchPaciente.value = true
     try {
-      const data = await $fetch('/api/admin/pacientes', { headers: { Authorization: 'Bearer ' + authToken.value } })
-      const all = data?.pacientes || []
-      const s = q.toLowerCase()
-      resultadosPacientes.value = all.filter(p =>
-        `${p.nombre} ${p.apellido || ''}`.toLowerCase().includes(s) ||
-        p.email?.toLowerCase().includes(s) || p.telefono?.includes(s) || p.curp?.toLowerCase().includes(s)
-      )
+      const data = await $fetch('/api/asistente/pacientes?search=' + encodeURIComponent(q), { headers: { Authorization: 'Bearer ' + authToken.value } })
+      resultadosPacientes.value = data?.pacientes || []
     } catch (e) { console.error(e) }
     loadingSearchPaciente.value = false
   }, 300)
@@ -1098,7 +1109,7 @@ async function crearPacienteParaEmpresa() {
             <button class="btn-confirm sms" @click="enviarConfirmacionSms(pendienteConfirmacion)" :disabled="confirmandoSms[pendienteConfirmacion._tipo + ':' + pendienteConfirmacion.id]">
               {{ confirmandoSms[pendienteConfirmacion._tipo + ':' + pendienteConfirmacion.id] ? 'Enviando...' : '📱 Enviar SMS (opcional)' }}
             </button>
-            <button class="btn-confirm-close" @click="pendienteConfirmacion.value = null">&times;</button>
+            <button class="btn-confirm-close" @click="pendienteConfirmacion = null">&times;</button>
           </div>
         </div>
 
@@ -1283,7 +1294,7 @@ async function crearPacienteParaEmpresa() {
             <button class="btn-confirm sms" @click="enviarConfirmacionSms(pendienteConfirmacion)" :disabled="confirmandoSms[pendienteConfirmacion._tipo + ':' + pendienteConfirmacion.id]">
               {{ confirmandoSms[pendienteConfirmacion._tipo + ':' + pendienteConfirmacion.id] ? 'Enviando...' : '📱 Enviar SMS (opcional)' }}
             </button>
-            <button class="btn-confirm-close" @click="pendienteConfirmacion.value = null">&times;</button>
+            <button class="btn-confirm-close" @click="pendienteConfirmacion = null">&times;</button>
           </div>
         </div>
 
@@ -1324,7 +1335,7 @@ async function crearPacienteParaEmpresa() {
             <button class="btn-confirm sms" @click="enviarConfirmacionSms(pendienteConfirmacion)" :disabled="confirmandoSms[pendienteConfirmacion._tipo + ':' + pendienteConfirmacion.id]">
               {{ confirmandoSms[pendienteConfirmacion._tipo + ':' + pendienteConfirmacion.id] ? 'Enviando...' : '📱 Enviar SMS (opcional)' }}
             </button>
-            <button class="btn-confirm-close" @click="pendienteConfirmacion.value = null">&times;</button>
+            <button class="btn-confirm-close" @click="pendienteConfirmacion = null">&times;</button>
           </div>
         </div>
 

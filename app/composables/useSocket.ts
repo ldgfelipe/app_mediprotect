@@ -71,6 +71,9 @@ function doConnect(token: string) {
       if (msg.type === 'connected') {
         connected.value = true
         console.log('[WS] ✅ Autenticado como', msg.tipo, 'id:', msg.userId)
+        for (const handler of reconnectionHandlers) {
+          try { handler() } catch {}
+        }
         return
       }
 
@@ -107,6 +110,16 @@ function on(event: string, handler: Function) {
   eventHandlers[event].push(handler)
 }
 
+let reconnectionHandlers: Function[] = []
+
+function onReconnect(handler: Function) {
+  reconnectionHandlers.push(handler)
+}
+
+function offReconnect(handler: Function) {
+  reconnectionHandlers = reconnectionHandlers.filter(h => h !== handler)
+}
+
 function off(event: string, handler: Function) {
   if (eventHandlers[event]) {
     eventHandlers[event] = eventHandlers[event].filter(h => h !== handler)
@@ -140,5 +153,5 @@ export function useSocket() {
     myHandlers.length = 0
   })
 
-  return { socket, connected, on: registerOn, off, disconnect }
+  return { socket, connected, on: registerOn, off, disconnect, onReconnect, offReconnect }
 }

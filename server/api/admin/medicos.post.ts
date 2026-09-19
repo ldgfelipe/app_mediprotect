@@ -102,6 +102,11 @@ export default defineEventHandler(async (event) => {
 
     const medico = result.rows[0]
 
+    try {
+      const { emitCitaEvento } = await import('../../utils/socket-emitter')
+      emitCitaEvento('medico:created', { id: medico.id, medico_id: medico.id, nombre: medico.nombre, apellido: medico.apellido })
+    } catch {}
+
     if (email) {
       const confirmToken = crypto.randomBytes(32).toString('hex')
       const expiraEn = new Date(Date.now() + 24 * 60 * 60 * 1000)
@@ -142,8 +147,8 @@ export default defineEventHandler(async (event) => {
     }
   } catch (err: any) {
     if (err.code === '23505') {
-      throw createError({ statusCode: 400, message: 'Ya existe un m�dico con esa c�dula o email' })
+      throw createError({ statusCode: 400, message: 'Ya existe un m\u00e9dico con esa c\u00e9dula o email' })
     }
-    throw createError({ statusCode: 500, message: 'Error al guardar m�dico: ' + err.message })
+    throw createError({ statusCode: 500, message: 'Error al guardar m\u00e9dico: ' + err.message })
   }
 })

@@ -108,5 +108,10 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  try {
+    const { emitCitaEvento } = await import('../../../utils/socket-emitter')
+    emitCitaEvento('paciente:updated', { id, paciente_id: id, nombre: result.rows[0]?.nombre, apellido: result.rows[0]?.apellido })
+  } catch {}
+
   return { success: true, paciente: result.rows[0] }
 })

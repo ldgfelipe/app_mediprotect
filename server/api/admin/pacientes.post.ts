@@ -120,5 +120,11 @@ export default defineEventHandler(async (event) => {
   }
 
   setResponseStatus(event, 201)
+
+  try {
+    const { emitCitaEvento } = await import('../../utils/socket-emitter')
+    emitCitaEvento('paciente:created', { id: paciente.id, paciente_id: paciente.id, nombre: paciente.nombre, apellido: paciente.apellido })
+  } catch {}
+
   return { paciente }
 })
