@@ -24,15 +24,16 @@ export default defineEventHandler(async (event) => {
 
   if (search) {
     sql += ` WHERE 
-      nombre ILIKE $1 
+      id::text = $3
+      OR nombre ILIKE $1 
       OR apellido ILIKE $1 
       OR email ILIKE $1 
       OR telefono ILIKE $1 
-      OR regexp_replace(telefono, '[^0-9]', '', 'g') LIKE $2
-      OR id::text ILIKE $1
+      OR regexp_replace(COALESCE(telefono, ''), '[^0-9]', '', 'g') LIKE $2
       OR (nombre || ' ' || COALESCE(apellido, '')) ILIKE $1`
     params.push('%' + search + '%')
     params.push('%' + search.replace(/[^0-9]/g, '') + '%')
+    params.push(search)
   }
 
   sql += ' ORDER BY created_at DESC LIMIT 20'
