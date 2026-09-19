@@ -191,17 +191,19 @@ async function buscarPacientesById() {
   const termino = nuevaCita.value.paciente_search.trim()
   if (!termino) { pacientesSearch.value = []; return }
   console.log('[Asistente] Buscando paciente por:', termino)
+  errorCita.value = ''
   try {
     const data = await $fetch('/api/asistente/pacientes?search=' + encodeURIComponent(termino), {
       headers: { Authorization: 'Bearer ' + authToken.value }
     })
-    console.log('[Asistente] Pacientes encontrados:', data.pacientes?.length, data.pacientes)
-    pacientesSearch.value = data.pacientes || []
+    console.log('[Asistente] Resultado:', data)
+    pacientesSearch.value = data?.pacientes || []
     if (pacientesSearch.value.length === 1) {
       seleccionarPaciente(pacientesSearch.value[0])
     }
   } catch (e) {
     console.error('[Asistente] Error buscando paciente:', e)
+    errorCita.value = 'Error del servidor: ' + (e?.data?.message || e?.message || 'Desconocido')
     pacientesSearch.value = []
   }
 }
@@ -209,11 +211,32 @@ async function buscarPacientesById() {
 async function buscarPacientesByIdDirecto() {
   const termino = nuevaCita.value.paciente_search.trim()
   if (!termino) return
-  await buscarPacientesById()
-  if (pacientesSearch.value.length === 1) {
-    seleccionarPaciente(pacientesSearch.value[0])
-  } else if (pacientesSearch.value.length > 1) {
+  errorCita.value = ''
+  pacientesSearch.value = []
+
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(termino)
+
+  if (isUUID) {
+    console.log('[Asistente] Buscando por ID directo:', termino)
+    try {
+      const data = await $fetch('/api/asistente/pacientes/' + termino, {
+        headers: { Authorization: 'Bearer ' + authToken.value }
+      })
+      console.log('[Asistente] Resultado ID directo:', data)
+      if (data?.paciente) {
+        seleccionarPaciente(data.paciente)
+        return
+      }
+    } catch (e) {
+      console.error('[Asistente] Error ID directo:', e)
+      errorCita.value = e?.data?.message || 'Paciente no encontrado con ID: ' + termino
+    }
   } else {
+    await buscarPacientesById()
+  }
+
+  if (!pacienteSeleccionado.value && pacientesSearch.value.length > 1) {
+  } else if (!pacienteSeleccionado.value && pacientesSearch.value.length === 0) {
     errorCita.value = `No se encontró paciente con "${termino}"`
   }
 }
@@ -228,11 +251,14 @@ async function buscarPacientes() {
       const data = await $fetch('/api/asistente/pacientes?search=' + encodeURIComponent(termino), {
         headers: { Authorization: 'Bearer ' + authToken.value }
       })
-      pacientesSearch.value = data.pacientes || []
+      pacientesSearch.value = data?.pacientes || []
       if (pacientesSearch.value.length === 1) {
         seleccionarPaciente(pacientesSearch.value[0])
       }
-    } catch (e) { pacientesSearch.value = [] }
+    } catch (e) {
+      console.error('[Asistente] Error buscarPacientes:', e)
+      pacientesSearch.value = []
+    }
   }, 350)
 }
 
