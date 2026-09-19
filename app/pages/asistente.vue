@@ -206,6 +206,18 @@ async function buscarPacientesById() {
   }
 }
 
+async function buscarPacientesByIdDirecto() {
+  const termino = nuevaCita.value.paciente_search.trim()
+  if (!termino) return
+  await buscarPacientesById()
+  if (pacientesSearch.value.length === 1) {
+    seleccionarPaciente(pacientesSearch.value[0])
+  } else if (pacientesSearch.value.length > 1) {
+  } else {
+    errorCita.value = `No se encontró paciente con "${termino}"`
+  }
+}
+
 let pacienteSearchTimeout = null
 async function buscarPacientes() {
   const termino = nuevaCita.value.paciente_search.trim()
@@ -1336,27 +1348,32 @@ async function crearPacienteParaEmpresa() {
             </div>
           </div>
 
-          <!-- PASO 1: Mensaje de WhatsApp -->
+          <!-- PASO 1: Buscar paciente -->
           <div v-if="pasoActual === 1">
             <div class="field">
-              <label>Pegar mensaje de WhatsApp</label>
-              <textarea v-model="nuevaCita.wa_text" rows="5" placeholder="Pega aquí el mensaje que llegó por WhatsApp...&#10;&#10;Ejemplo:&#10;Hola, quiero una cita con el médico Dr Carlos Ramirez.&#10;Mi nombre es: Juan Pérez&#10;Mi ID de usuario es: abc-123-uuid"></textarea>
-              <button @click="parsearMensaje" :disabled="parseando || !nuevaCita.wa_text.trim()" class="btn-parse">
-                {{ parseando ? 'Analizando...' : '🔍 Analizar mensaje' }}
-              </button>
+              <label>ID del paciente (UUID)</label>
+              <div style="display:flex; gap:0.5rem;">
+                <input
+                  v-model="nuevaCita.paciente_search"
+                  placeholder="Ej: 428d1726-b0de-46cc-8895-5397fb0e0c9c"
+                  @keyup.enter="buscarPacientesByIdDirecto"
+                  style="flex:1;"
+                />
+                <button @click="buscarPacientesByIdDirecto" :disabled="!nuevaCita.paciente_search.trim()" class="btn-sm blue">Buscar</button>
+              </div>
+              <p style="font-size:0.75rem; color:#636e72; margin-top:0.3rem;">También puedes buscar por nombre, email o teléfono en el campo de abajo</p>
             </div>
 
             <div class="field">
-              <label>Buscar paciente manualmente</label>
+              <label>Buscar paciente</label>
               <div class="autocomplete-wrapper">
                 <svg class="autocomplete-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
                 <input
                   v-model="nuevaCita.paciente_search"
-                  placeholder="Escribe nombre, email o telefono..."
+                  placeholder="Nombre, email, teléfono o ID..."
                   @input="buscarPacientes"
                   class="autocomplete-input"
                 />
-                <span v-if="buscandoMedico" class="autocomplete-spinner"></span>
               </div>
               <div v-if="pacientesSearch.length > 0 && !pacienteSeleccionado" class="autocomplete-dropdown">
                 <div class="autocomplete-count">{{ pacientesSearch.length }} pacientes encontrados</div>
@@ -1375,6 +1392,17 @@ async function crearPacienteParaEmpresa() {
               <div v-if="nuevaCita.paciente_search.length >= 2 && pacientesSearch.length === 0 && !pacienteSeleccionado && !buscandoMedico" class="autocomplete-empty">
                 No se encontraron pacientes con "{{ nuevaCita.paciente_search }}"
               </div>
+            </div>
+
+            <!-- Resumen del paciente seleccionado -->
+            <div v-if="pacienteSeleccionado" class="selected-patient">
+              <div class="selected-patient-avatar">{{ pacienteSeleccionado.nombre?.charAt(0) }}{{ pacienteSeleccionado.apellido?.charAt(0) }}</div>
+              <div class="selected-patient-info">
+                <strong>{{ pacienteSeleccionado.nombre }} {{ pacienteSeleccionado.apellido }}</strong>
+                <span v-if="pacienteSeleccionado.email">{{ pacienteSeleccionado.email }}</span>
+                <span v-if="pacienteSeleccionado.telefono">{{ pacienteSeleccionado.telefono }}</span>
+              </div>
+              <button @click="pacienteSeleccionado = null; pasoActual = 1" class="btn-sm red">Cambiar</button>
             </div>
 
             <div v-if="pacienteSeleccionado" class="selected-card">
