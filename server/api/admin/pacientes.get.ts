@@ -5,11 +5,11 @@ const _user = verifyAdminOrAsistenteToken(event)
   const pool = await useDbPool(event)
   const buscar = getQuery(event).buscar as string | undefined
 
-  let query = 'SELECT id, nombre, apellido, email, telefono, curp, genero, estado_civil, id_empresa, email_confirmado, telefono_confirmado, created_at FROM pacientes'
+  let query = 'SELECT id, nombre, apellido, email, telefono, curp, genero, estado_civil, email_confirmado, telefono_confirmado, created_at FROM pacientes'
   const params: any[] = []
 
   if (buscar && buscar.length >= 2) {
-    query += ` WHERE (nombre ILIKE $1 OR apellido ILIKE $1 OR email ILIKE $1)`
+    query += ` WHERE (nombre ILIKE $1 OR apellido ILIKE $1 OR email ILIKE $1 OR telefono ILIKE $1 OR id::text ILIKE $1 OR (nombre || ' ' || COALESCE(apellido, '')) ILIKE $1)`
     params.push(`%${buscar}%`)
   }
 

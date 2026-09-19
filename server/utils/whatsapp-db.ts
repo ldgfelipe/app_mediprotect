@@ -62,7 +62,7 @@ export async function getOrCreateConversation(pool: any, telefono: string, nombr
   if (result.rows.length === 0) {
     let idPaciente = null
     const pacienteRes = await pool.query(
-      `SELECT id FROM pacientes WHERE telefono = $1 OR whatsapp = $1 OR regexp_replace(telefono, '[^0-9]', '', 'g') LIKE '%' || $2 || '%' OR regexp_replace(whatsapp, '[^0-9]', '', 'g') LIKE '%' || $2 || '%' LIMIT 1`,
+      `SELECT id FROM pacientes WHERE telefono = $1 OR regexp_replace(telefono, '[^0-9]', '', 'g') LIKE '%' || $2 || '%' LIMIT 1`,
       [telefono, telefono.replace(/[^0-9]/g, '')]
     )
     if (pacienteRes.rows.length > 0) {
@@ -190,11 +190,10 @@ export async function createCitaFromWhatsApp(
 export async function searchPatientByPhone(pool: any, telefono: string) {
   const digits = telefono.replace(/[^0-9]/g, '')
   const result = await pool.query(
-    `SELECT id, nombre, apellido, email, telefono
+     `SELECT id, nombre, apellido, email, telefono
      FROM pacientes
-     WHERE telefono = $1 OR whatsapp = $1
+     WHERE telefono = $1
      OR regexp_replace(telefono, '[^0-9]', '', 'g') LIKE '%' || $2 || '%'
-     OR regexp_replace(whatsapp, '[^0-9]', '', 'g') LIKE '%' || $2 || '%'
      LIMIT 1`,
     [telefono, digits]
   )
