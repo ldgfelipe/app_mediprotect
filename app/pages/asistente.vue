@@ -86,7 +86,7 @@ function pasoAnterior() {
   if (pasoActual.value > 1) pasoActual.value--
 }
 
-const { on, onReconnect } = useSocket()
+const { on, onReconnect, disconnect } = useSocket()
 const { agregar } = useNotifications()
 
 onMounted(() => {
@@ -499,6 +499,7 @@ function abrirWA(tel) {
 }
 
 function cerrarSesion() {
+  disconnect()
   localStorage.removeItem('usuario')
   authToken.value = null
   navigateTo('/login-asistente')
