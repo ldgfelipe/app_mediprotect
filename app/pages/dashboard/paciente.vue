@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import { useSocket } from '~/composables/useSocket'
+
 const token = useCookie('token')
 const usuario = useCookie('usuario')
 
-// Respaldar: si la cookie esta vacia, hidratar desde localStorage (flujo registro-curp)
 if (!usuario.value) {
   try {
     const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('usuario') : null
@@ -11,6 +12,8 @@ if (!usuario.value) {
 }
 
 const plan = ref<any>(null)
+const citas = ref<any[]>([])
+const loadingCitas = ref(true)
 
 definePageMeta({
   middleware: 'auth',
@@ -26,10 +29,39 @@ const cambiando = ref(false)
 const cambioMsg = ref('')
 const cambioError = ref('')
 
-// Modal de cita pendiente
 const showCitaPendiente = ref(false)
 const citaPendienteDoctor = ref('')
 const creandoCitaPendiente = ref(false)
+
+const { on, onReconnect } = useSocket()
+
+const estadosLabels: Record<string, string> = {
+  pendiente: 'Pendiente', confirmada: 'Confirmada', cancelada: 'Cancelada',
+  asistida: 'Asistida', no_asistida: 'No Asistida', reagendada: 'Reagendada',
+  paciente_llego: 'Paciente lleg\u00f3', en_atencion: 'En atenci\u00f3n',
+}
+
+const estadosColores: Record<string, string> = {
+  pendiente: '#f39c12', confirmada: '#00b894', cancelada: '#d63031',
+  asistida: '#00b894', no_asistida: '#636e72', reagendada: '#0984e3',
+  paciente_llego: '#e17055', en_atencion: '#6c5ce7',
+}
+
+async function cargarCitas() {
+  try {
+    const res: any = await $fetch('/api/citas/mis-citas', {
+      headers: { Authorization: `Bearer ${token.value}` },
+    })
+    citas.value = res?.citas || []
+  } catch {}
+  loadingCitas.value = false
+}
+
+function formatearFecha(fecha: string) {
+  return new Date(fecha).toLocaleDateString('es-MX', {
+    weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+  })
+}
 
 onMounted(async () => {
   if (emailConfirmado.value) {
@@ -38,13 +70,21 @@ onMounted(async () => {
       plan.value = (data.value as any)?.plan
     } catch {}
 
-    // Verificar si hay cita pendiente desde registro
+    await cargarCitas()
+
     const pendingDoctor = localStorage.getItem('agendar_doctor')
     if (pendingDoctor) {
       citaPendienteDoctor.value = pendingDoctor
       showCitaPendiente.value = true
     }
   }
+
+  on('cita:created', () => { cargarCitas() })
+  on('cita:confirmed', () => { cargarCitas() })
+  on('cita:cancelled', () => { cargarCitas() })
+  on('cita:updated', () => { cargarCitas() })
+
+  onReconnect(() => { cargarCitas() })
 })
 
 async function enviarConfirmacion() {
@@ -240,6 +280,33 @@ function limpiarCitaPendiente() {
           <span v-else>Gratuito</span>
         </div>
 
+        <!-- PROXIMAS CITAS -->
+        <div class="section-citas" v-if="!loadingCitas">
+          <h2 class="section-title">Mis Próximas Citas</h2>
+          <div v-if="citas.length === 0" class="empty-citas">
+            <p>No tienes citas programadas</p>
+            <NuxtLink to="/mis-citas" class="btn-card">Agendar Cita</NuxtLink>
+          </div>
+          <div v-else class="citas-timeline">
+            <div v-for="cita in citas.slice(0, 5)" :key="cita.id" class="cita-item" :style="{ borderLeftColor: estadosColores[cita.estado] || '#636e72' }">
+              <div class="cita-item-header">
+                <span class="cita-estado" :style="{ background: estadosColores[cita.estado] || '#636e72' }">{{ estadosLabels[cita.estado] || cita.estado }}</span>
+                <span class="cita-fecha">{{ formatearFecha(cita.fecha_hora) }}</span>
+              </div>
+              <div class="cita-item-body">
+                <div class="cita-doctor">
+                  <strong>{{ cita.medico_nombre || 'Sin médico asignado' }}</strong>
+                  <span v-if="cita.medico_apellido">{{ cita.medico_apellido }}</span>
+                </div>
+                <div v-if="cita.notas_asistente" class="cita-notas">{{ cita.notas_asistente }}</div>
+              </div>
+            </div>
+          </div>
+          <div v-if="citas.length > 5" class="citas-more">
+            <NuxtLink to="/mis-citas">Ver todas ({{ citas.length }})</NuxtLink>
+          </div>
+        </div>
+
         <div class="cards">
           <div class="card">
             <h3>Buscar Especialistas</h3>
@@ -416,6 +483,23 @@ function limpiarCitaPendiente() {
   margin: 0.6rem 0 0;
   line-height: 1.4;
 }
+
+/* ========== SECCION CITAS ========== */
+.section-citas { margin-bottom: 2rem; }
+.section-title { font-size: 1.2rem; color: #2d3436; margin-bottom: 1rem; }
+.empty-citas { text-align: center; padding: 2rem; background: #f8f9fa; border-radius: 12px; color: #636e72; }
+.empty-citas .btn-card { display: inline-block; margin-top: 0.75rem; }
+.citas-timeline { display: flex; flex-direction: column; gap: 0.75rem; }
+.cita-item { background: white; border: 1px solid #eaeaea; border-left: 4px solid; border-radius: 10px; padding: 1rem 1.25rem; transition: box-shadow 0.2s; }
+.cita-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.cita-item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+.cita-estado { font-size: 0.75rem; font-weight: 600; color: white; padding: 0.2rem 0.6rem; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.3px; }
+.cita-fecha { font-size: 0.85rem; color: #636e72; }
+.cita-item-body { display: flex; flex-direction: column; gap: 0.3rem; }
+.cita-doctor { font-size: 0.95rem; color: #2d3436; }
+.cita-notas { font-size: 0.8rem; color: #b2bec3; font-style: italic; }
+.citas-more { text-align: center; margin-top: 0.75rem; }
+.citas-more a { color: #0984e3; font-size: 0.85rem; font-weight: 500; }
 
 /* ========== MODAL CITA PENDIENTE ========== */
 .cita-pendiente-overlay {
