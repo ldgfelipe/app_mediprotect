@@ -1,6 +1,6 @@
 
 export default defineEventHandler(async (event) => {
-const _user = verifyAdminToken(event)
+const _user = verifyAdminOrAsistenteToken(event)
 
   const { id } = getRouterParams(event)
   const body = await readBody(event)

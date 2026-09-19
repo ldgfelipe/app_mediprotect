@@ -1,6 +1,6 @@
 
 export default defineEventHandler(async (event) => {
-const _user = verifyAdminToken(event)
+const _user = verifyAdminOrAsistenteToken(event)
 
   const body = await readBody(event)
   const { curp, genero, estado_civil, id_empresa } = body

@@ -1,6 +1,6 @@
 
 export default defineEventHandler(async (event) => {
-const _user = verifyAdminToken(event)
+const _user = verifyAdminOrAsistenteToken(event)
 
   const body = await readBody(event)
   const { id_medico, nombre, direccion, codigo_postal, colonia, ciudad, estado, hospital_consultorio, google_maps_url, es_principal } = body
