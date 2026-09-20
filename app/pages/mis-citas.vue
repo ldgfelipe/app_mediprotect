@@ -10,7 +10,9 @@ const citas = ref<any[]>([])
 const loading = ref(true)
 const error = ref('')
 const cancelando = ref<string | null>(null)
-const { on } = useSocket()
+const { on, onReconnect } = useSocket()
+
+useSmartPolling('mis-citas', cargarCitas, { fastInterval: 8000, slowInterval: 15000 })
 const { agregar } = useNotifications()
 
 const estados: Record<string, string> = {
@@ -67,6 +69,8 @@ onMounted(() => {
     console.log('[MisCitas] Cita actualizada:', data?.id)
     cargarCitas()
   })
+
+  onReconnect(() => { cargarCitas() })
 })
 
 async function cancelar(id: string) {

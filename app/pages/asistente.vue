@@ -89,6 +89,8 @@ function pasoAnterior() {
 const { on, onReconnect, disconnect } = useSocket()
 const { agregar } = useNotifications()
 
+useSmartPolling('asistente-citas', cargarCitas, { fastInterval: 10000, slowInterval: 20000 })
+
 onMounted(() => {
   const saved = localStorage.getItem('usuario')
   if (!saved) { navigateTo('/login-asistente'); return }

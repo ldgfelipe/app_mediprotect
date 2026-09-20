@@ -35,6 +35,8 @@ const creandoCitaPendiente = ref(false)
 
 const { on, onReconnect } = useSocket()
 
+useSmartPolling('paciente-citas', cargarCitas, { fastInterval: 8000, slowInterval: 15000 })
+
 const estadosLabels: Record<string, string> = {
   pendiente: 'Pendiente', confirmada: 'Confirmada', cancelada: 'Cancelada',
   asistida: 'Asistida', no_asistida: 'No Asistida', reagendada: 'Reagendada',

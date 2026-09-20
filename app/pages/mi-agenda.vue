@@ -42,8 +42,10 @@ async function cargarDatos() {
   }
 }
 
-const { on } = useSocket()
+const { on, onReconnect } = useSocket()
 const { agregar } = useNotifications()
+
+useSmartPolling('mi-agenda', cargarDatos, { fastInterval: 8000, slowInterval: 15000 })
 
 onMounted(() => {
   cargarDatos()
@@ -63,6 +65,8 @@ onMounted(() => {
   on('cita:updated', (cita) => {
     cargarDatos()
   })
+
+  onReconnect(() => { cargarDatos() })
 })
 
 async function confirmar(id: string) {
