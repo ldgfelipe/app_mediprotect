@@ -155,8 +155,9 @@ async function parsearMensaje() {
   console.log('[Asistente] Parseando mensaje:', text.substring(0, 300))
 
   // Extract doctor name
-  const medicoMatch = text.match(/(?:con\s+(?:el\s+)?(?:médico|doctor|dra?\.?)\s+)([^\n.,;]+)/i)
-    || text.match(/(?:médico|doctor|dra?\.?)\s+(?:es\s+|:?\s*)([^\n.,;]+)/i)
+  const medicoMatch = text.match(/(?:con\s+(?:el\s+)?(?:m[eé]dico|doctor|dra?\.?)\s+)([^\n.,;]+)/i)
+    || text.match(/(?:m[eé]dico|doctor|dra?\.?)\s+(?:es\s+|:?\s*)([^\n.,;]+)/i)
+    || text.match(/(?:dr(?:a?)\.?\s+)([A-ZÁÉÍÓÚÑa-záéíóúñ\s]+?)(?:\s*[.,;]|$)/i)
   if (medicoMatch) {
     const nombreLimpio = medicoMatch[1].trim().replace(/^(dra?\.?\s*)/i, '').trim()
     nuevaCita.value.medico_search = nombreLimpio
@@ -174,15 +175,20 @@ async function parsearMensaje() {
   const uuidMatch = text.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i)
   if (uuidMatch) busquedas.push(uuidMatch[1].trim())
 
-  // Phone (10-12 digits)
-  const phoneMatch = text.match(/(?:tel(?:[eé]fono)?|cel(?:ular)?)[:\s]*(\d{10,12})/i)
+  // Phone - multiple patterns for WhatsApp messages
+  const phoneMatch = text.match(/(?:tel(?:[eé]fono)?|cel(?:ular)?|phone|movil|m[oó]vil)[:\s]*(\d{10,12})/i)
     || text.match(/(\d{10})/)
-  if (phoneMatch) busquedas.push(phoneMatch[1].trim())
+    || text.match(/(\d{2,4}[\s\-]?\d{3,4}[\s\-]?\d{3,4})/)
+  if (phoneMatch) {
+    const digits = phoneMatch[1].replace(/[^0-9]/g, '')
+    if (digits.length >= 10) busquedas.push(digits)
+  }
 
   // Name patterns: "soy [Name]", "nombre es: [Name]", "nombre: [Name]", "paciente: [Name]"
   const nombreMatch = text.match(/soy\s+([A-ZÁÉÍÓÚÑa-záéíóúñ\s]+?)(?:\s+y\s+(?:solicita|requiere))/i)
     || text.match(/(?:nombre\s*(?:es|:))\s+([^\n.,]+)/i)
     || text.match(/paciente:\s*([^\n.,]+)/i)
+    || text.match(/(?:me\s+llamo)\s+([^\n.,]+)/i)
   if (nombreMatch) busquedas.push(nombreMatch[1].trim())
 
   console.log('[Asistente] Busquedas extraídas:', busquedas)
@@ -201,6 +207,7 @@ async function parsearMensaje() {
     pasoActual.value = 2
     console.log('[Asistente] Paciente seleccionado:', pacienteSeleccionado.value.nombre, pacienteSeleccionado.value.apellido)
   } else {
+    errorCita.value = 'No se encontró paciente. Busca manualmente por nombre, email o teléfono.'
     console.log('[Asistente] No se encontró paciente con:', busquedas)
   }
 }
@@ -1390,48 +1397,60 @@ async function crearPacienteParaEmpresa() {
 
           <!-- PASO 1: Buscar paciente -->
           <div v-if="pasoActual === 1">
+            <!-- WhatsApp message paste -->
             <div class="field">
-              <label>ID del paciente (UUID)</label>
+              <label>Mensaje de WhatsApp (copy/paste)</label>
+              <textarea
+                v-model="nuevaCita.wa_text"
+                rows="4"
+                placeholder="Pega aquí el mensaje completo de WhatsApp...&#10;&#10;Ejemplo:&#10;Hola, soy Juan Pérez. Mi ID es: abc-123-uuid&#10;Mi correo es: juan@email.com&#10;Mi teléfono: 5551234567&#10;Quiero cita con el Dr. Carlos Ramírez"
+                style="font-family: inherit; font-size: 0.9rem;"
+              ></textarea>
+              <button
+                @click="parsearMensaje"
+                :disabled="parseando || !nuevaCita.wa_text.trim()"
+                class="btn-parse"
+              >
+                {{ parseando ? 'Analizando...' : 'Analizar mensaje' }}
+              </button>
+            </div>
+
+            <div style="text-align:center; color:#b2bec3; font-size:0.8rem; margin: 0.5rem 0;">
+              \u2014 o busca manualmente \u2014
+            </div>
+
+            <!-- Direct ID search -->
+            <div class="field">
+              <label>ID del paciente</label>
               <div style="display:flex; gap:0.5rem;">
                 <input
                   v-model="nuevaCita.paciente_search"
-                  placeholder="Ej: 428d1726-b0de-46cc-8895-5397fb0e0c9c"
+                  placeholder="UUID, nombre, email o teléfono..."
+                  @input="buscarPacientes"
                   @keyup.enter="buscarPacientesByIdDirecto"
                   style="flex:1;"
                 />
                 <button @click="buscarPacientesByIdDirecto" :disabled="!nuevaCita.paciente_search.trim()" class="btn-sm blue">Buscar</button>
               </div>
-              <p style="font-size:0.75rem; color:#636e72; margin-top:0.3rem;">También puedes buscar por nombre, email o teléfono en el campo de abajo</p>
             </div>
 
-            <div class="field">
-              <label>Buscar paciente</label>
-              <div class="autocomplete-wrapper">
-                <svg class="autocomplete-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                <input
-                  v-model="nuevaCita.paciente_search"
-                  placeholder="Nombre, email, teléfono o ID..."
-                  @input="buscarPacientes"
-                  class="autocomplete-input"
-                />
-              </div>
-              <div v-if="pacientesSearch.length > 0 && !pacienteSeleccionado" class="autocomplete-dropdown">
-                <div class="autocomplete-count">{{ pacientesSearch.length }} pacientes encontrados</div>
-                <div v-for="p in pacientesSearch" :key="p.id" class="autocomplete-item" @click="seleccionarPaciente(p)">
-                  <div class="autocomplete-avatar green">{{ p.nombre?.charAt(0) }}{{ p.apellido?.charAt(0) }}</div>
-                  <div class="autocomplete-info">
-                    <div class="autocomplete-name">{{ p.nombre }} {{ p.apellido }}</div>
-                    <div class="autocomplete-meta">
-                      <span v-if="p.email">{{ p.email }}</span>
-                      <span v-if="p.telefono">{{ p.telefono }}</span>
-                    </div>
+            <!-- Autocomplete dropdown -->
+            <div v-if="pacientesSearch.length > 0 && !pacienteSeleccionado" class="autocomplete-dropdown">
+              <div class="autocomplete-count">{{ pacientesSearch.length }} pacientes encontrados</div>
+              <div v-for="p in pacientesSearch" :key="p.id" class="autocomplete-item" @click="seleccionarPaciente(p)">
+                <div class="autocomplete-avatar green">{{ p.nombre?.charAt(0) }}{{ p.apellido?.charAt(0) }}</div>
+                <div class="autocomplete-info">
+                  <div class="autocomplete-name">{{ p.nombre }} {{ p.apellido }}</div>
+                  <div class="autocomplete-meta">
+                    <span v-if="p.email">{{ p.email }}</span>
+                    <span v-if="p.telefono">{{ p.telefono }}</span>
                   </div>
-                  <svg class="autocomplete-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg>
                 </div>
+                <svg class="autocomplete-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg>
               </div>
-              <div v-if="nuevaCita.paciente_search.length >= 2 && pacientesSearch.length === 0 && !pacienteSeleccionado && !buscandoMedico" class="autocomplete-empty">
-                No se encontraron pacientes con "{{ nuevaCita.paciente_search }}"
-              </div>
+            </div>
+            <div v-if="nuevaCita.paciente_search.length >= 2 && pacientesSearch.length === 0 && !pacienteSeleccionado && !buscandoMedico" class="autocomplete-empty">
+              No se encontraron pacientes con "{{ nuevaCita.paciente_search }}"
             </div>
 
             <!-- Resumen del paciente seleccionado -->
