@@ -31,6 +31,7 @@
       <div class="tabs-bar">
         <button class="tab-btn" :class="{ active: tabActiva === 'conversaciones' }" @click="tabActiva = 'conversaciones'">📋 Conversaciones</button>
         <button class="tab-btn" :class="{ active: tabActiva === 'simulador' }" @click="tabActiva = 'simulador'">🧪 Simulador</button>
+        <button class="tab-btn" :class="{ active: tabActiva === 'configuracion' }" @click="tabActiva = 'configuracion'">⚙️ Configuración</button>
       </div>
 
       <!-- TAB: Conversaciones -->
@@ -167,7 +168,6 @@
 
       <!-- TAB: Simulador -->
       <template v-if="tabActiva === 'simulador'">
-        <div class="simulador-layout">
           <!-- Panel de entrada -->
           <div class="sim-input-panel">
             <h3>🧪 Simulador de WhatsApp</h3>
@@ -283,6 +283,75 @@
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- TAB: Configuración -->
+      <template v-if="tabActiva === 'configuracion'">
+        <div class="config-layout">
+          <div class="config-card">
+            <h3>🔧 Configuración WhatsApp</h3>
+            <p class="config-desc">Selecciona el entorno de envío de mensajes</p>
+
+            <div class="config-row">
+              <label>Modo:</label>
+              <select v-model="modoWhatsApp" class="config-select">
+                <option value="produccion">Producción (Meta Real)</option>
+                <option value="pruebas">Pruebas (Simulador Vercel)</option>
+              </select>
+            </div>
+
+            <div v-if="modoWhatsApp === 'produccion'" class="config-row">
+              <label>Token Meta:</label>
+              <input
+                v-model="tokenWhatsApp"
+                type="password"
+                class="config-input"
+                placeholder="TOKEN_DE_META"
+                />
+            </div>
+
+            <div v-if="modoWhatsApp !== 'produccion'" class="config-row">
+              <label>URL Simulador:</label>
+              <input
+                v-model="urlBaseWhatsApp"
+                type="text"
+                class="config-input"
+                placeholder="https://tu-proyecto.vercel.app"
+                />
+            </div>
+
+            <div class="config-actions">
+              <button
+                class="btn-save-config"
+                @click="guardarConfiguracionWhatsApp"
+                :disabled="guardandoConfig"
+              >
+                Guardar Configuración
+              </button>
+              <button
+                class="btn-reset-config"
+                @click="resetearConfiguracion"
+                >
+                Restablecer a Pruebas
+              </button>
+            </div>
+
+            <div v-if="errorConfig" class="config-error">
+              <p>❌ {{ errorConfig }}</p>
+            </div>
+
+            <div v-if="exitoConfig" class="config-exito">
+              <p>✅ {{ exitoConfig }}</p>
+            </div>
+          </div>
+
+          <div class="config-info">
+            <h4>Información:</h4>
+            <p>Al cambiar a "Pruebas", los mensajes enviados a https://app.mediprotect.com.mx/whook/wame irán al simulador en Vercel.</p>
+            <p>Al cambiar a "Producción", los mensajes irán a Meta Graph API v19.0.</p>
+            <p>El selector está preconfigurado en "Pruebas" para pruebas iniciales.</p>
           </div>
         </div>
       </template>
@@ -517,7 +586,45 @@ const cargarTemplate = (tipo: string) => {
 
 onMounted(() => {
   buscarConversaciones()
+  cargarConfiguracionWhatsApp()
 })
+
+const modoWhatsApp = ref<'produccion' | 'pruebas'>('pruebas')
+const urlBaseWhatsApp = ref('')
+const tokenWhatsApp = ref('')
+const cargarConfiguracionWhatsApp = async () => {
+  try {
+    const data: any = await $fetch('/api/admin/whatsapp-config', {
+      headers: { Authorization: `Bearer ${useCookie('admin_token').value}` }
+    })
+    modoWhatsApp.value = data.config.modo
+    urlBaseWhatsApp.value = data.config.apiBaseUrl
+    tokenWhatsApp.value = data.config.token || ''
+    console.log('Config WhatsApp cargada:', { modo: modoWhatsApp.value, url: urlBaseWhatsApp.value })
+  } catch (e: any) {
+    console.error('Error cargando config WhatsApp:', e)
+    // Valores por defecto en modo pruebas
+    modoWhatsApp.value = 'pruebas'
+    urlBaseWhatsApp.value = 'https://tu-proyecto.vercel.app'
+  }
+}
+
+const actualizarConfiguracionWhatsApp = async (modo: string, url: string, token: string) => {
+  try {
+    await $fetch('/api/admin/whatsapp-config', {
+      method: 'POST',
+      body: { modo, apiBaseUrl: url, token },
+      headers: { Authorization: `Bearer ${useCookie('admin_token').value}` }
+    })
+    modoWhatsApp.value = modo
+    urlBaseWhatsApp.value = url
+    tokenWhatsApp.value = token
+    console.log('Config WhatsApp actualizada exitosamente')
+  } catch (e: any) {
+    console.error('Error actualizando config WhatsApp:', e)
+    throw e
+  }
+}
 </script>
 
 <style scoped>
@@ -657,6 +764,12 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 0.25rem; margin-top: 
 .sim-typing span:nth-child(3) { animation-delay: 0.4s; }
 @keyframes typing { 0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); } 30% { opacity: 1; transform: scale(1); } }
 
+.sim-typing { display: flex; gap: 4px; padding: 0.75rem 1rem; align-items: center; }
+.sim-typing span { width: 8px; height: 8px; border-radius: 50%; background: #b2bec3; animation: typing 1.4s infinite; }
+.sim-typing span:nth-child(2) { animation-delay: 0.2s; }
+.sim-typing span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes typing { 0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); } 30% { opacity: 1; transform: scale(1); } }
+
 @media (max-width: 768px) {
   .sidebar { display: none; }
   .admin-content { margin-left: 0; }
@@ -664,5 +777,32 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 0.25rem; margin-top: 
   .conversaciones-panel { grid-template-columns: 1fr; }
   .conv-detail { display: none; }
   .simulador-layout { grid-template-columns: 1fr; }
+}
+
+/* Configuración WhatsApp */
+.config-layout { max-width: 800px; margin: 0 auto; padding: 2rem; }
+.config-card { background: white; border: 1px solid #e0e0e0; border-radius: 12px; padding: 2rem; max-width: 600px; margin: 0 auto; }
+.config-desc { color: #636e72; font-size: 0.9rem; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid #f0f0f0; }
+.config-row { margin-bottom: 1.5rem; }
+.config-row label { display: block; font-weight: 600; color: #2d3436; margin-bottom: 0.5rem; font-size: 0.9rem; }
+.config-row select, .config-row input { width: 100%; padding: 0.6rem 0.75rem; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 0.9rem; font-family: inherit; box-sizing: border-box; }
+.config-row input[type="password"] { background: #f8f9fa; }
+.config-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem; }
+.btn-save-config { background: #00b894; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+.btn-save-config:hover { background: #00a884; }
+.btn-save-config:disabled { background: #b2bec3; cursor: not-allowed; }
+.btn-reset-config { background: #ff7675; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-size: 0.9rem; cursor: pointer; transition: background 0.2s; }
+.btn-reset-config:hover { background: #d63031; }
+.config-info { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1rem; margin-top: 1.5rem; }
+.config-info h4 { margin: 0 0 0.5rem; font-size: 0.9rem; color: #636e72; }
+.config-info p { margin: 0.25rem 0; font-size: 0.85rem; color: #636e72; }
+.config-error { background: #ffe0e0; color: #d63031; padding: 0.75rem; border-radius: 8px; margin-top: 1rem; text-align: center; }
+.config-exito { background: #e0ffe0; color: #2e7d32; padding: 0.75rem; border-radius: 8px; margin-top: 1rem; text-align: center; }
+
+@media (max-width: 768px) {
+  .config-layout { padding: 1rem; }
+  .config-card { padding: 1rem; }
+  .config-actions { flex-direction: column; gap: 0.5rem; align-items: stretch; }
+  .btn-save-config, .btn-reset-config { width: 100%; }
 }
 </style>

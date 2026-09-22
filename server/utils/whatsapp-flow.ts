@@ -85,7 +85,33 @@ export function parsearSolicitudCita(texto: string) {
   return result
 }
 
+export function detectarSaludo(texto: string): string | null {
+  const textoLower = texto.toLowerCase().trim()
+  const saludos = ['hola', 'hello', 'holi', 'que tal', 'que pasa']
+
+  for (const saludo of saludos) {
+    if (textoLower === saludo || textoLower.startsWith(saludo + ' ') || textoLower.startsWith(saludo + '\n')) {
+      return saludo
+    }
+  }
+  return null
+}
+
 export async function processMessage(conv: Conversacion, texto: string, nombre: string, pool: any): Promise<Respuesta | null> {
+  // Primero, detectar saludos simples
+  const saludo = detectarSaludo(texto)
+  if (saludo) {
+    const hoy = new Date()
+    const diaSemana = DIAS_SEMANA[hoy.getDay()]
+    const respuestaTexto = `¡Hola! 👋\n\n${nombre ? nombre + ' ' : ''}¿Cómo estás el ${diaSemana}?`
+    
+    return {
+      texto: respuestaTexto,
+      nuevoEstado: conv.estado || 'bienvenida',
+      datosTemp: { ...conv.datos_temp }
+    }
+  }
+
   const state = conv.estado
   const data = conv.datos_temp || {}
 

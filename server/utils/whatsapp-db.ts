@@ -4,37 +4,68 @@ interface WhatsAppConfig {
   modo: string
 }
 
-export async function getWhatsAppConfig(pool: any): Promise<WhatsAppConfig> {
-  const result = await pool.query(
-    `SELECT clave, valor FROM configuracion_sistema
-     WHERE clave IN (
-       'whatsapp_token', 'whatsapp_phone_number_id',
-       'whatsapp_token_sandbox', 'whatsapp_phone_number_id_sandbox',
-       'whatsapp_modo'
-     )
-     AND categoria = 'whatsapp'`
+export async function updateWhatsAppConfig(pool: any, modo: string, apiBaseUrl: string, token?: string) {
+  // Si modo es 'produccion', requerimos token
+  if (modo === 'produccion' && !token) {
+    throw new Error('Token es requerido para modo produccion')
+  }
+
+  await pool.query(
+    `INSERT INTO configuracion_sistema (clave, valor, categoria) VALUES
+     ('whatsapp_modo', $1, 'whatsapp'),
+     ('whatsapp_api_base_url', $2, 'whatsapp')
+     ON CONFLICT (clave) DO UPDATE SET valor = EXCLUDED.valor`,
+    [modo, apiBaseUrl]
   )
 
-  const config: Record<string, string> = {}
-  for (const row of result.rows) {
-    config[row.clave] = row.valor
+  if (modo === 'produccion' && token) {
+    await pool.query(
+      `INSERT INTO configuracion_sistema (clave, valor, categoria) VALUES
+       ('whatsapp_token', $1, 'whatsapp')
+       ON CONFLICT (clave) DO UPDATE SET valor = EXCLUDED.valor`,
+      [token]
+    )
+  } else if (modo === 'pruebas') {
+    // En modo pruebas, removemos o limpiamos el token
+    await pool.query(
+      `DELETE FROM configuracion_sistema WHERE clave = 'whatsapp_token' AND categoria = 'whatsapp'`
+    )
   }
 
-  const modo = config['whatsapp_modo'] || 'sandbox'
+  return { ok: true, modo, apiBaseUrl }
+}
 
-  if (modo === 'produccion') {
-    return {
-      token: config['whatsapp_token'] || '',
-      phoneNumberId: config['whatsapp_phone_number_id'] || '',
-      modo,
-    }
-  }
+export async function getWhatsAppConfig(pool: any): Promise<{
+  modo: string
+  apiBaseUrl: string
+  token: string | null
+  phoneNumberId: string | null
+}> {
+  // Leer modo
+  const modoResult = await pool.query(
+    `SELECT valor FROM configuracion_sistema WHERE clave = 'whatsapp_modo' AND categoria = 'whatsapp'`
+  )
+  const modo = modoResult.rows[0]?.valor || 'produccion'
 
-  return {
-    token: config['whatsapp_token_sandbox'] || '',
-    phoneNumberId: config['whatsapp_phone_number_id_sandbox'] || '',
-    modo,
-  }
+  // Leer URL base
+  const urlResult = await pool.query(
+    `SELECT valor FROM configuracion_sistema WHERE clave = 'whatsapp_api_base_url' AND categoria = 'whatsapp'`
+  )
+  const apiBaseUrl = urlResult.rows[0]?.valor || 'https://graph.facebook.com/v19.0'
+
+  // Leer token si existe
+  const tokenResult = await pool.query(
+    `SELECT valor FROM configuracion_sistema WHERE clave = 'whatsapp_token' AND categoria = 'whatsapp'`
+  )
+  const token = tokenResult.rows[0]?.valor || null
+
+  // Leer phoneNumberId
+  const pnResult = await pool.query(
+    `SELECT valor FROM configuracion_sistema WHERE clave = 'whatsapp_phone_number_id' AND categoria = 'whatsapp'`
+  )
+  const phoneNumberId = pnResult.rows[0]?.valor || null
+
+  return { modo, apiBaseUrl, token, phoneNumberId }
 }
 
 export async function logMensaje(
