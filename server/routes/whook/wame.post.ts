@@ -1,5 +1,5 @@
 import { getWhatsAppConfig, logMensaje, getOrCreateConversation, updateConversationState } from '../../utils/whatsapp-db'
-import { processMessage } from '../../utils/whatsapp-flow'
+import { processMessage, parsearSolicitudCita } from '../../utils/whatsapp-flow'
 import { enviarMensaje, enviarLista, enviarBotones } from '../../utils/whatsapp'
 
 export default defineEventHandler(async (event) => {
@@ -77,6 +77,15 @@ async function processIncomingMessage(msg: any, contacts: any[], pool: any) {
   await logMensaje(pool, telefono, 'in', texto, tipo, msg.id)
 
   const conv = await getOrCreateConversation(pool, telefono, nombre)
+
+  if (conv.estado === 'bienvenida' && tipo === 'text') {
+    const solicitud = parsearSolicitudCita(texto)
+    if (solicitud.esSolicitudDirecta) {
+      await updateConversationState(pool, conv.id, 'solicitud_directa', conv.datos_temp || {})
+      conv.estado = 'solicitud_directa'
+    }
+  }
+
   const respuesta = await processMessage(conv, texto, nombre, pool)
 
   if (respuesta) {

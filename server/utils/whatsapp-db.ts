@@ -199,3 +199,87 @@ export async function searchPatientByPhone(pool: any, telefono: string) {
   )
   return result.rows[0] || null
 }
+
+export async function searchPatientById(pool: any, id: string) {
+  const result = await pool.query(
+    `SELECT id, nombre, apellido, email, telefono
+     FROM pacientes
+     WHERE id::text = $1 OR id = $1::uuid
+     LIMIT 1`,
+    [id]
+  )
+  return result.rows[0] || null
+}
+
+export async function searchDoctorBySlug(pool: any, slug: string) {
+  const result = await pool.query(
+    `SELECT id, nombre, apellido, slug, precio_regular, porcentaje_descuento, especialidad
+     FROM medicos
+     WHERE slug = $1
+     AND activo = true
+     AND (estatus_medico IS NULL OR estatus_medico = 'activo')
+     LIMIT 1`,
+    [slug]
+  )
+  return result.rows[0] || null
+}
+
+export async function searchDoctorByName(pool: any, nombre: string) {
+  const search = `%${nombre.toLowerCase()}%`
+  const result = await pool.query(
+    `SELECT id, nombre, apellido, slug, precio_regular, porcentaje_descuento, especialidad
+     FROM medicos
+     WHERE (
+       LOWER(nombre) LIKE $1
+       OR LOWER(apellido) LIKE $1
+       OR LOWER(slug) LIKE $1
+       OR LOWER(CONCAT(nombre, ' ', apellido)) LIKE $1
+     )
+     AND activo = true
+     AND (estatus_medico IS NULL OR estatus_medico = 'activo')
+     LIMIT 1`,
+    [search]
+  )
+  return result.rows[0] || null
+}
+
+export function getDiasDisponibles(): { id: string; titulo: string; descripcion: string }[] {
+  const hoy = new Date()
+  const dias: { id: string; titulo: string; descripcion: string }[] = []
+  const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+  const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+
+  let d = new Date(hoy)
+  d.setDate(d.getDate() + 1)
+  while (dias.length < 5) {
+    const dayOfWeek = d.getDay()
+    if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+      const fechaStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      dias.push({
+        id: `dia_${fechaStr}`,
+        titulo: `${DIAS[dayOfWeek]} ${d.getDate()} ${MESES[d.getMonth()]}`,
+        descripcion: fechaStr,
+      })
+    }
+    d.setDate(d.getDate() + 1)
+  }
+  return dias
+}
+
+export function getHorasDisponibles(): { id: string; titulo: string; descripcion: string }[] {
+  const horas: { id: string; titulo: string; descripcion: string }[] = []
+  for (let h = 9; h <= 20; h++) {
+    for (let m = 0; m < 60; m += 30) {
+      if (h === 20 && m > 0) break
+      const hora = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+      const hour12 = h > 12 ? h - 12 : h
+      const suffix = h >= 12 ? 'PM' : 'AM'
+      horas.push({
+        id: `hora_${hora}`,
+        titulo: `${hour12}:${String(m).padStart(2, '0')} ${suffix}`,
+        descripcion: hora,
+      })
+    }
+  }
+  return horas
+}
