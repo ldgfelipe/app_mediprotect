@@ -33,6 +33,12 @@
               <input type="checkbox" v-model="autoRefresh" @change="toggleAutoRefresh">
               Auto-refresh (5s)
             </label>
+            <button class="btn-download" @click="descargarCSV" :disabled="descargandoCsv">
+              {{ descargandoCsv ? 'Generando...' : '⬇️ Descargar CSV' }}
+            </button>
+            <button class="btn-clear-logs" @click="limpiarLogs" :disabled="limpiandoLogs">
+              {{ limpiandoLogs ? 'Limpiando...' : '🗑️ Limpiar logs' }}
+            </button>
             <button class="btn-refresh" @click="cargarLogs" :disabled="cargando">
               {{ cargando ? 'Cargando...' : '🔄 Actualizar' }}
             </button>
@@ -297,6 +303,62 @@ const limpiarFiltros = () => {
   cargarLogs()
 }
 
+const descargandoCsv = ref(false)
+const limpiandoLogs = ref(false)
+
+const obtenerParamsLogs = () => {
+  const params: any = {}
+  if (filtroTelefono.value) params.telefono = filtroTelefono.value
+  if (filtroDireccion.value) params.direccion = filtroDireccion.value
+  if (filtroTipo.value) params.tipo = filtroTipo.value
+  if (filtroFechaDesde.value) params.fecha_desde = filtroFechaDesde.value
+  if (filtroFechaHasta.value) params.fecha_hasta = filtroFechaHasta.value
+  return params
+}
+
+const descargarCSV = async () => {
+  descargandoCsv.value = true
+  try {
+    const blob: any = await $fetch('/api/admin/whatsapp-logs/csv', {
+      params: obtenerParamsLogs(),
+      responseType: 'blob',
+      headers: { Authorization: `Bearer ${useCookie('admin_token').value}` }
+    })
+
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `whatsapp_logs_${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    console.error('Error descargando CSV:', e)
+    alert('Error al descargar el CSV')
+  } finally {
+    descargandoCsv.value = false
+  }
+}
+
+const limpiarLogs = async () => {
+  if (!confirm('¿Eliminar todos los logs de mensajes de WhatsApp? Esta acción no se puede deshacer.')) return
+
+  limpiandoLogs.value = true
+  try {
+    await $fetch('/api/admin/whatsapp-logs/limpiar', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${useCookie('admin_token').value}` }
+    })
+    await cargarLogs()
+  } catch (e) {
+    console.error('Error limpiando logs:', e)
+    alert('Error al limpiar los logs')
+  } finally {
+    limpiandoLogs.value = false
+  }
+}
+
 const expandirMensaje = (log: any) => {
   mensajeSeleccionado.value = log
 }
@@ -359,6 +421,12 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 0.25rem; margin-top: 
 .btn-refresh { background: #00b894; color: white; border: none; padding: 0.5rem 1.2rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; }
 .btn-refresh:hover { background: #00a884; }
 .btn-refresh:disabled { opacity: 0.5; }
+.btn-download { background: #0984e3; color: white; border: none; padding: 0.5rem 1.2rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; }
+.btn-download:hover { background: #0773c1; }
+.btn-download:disabled { opacity: 0.5; }
+.btn-clear-logs { background: #e17055; color: white; border: none; padding: 0.5rem 1.2rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; }
+.btn-clear-logs:hover { background: #d95d43; }
+.btn-clear-logs:disabled { opacity: 0.5; }
 
 .stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
 .stat-card { background: white; border: 1px solid #e0e0e0; border-radius: 10px; padding: 1rem; text-align: center; }
@@ -443,6 +511,8 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 0.25rem; margin-top: 
   .sidebar { display: none; }
   .admin-content { margin-left: 0; }
   .stats-row { grid-template-columns: repeat(2, 1fr); }
+  .header-top { flex-direction: column; gap: 1rem; }
+  .header-actions { flex-wrap: wrap; }
   .filters-bar { flex-direction: column; }
   .filter-input, .filter-date { max-width: 100%; }
 }
