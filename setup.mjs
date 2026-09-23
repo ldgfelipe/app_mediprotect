@@ -24,27 +24,7 @@ if (content.includes('await _ensureOxc()') || content.includes('await _oxc')) {
 
 content = content.replace("import { createRequire } from 'node:module';", '')
 
-const oldFn = `let cachedParseSync;
-function resolveParseSync() {
-  if (cachedParseSync) return cachedParseSync;
-  const require = createRequire(import.meta.url);
-  const candidates = ["oxc-parser", "rolldown/utils"];
-  for (const id of candidates) {
-    try {
-      const mod = require(id);
-      if (typeof mod.parseSync === "function") {
-        cachedParseSync = mod.parseSync;
-        return cachedParseSync;
-      }
-    } catch {
-    }
-  }
-  throw new Error(
-    "oxc-walker: could not resolve a \\`parseSync\\` implementation. Install \\`oxc-parser\\` or \\`rolldown\\` (and use \\`rolldown/utils\\`), or pass a \\`parseSync\\` function via the \\`parseAndWalk\\` options."
-  );
-}`
-
-const newFn = `let _oxcInit;
+const newFn = String.raw`let _oxcInit;
 let cachedParseSync;
 function resolveParseSync() {
   if (cachedParseSync) return cachedParseSync;
@@ -58,8 +38,9 @@ if (!_oxcInit) {
   await _oxcInit;
 }`
 
-if (content.includes(oldFn)) {
-  content = content.replace(oldFn, newFn)
+const re = /function resolveParseSync\(\) \{[\s\S]*?throw new Error\([\s\S]*?\);\s*\n\}/
+if (re.test(content)) {
+  content = content.replace(re, newFn)
   writeFileSync(oxcWalkerPath, content, 'utf8')
   console.log('oxc-walker patched successfully')
 } else {
