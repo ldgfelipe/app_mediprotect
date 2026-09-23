@@ -1,8 +1,9 @@
 import jwt from 'jsonwebtoken'
 import { defineWebSocketHandler } from 'h3'
 import { peers, rooms } from '../utils/ws-peers'
+import { jwtSecret } from '../utils/secrets'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'mediprotect_jwt_secret_key_2026'
+const JWT_SECRET = jwtSecret()
 
 function joinRoom(peer: any, room: string) {
   peer.subscribe(room)

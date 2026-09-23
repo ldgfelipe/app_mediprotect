@@ -38,10 +38,12 @@ export async function getWhatsAppConfig(pool: any): Promise<WhatsAppConfig> {
     configMap[row.clave] = row.valor || ''
   }
 
+  const cfg = useRuntimeConfig()
+
   return {
-    gatewayUrl: configMap['whatsapp_gateway_url'] || 'http://127.0.0.1:8080',
-    instanceName: configMap['whatsapp_instance_name'] || '',
-    apiKey: configMap['whatsapp_gateway_apikey'] || '',
+    gatewayUrl: configMap['whatsapp_gateway_url'] || cfg.whatsappGatewayUrl || 'http://127.0.0.1:8080',
+    instanceName: configMap['whatsapp_instance_name'] || cfg.whatsappInstanceName || '',
+    apiKey: configMap['whatsapp_gateway_apikey'] || cfg.whatsappGatewayApiKey || '',
   }
 }
 
@@ -122,46 +124,171 @@ export async function getDoctorsBySpecialty(pool: any, especialidad: string) {
   return result.rows
 }
 
-export async function getAvailableDates(pool: any, medicoId: string) {
-  const result = await pool.query(
-    `SELECT DISTINCT fecha_hora::date as dia
-     FROM generate_series(
-       CURRENT_DATE,
-       CURRENT_DATE + INTERVAL '14 days',
-       '1 day'::interval
-     ) AS fecha
-     WHERE NOT EXISTS (
-       SELECT 1 FROM citas
-       WHERE id_medico = $1
-       AND fecha_hora::date = fecha::date
-       AND estado NOT IN ('cancelada')
-     )
-     ORDER BY dia
-     LIMIT 7`,
-    [medicoId]
-  )
-  return result.rows.map((r: any) => r.dia)
+interface DisponibilidadMedico {
+  diasDisponibles: number[]
+  inicio: string | null
+  fin: string | null
+  inicioVespertino: string | null
+  finVespertino: string | null
 }
 
-export async function getAvailableHours(pool: any, medicoId: string, fecha: string) {
-  const horas = [
-    '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
-    '13:00', '13:30', '14:00', '14:30',
-    '16:00', '16:30', '17:00', '17:30', '18:00', '18:30'
-  ]
+function minutosAHora(min: number): string {
+  const h = Math.floor(min / 60)
+  const m = min % 60
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
+
+function horaAMinutos(hora: string | null): number | null {
+  if (!hora) return null
+  const [h, m] = hora.split(':').map(Number)
+  if (Number.isNaN(h) || Number.isNaN(m)) return null
+  return h * 60 + m
+}
+
+function formatearFecha(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function generarBloques(dispo: DisponibilidadMedico, fecha: string): string[] {
+  const rangos: { inicio: number; fin: number }[] = []
+  const inicio = horaAMinutos(dispo.inicio)
+  const fin = horaAMinutos(dispo.fin)
+  if (inicio !== null && fin !== null && fin > inicio) rangos.push({ inicio, fin })
+  const inicioV = horaAMinutos(dispo.inicioVespertino)
+  const finV = horaAMinutos(dispo.finVespertino)
+  if (inicioV !== null && finV !== null && finV > inicioV) rangos.push({ inicio: inicioV, fin: finV })
+
+  const bloques: string[] = []
+  for (const r of rangos) {
+    for (let t = r.inicio; t + 30 <= r.fin; t += 30) {
+      bloques.push(minutosAHora(t))
+    }
+  }
+
+  if (fecha === formatearFecha(new Date())) {
+    const ahora = new Date().getHours() * 60 + new Date().getMinutes()
+    return bloques.filter((b) => {
+      const t = horaAMinutos(b)
+      return t !== null && t > ahora
+    })
+  }
+  return bloques
+}
+
+export async function getDisponibilidadMedico(pool: any, medicoId: string): Promise<DisponibilidadMedico> {
+  const res = await pool.query(
+    `SELECT dias_disponibles, horario_inicio, horario_fin,
+            horario_inicio_vespertino, horario_fin_vespertino
+     FROM medicos WHERE id = $1`,
+    [medicoId]
+  )
+  const m = res.rows[0]
+  if (m) {
+    let dias = m.dias_disponibles
+    if (typeof dias === 'string') {
+      try { dias = JSON.parse(dias) } catch { dias = null }
+    }
+    if (Array.isArray(dias) && dias.length > 0) {
+      return {
+        diasDisponibles: [...new Set(dias.map((d: any) => Number(d)))],
+        inicio: m.horario_inicio ? String(m.horario_inicio).slice(0, 5) : null,
+        fin: m.horario_fin ? String(m.horario_fin).slice(0, 5) : null,
+        inicioVespertino: m.horario_inicio_vespertino ? String(m.horario_inicio_vespertino).slice(0, 5) : null,
+        finVespertino: m.horario_fin_vespertino ? String(m.horario_fin_vespertino).slice(0, 5) : null,
+      }
+    }
+  }
+
+  const dispRes = await pool.query(
+    `SELECT dia_semana, hora_inicio, hora_fin
+     FROM disponibilidad_medico
+     WHERE id_medico = $1 AND activo = true
+     ORDER BY hora_inicio ASC`,
+    [medicoId]
+  )
+  if (dispRes.rows.length > 0) {
+    const rows = dispRes.rows
+    const dias = [...new Set(rows.map((r: any) => Number(r.dia_semana)))]
+    const primerRango = rows[0]
+    return {
+      diasDisponibles: dias,
+      inicio: String(primerRango.hora_inicio).slice(0, 5),
+      fin: String(primerRango.hora_fin).slice(0, 5),
+      inicioVespertino: null,
+      finVespertino: null,
+    }
+  }
+
+  return { diasDisponibles: [1, 2, 3, 4, 5], inicio: '09:00', fin: '20:00', inicioVespertino: null, finVespertino: null }
+}
+
+export async function getAvailableHours(pool: any, medicoId: string, fecha: string, dispo?: DisponibilidadMedico, limite = 10) {
+  const disponibilidad = dispo || await getDisponibilidadMedico(pool, medicoId)
+  const fechaDate = new Date(`${fecha}T12:00:00`)
+  if (Number.isNaN(fechaDate.getTime())) return []
+  if (!disponibilidad.diasDisponibles.includes(fechaDate.getDay())) return []
+
+  const bloques = generarBloques(disponibilidad, fecha)
+  if (bloques.length === 0) return []
 
   const ocupadas = await pool.query(
-    `SELECT EXTRACT(HOUR FROM fecha_hora)::text || ':' ||
-            LPAD(EXTRACT(MINUTE FROM fecha_hora)::text, 2, '0') as hora
+    `SELECT EXTRACT(HOUR FROM fecha_hora)::int * 60 + EXTRACT(MINUTE FROM fecha_hora)::int AS minutos
      FROM citas
      WHERE id_medico = $1
      AND fecha_hora::date = $2::date
      AND estado NOT IN ('cancelada')`,
     [medicoId, fecha]
   )
+  const minutosOcupados: number[] = ocupadas.rows.map((r: any) => r.minutos)
 
-  const ocupadasSet = new Set(ocupadas.rows.map((r: any) => r.hora))
-  return horas.filter(h => !ocupadasSet.has(h))
+  return bloques.filter((bloque) => {
+    const b = horaAMinutos(bloque) as number
+    return !minutosOcupados.some((m) => m >= b && m < b + 30)
+  }).slice(0, limite)
+}
+
+export async function getAvailableDates(pool: any, medicoId: string, limite = 7, ventanaDias = 60) {
+  const dispo = await getDisponibilidadMedico(pool, medicoId)
+  const fechas: string[] = []
+  const hoy = new Date()
+  for (let i = 1; i <= ventanaDias && fechas.length < limite; i++) {
+    const d = new Date(hoy)
+    d.setDate(hoy.getDate() + i)
+    if (!dispo.diasDisponibles.includes(d.getDay())) continue
+    const fechaStr = formatearFecha(d)
+    const horas = await getAvailableHours(pool, medicoId, fechaStr, dispo)
+    if (horas.length > 0) fechas.push(fechaStr)
+  }
+  return fechas
+}
+
+export async function getDiasDisponiblesParaMedico(pool: any, medicoId: string): Promise<{ id: string; titulo: string; descripcion: string }[]> {
+  const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+  const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+  const fechas = await getAvailableDates(pool, medicoId)
+  return fechas.map((f) => {
+    const [y, mo, d] = f.split('-').map(Number)
+    const fecha = new Date(y, mo - 1, d)
+    return {
+      id: `dia_${f}`,
+      titulo: `${DIAS[fecha.getDay()]} ${d} ${MESES[mo - 1]}`,
+      descripcion: f,
+    }
+  })
+}
+
+export async function getHorasDisponiblesParaMedico(pool: any, medicoId: string, fecha: string): Promise<{ id: string; titulo: string; descripcion: string }[]> {
+  const horas = await getAvailableHours(pool, medicoId, fecha)
+  return horas.map((h) => {
+    const [hh, mm] = h.split(':').map(Number)
+    const hour12 = hh > 12 ? hh - 12 : hh
+    const suffix = hh >= 12 ? 'PM' : 'AM'
+    return {
+      id: `hora_${h}`,
+      titulo: `${hour12}:${String(mm).padStart(2, '0')} ${suffix}`,
+      descripcion: h,
+    }
+  })
 }
 
 export async function createCitaFromWhatsApp(

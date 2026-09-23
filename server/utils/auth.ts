@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken'
+import { jwtSecret } from './secrets'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'mediprotect_jwt_secret_key_2026'
+const JWT_SECRET = jwtSecret()
 
 export function verifyToken(event: any) {
   const authHeader = getHeader(event, 'authorization')

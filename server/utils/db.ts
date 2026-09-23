@@ -1,6 +1,7 @@
 import { Pool } from 'pg'
+import { databaseUrl } from './secrets'
 
-const PROD_URL = process.env.DATABASE_URL || 'postgresql://postgres:Mobiltoo111213@db.mruezojnfgkdhtgxwgmv.supabase.co:5432/postgres'
+const PROD_URL = databaseUrl()
 
 let prodPool: Pool | null = null
 

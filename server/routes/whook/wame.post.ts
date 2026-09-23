@@ -1,9 +1,16 @@
 import { getWhatsAppConfig, logMensaje, getOrCreateConversation, updateConversationState } from '../../utils/whatsapp-db'
 import { processMessage, parsearSolicitudCita } from '../../utils/whatsapp-flow'
 import { enviarMensaje, enviarLista, enviarBotones } from '../../utils/whatsapp'
+import { estaAutorizadoWebhook } from '../../utils/whook-guard'
+import { permiteMensaje } from '../../utils/whatsapp-security'
 
 export default defineEventHandler(async (event) => {
   const pool = await useDbPool(event)
+
+  if (!estaAutorizadoWebhook(event)) {
+    console.log('[WhatsApp Webhook] Acceso no autorizado, rechazado')
+    throw createError({ statusCode: 403, message: 'Acceso denegado' })
+  }
 
   const webhookActivo = await pool.query(
     `SELECT valor FROM configuracion_sistema WHERE clave = 'whatsapp_webhook_activo'`
@@ -35,6 +42,16 @@ export default defineEventHandler(async (event) => {
 
   for (const msg of mensajes) {
     if (!msg || msg.key?.fromMe === true) continue
+
+    const { telefono } = extraerMensajeEvolution(msg)
+    if (!telefono) continue
+
+    const permitido = await permiteMensaje(pool, telefono)
+    if (!permitido) {
+      console.log(`[WhatsApp Webhook] Rate limit alcanzado para ${telefono}, mensaje ignorado`)
+      continue
+    }
+
     await processIncomingMessage(msg, pool)
   }
 

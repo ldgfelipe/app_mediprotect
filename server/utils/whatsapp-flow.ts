@@ -8,8 +8,8 @@ import {
   searchPatientById,
   searchDoctorBySlug,
   searchDoctorByName,
-  getDiasDisponibles,
-  getHorasDisponibles
+  getDiasDisponiblesParaMedico,
+  getHorasDisponiblesParaMedico
 } from './whatsapp-db'
 
 interface Conversacion {
@@ -462,7 +462,15 @@ export async function processMessage(conv: Conversacion, texto: string, nombre: 
       }
 
       const precioConDesc = (doctorFromData.precio_regular || 1000) * (1 - (doctorFromData.porcentaje_descuento || 10) / 100)
-      const diasPac = getDiasDisponibles()
+      const diasPac = await getDiasDisponiblesParaMedico(pool, doctorFromData.id)
+
+      if (diasPac.length === 0) {
+        return {
+          texto: `El Dr. ${doctorFromData.nombre} ${doctorFromData.apellido} no tiene disponibilidad en los próximos días.\n\n¿Deseas consultar con otro médico?`,
+          nuevoEstado: 'solicitando_doctor',
+          datosTemp: { ...data },
+        }
+      }
 
       return {
         texto: `¡Hola ${pacienteIdRes.nombre} ${pacienteIdRes.apellido}! 👋\n\nEncontré tu registro y al *Dr. ${doctorFromData.nombre} ${doctorFromData.apellido}*.\n\n📋 *Precio preferencial: $${precioConDesc} MXN*\n\n¿Qué día prefieres para tu cita?`,
@@ -496,7 +504,15 @@ export async function processMessage(conv: Conversacion, texto: string, nombre: 
       }
 
       const precioConDesc2 = (doctorBuscado.precio_regular || 1000) * (1 - (doctorBuscado.porcentaje_descuento || 10) / 100)
-      const dias2 = getDiasDisponibles()
+      const dias2 = await getDiasDisponiblesParaMedico(pool, doctorBuscado.id)
+
+      if (dias2.length === 0) {
+        return {
+          texto: `El Dr. ${doctorBuscado.nombre} ${doctorBuscado.apellido} no tiene disponibilidad en los próximos días.\n\n¿Deseas consultar con otro médico?`,
+          nuevoEstado: 'solicitando_doctor',
+          datosTemp: { ...data },
+        }
+      }
 
       return {
         texto: `Encontré al *Dr. ${doctorBuscado.nombre} ${doctorBuscado.apellido}* (${doctorBuscado.especialidad}).\n\n¿Qué día prefieres?`,
@@ -518,7 +534,19 @@ export async function processMessage(conv: Conversacion, texto: string, nombre: 
     case 'seleccionando_dia_preferencia': {
       if (texto.startsWith('dia_')) {
         const fecha = texto.replace('dia_', '')
-        const horasDisp = getHorasDisponibles()
+        const horasDisp = await getHorasDisponiblesParaMedico(pool, data.doctorId, fecha)
+
+        if (horasDisp.length === 0) {
+          return {
+            texto: `No hay horarios disponibles para el *${formatFecha(fecha)}*.\n\nSelecciona otro día:`,
+            nuevoEstado: 'seleccionando_dia_preferencia',
+            datosTemp: { ...data },
+            lista: {
+              titulo_seccion: 'Días disponibles',
+              opciones: await getDiasDisponiblesParaMedico(pool, data.doctorId),
+            }
+          }
+        }
 
         return {
           texto: `¿Qué horario prefieres para el *${formatFecha(fecha)}*?`,
@@ -608,7 +636,7 @@ export async function processMessage(conv: Conversacion, texto: string, nombre: 
       }
 
       if (texto === 'cambiar_dia') {
-        const diasCamb = getDiasDisponibles()
+        const diasCamb = await getDiasDisponiblesParaMedico(pool, data.doctorId)
         return {
           texto: 'Selecciona un nuevo día:',
           nuevoEstado: 'seleccionando_dia_preferencia',

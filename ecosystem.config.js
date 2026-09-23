@@ -1,0 +1,70 @@
+module.exports = {
+  apps: [
+    {
+      name: 'mediprotect-app',
+      script: '.output/server/index.mjs',
+      cwd: '/var/www/app_mediprotect',
+      instances: 1,
+      exec_mode: 'fork',
+      env: {
+        NODE_ENV: 'production',
+        PORT: '3000',
+        HOST: '0.0.0.0',
+        NUXT_JWT_SECRET: 'cambia_este_secreto_largo',
+        NUXT_DATABASE_URL: 'postgresql://postgres:PASSWORD@db.xxxx.supabase.co:5432/postgres',
+        NUXT_WHATSAPP_GATEWAY_URL: 'http://127.0.0.1:8080',
+        NUXT_WHATSAPP_INSTANCE_NAME: 'mediprotect',
+        NUXT_WHATSAPP_GATEWAY_APIKEY: '',
+        NUXT_WHATSAPP_WEBHOOK_APIKEY: 'cambia_esta_clave_webhook',
+        NUXT_WHATSAPP_WEBHOOK_ALLOWED_IPS: '127.0.0.1',
+        NUXT_VALIDA_CURP_TOKEN: 'pruebas',
+        DATABASE_URL: 'postgresql://postgres:PASSWORD@db.xxxx.supabase.co:5432/postgres',
+        JWT_SECRET: 'cambia_este_secreto_largo'
+      },
+      out_file: '/var/log/mediprotect/app-out.log',
+      error_file: '/var/log/mediprotect/app-error.log',
+      merge_logs: true,
+      time: true,
+      autorestart: true,
+      max_memory_restart: '512M',
+      kill_timeout: 5000
+    },
+    {
+      name: 'evolution-api',
+      script: 'dist/server.js',
+      cwd: '/var/www/evolution-api',
+      instances: 1,
+      exec_mode: 'fork',
+      env: {
+        NODE_ENV: 'production',
+        PORT: '8080',
+        SERVER_URL: 'http://127.0.0.1:8080',
+        AUTHENTICATION_API_KEY: 'cambia_esta_clave_global',
+        DATABASE_ENABLED: 'true',
+        DATABASE_PROVIDER: 'postgresql',
+        DATABASE_CONNECTION_URI: 'postgresql://postgres:PASSWORD@db.xxxx.supabase.co:5432/postgres',
+        DATABASE_SAVE_DATA_INSTANCE: 'true',
+        DATABASE_SAVE_DATA_CREATE_INSTANCE: 'false',
+        DATABASE_SAVE_DATA_NEW_MESSAGE: 'true',
+        DATABASE_SAVE_MESSAGE_UPDATE: 'true',
+        DATABASE_SAVE_DATA_CONTACTS: 'true',
+        DATABASE_SAVE_DATA_CHATS: 'true',
+        DATABASE_SAVE_DATA_LABELS: 'true',
+        DATABASE_SAVE_INSTANCES: 'true',
+        DATABASE_SAVE_INSTANCES_SESSION: 'true',
+        DATABASE_SAVE_INSTANCES_LOGS: 'true',
+        WEBHOOK_GLOBAL_ENABLED: 'true',
+        WEBHOOK_GLOBAL_URL: 'https://tu-dominio.com/whook/wame',
+        WEBHOOK_GLOBAL_EVENTS: 'messages.upsert',
+        WEBHOOK_GLOBAL_HEADERS: '{"x-mediprotect-apikey":"cambia_esta_clave_webhook"}'
+      },
+      out_file: '/var/log/mediprotect/evolution-api-out.log',
+      error_file: '/var/log/mediprotect/evolution-api-error.log',
+      merge_logs: true,
+      time: true,
+      autorestart: true,
+      max_memory_restart: '600M',
+      kill_timeout: 5000
+    }
+  ]
+}
