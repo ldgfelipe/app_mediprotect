@@ -37,7 +37,7 @@ module.exports = {
     },
     {
       name: 'evolution-api',
-      script: 'dist/server.js',
+      script: 'dist/main.js',
       cwd: '/var/www/evolution-api',
       instances: 1,
       exec_mode: 'fork',
