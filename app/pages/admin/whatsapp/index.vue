@@ -291,33 +291,35 @@
         <div class="config-layout">
           <div class="config-card">
             <h3>🔧 Configuración WhatsApp</h3>
-            <p class="config-desc">Selecciona el entorno de envío de mensajes</p>
+            <p class="config-desc">Configura la pasarela Evolution API (WhatsApp autohospedado)</p>
 
             <div class="config-row">
-              <label>Modo:</label>
-              <select v-model="modoWhatsApp" class="config-select">
-                <option value="produccion">Producción (Meta Real)</option>
-                <option value="pruebas">Pruebas (Simulador Vercel)</option>
-              </select>
-            </div>
-
-            <div v-if="modoWhatsApp === 'produccion'" class="config-row">
-              <label>Token Meta:</label>
+              <label>URL de la pasarela (Gateway):</label>
               <input
-                v-model="tokenWhatsApp"
-                type="password"
+                v-model="gatewayUrlWhatsApp"
+                type="text"
                 class="config-input"
-                placeholder="TOKEN_DE_META"
+                placeholder="http://127.0.0.1:8080"
                 />
             </div>
 
-            <div v-if="modoWhatsApp !== 'produccion'" class="config-row">
-              <label>URL Simulador:</label>
+            <div class="config-row">
+              <label>Nombre de la instancia:</label>
               <input
-                v-model="urlBaseWhatsApp"
+                v-model="instanceNameWhatsApp"
                 type="text"
                 class="config-input"
-                placeholder="https://tu-proyecto.vercel.app"
+                placeholder="mediprotect"
+                />
+            </div>
+
+            <div class="config-row">
+              <label>API Key (apikey) de la instancia:</label>
+              <input
+                v-model="apikeyWhatsApp"
+                type="password"
+                class="config-input"
+                placeholder="Clave API de la instancia Evolution"
                 />
             </div>
 
@@ -333,7 +335,7 @@
                 class="btn-reset-config"
                 @click="resetearConfiguracion"
                 >
-                Restablecer a Pruebas
+                Restablecer
               </button>
             </div>
 
@@ -348,9 +350,9 @@
 
           <div class="config-info">
             <h4>Información:</h4>
-            <p>Al cambiar a "Pruebas", los mensajes enviados a https://app.mediprotect.com.mx/whook/wame irán al simulador en Vercel.</p>
-            <p>Al cambiar a "Producción", los mensajes irán a Meta Graph API v19.0.</p>
-            <p>El selector está preconfigurado en "Pruebas" para pruebas iniciales.</p>
+            <p>El webhook entrante recibe eventos <code>messages.upsert</code> de la pasarela Evolution API en <code>/whook/wame</code>.</p>
+            <p>Los mensajes salientes se envían vía <code>message/sendText</code>, <code>message/sendList</code> y <code>message/sendButtons</code> con el header <code>apikey</code>.</p>
+            <p>Apuntar la URL de la instancia a tu VPS donde corre la pasarela (ej. <code>http://127.0.0.1:8080</code>).</p>
           </div>
         </div>
       </template>
@@ -588,36 +590,34 @@ onMounted(() => {
   cargarConfiguracionWhatsApp()
 })
 
-const modoWhatsApp = ref<'produccion' | 'pruebas'>('pruebas')
-const urlBaseWhatsApp = ref('')
-const tokenWhatsApp = ref('')
+const gatewayUrlWhatsApp = ref('')
+const instanceNameWhatsApp = ref('')
+const apikeyWhatsApp = ref('')
 const cargarConfiguracionWhatsApp = async () => {
   try {
     const data: any = await $fetch('/api/admin/whatsapp-config', {
       headers: { Authorization: `Bearer ${useCookie('admin_token').value}` }
     })
-    modoWhatsApp.value = data.config.modo
-    urlBaseWhatsApp.value = data.config.apiBaseUrl
-    tokenWhatsApp.value = data.config.token || ''
-    console.log('Config WhatsApp cargada:', { modo: modoWhatsApp.value, url: urlBaseWhatsApp.value })
+    gatewayUrlWhatsApp.value = data.config.gatewayUrl || ''
+    instanceNameWhatsApp.value = data.config.instanceName || ''
+    apikeyWhatsApp.value = data.config.apiKey || ''
+    console.log('Config WhatsApp cargada:', { gatewayUrl: gatewayUrlWhatsApp.value, instance: instanceNameWhatsApp.value })
   } catch (e: any) {
     console.error('Error cargando config WhatsApp:', e)
-    // Valores por defecto en modo pruebas
-    modoWhatsApp.value = 'pruebas'
-    urlBaseWhatsApp.value = 'https://tu-proyecto.vercel.app'
+    gatewayUrlWhatsApp.value = 'http://127.0.0.1:8080'
   }
 }
 
-const actualizarConfiguracionWhatsApp = async (modo: string, url: string, token: string) => {
+const actualizarConfiguracionWhatsApp = async (gatewayUrl: string, instanceName: string, apiKey: string) => {
   try {
     await $fetch('/api/admin/whatsapp-config', {
       method: 'POST',
-      body: { modo, apiBaseUrl: url, token },
+      body: { gatewayUrl, instanceName, apiKey },
       headers: { Authorization: `Bearer ${useCookie('admin_token').value}` }
     })
-    modoWhatsApp.value = modo
-    urlBaseWhatsApp.value = url
-    tokenWhatsApp.value = token
+    gatewayUrlWhatsApp.value = gatewayUrl
+    instanceNameWhatsApp.value = instanceName
+    apikeyWhatsApp.value = apiKey
     console.log('Config WhatsApp actualizada exitosamente')
   } catch (e: any) {
     console.error('Error actualizando config WhatsApp:', e)
@@ -633,29 +633,26 @@ const guardarConfiguracionWhatsApp = async () => {
   errorConfig.value = ''
   exitoConfig.value = ''
 
-  let url = urlBaseWhatsApp.value.trim()
-  const token = tokenWhatsApp.value.trim()
+  const gatewayUrl = gatewayUrlWhatsApp.value.trim()
+  const instanceName = instanceNameWhatsApp.value.trim()
+  const apiKey = apikeyWhatsApp.value.trim()
 
-  if (modoWhatsApp.value === 'produccion') {
-    if (!token) {
-      errorConfig.value = 'El token de Meta es requerido en modo Producción.'
-      return
-    }
-    url = 'https://graph.facebook.com/v19.0'
-  } else {
-    if (!url) {
-      errorConfig.value = 'Ingresa la URL del simulador (ej. https://w-atest.vercel.app).'
-      return
-    }
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      errorConfig.value = 'La URL del simulador debe comenzar con http:// o https://.'
-      return
-    }
+  if (!gatewayUrl) {
+    errorConfig.value = 'Ingresa la URL de la pasarela Evolution API (ej. http://127.0.0.1:8080).'
+    return
+  }
+  if (!gatewayUrl.startsWith('http://') && !gatewayUrl.startsWith('https://')) {
+    errorConfig.value = 'La URL de la pasarela debe comenzar con http:// o https://.'
+    return
+  }
+  if (!instanceName) {
+    errorConfig.value = 'Ingresa el nombre de la instancia en Evolution API.'
+    return
   }
 
   guardandoConfig.value = true
   try {
-    await actualizarConfiguracionWhatsApp(modoWhatsApp.value, url, token)
+    await actualizarConfiguracionWhatsApp(gatewayUrl, instanceName, apiKey)
     exitoConfig.value = 'Configuración guardada correctamente.'
   } catch (e: any) {
     errorConfig.value = e.data?.message || e.message || 'Error al guardar la configuración.'
@@ -667,14 +664,14 @@ const guardarConfiguracionWhatsApp = async () => {
 const resetearConfiguracion = async () => {
   errorConfig.value = ''
   exitoConfig.value = ''
-  modoWhatsApp.value = 'pruebas'
-  urlBaseWhatsApp.value = 'https://w-atest.vercel.app'
-  tokenWhatsApp.value = ''
+  gatewayUrlWhatsApp.value = 'http://127.0.0.1:8080'
+  instanceNameWhatsApp.value = ''
+  apikeyWhatsApp.value = ''
 
   guardandoConfig.value = true
   try {
-    await actualizarConfiguracionWhatsApp('pruebas', 'https://w-atest.vercel.app', '')
-    exitoConfig.value = 'Configuración restablecida a Pruebas.'
+    await actualizarConfiguracionWhatsApp('http://127.0.0.1:8080', '', '')
+    exitoConfig.value = 'Configuración restablecida a los valores por defecto.'
   } catch (e: any) {
     errorConfig.value = e.data?.message || e.message || 'Error al restablecer la configuración.'
   } finally {

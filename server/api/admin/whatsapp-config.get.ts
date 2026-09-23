@@ -7,10 +7,9 @@ export default defineEventHandler(async (event) => {
     return {
       ok: true,
       config: {
-        modo: config.modo,
-        apiBaseUrl: config.apiBaseUrl,
-        token: config.token,
-        phoneNumberId: config.phoneNumberId,
+        gatewayUrl: config.gatewayUrl,
+        instanceName: config.instanceName,
+        apiKey: config.apiKey,
       }
     }
   } catch (e: any) {

@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
   if (!authHeader) throw createError({ statusCode: 401, message: 'No autorizado' })
 
   const config = await getWhatsAppConfig(pool)
-  if (!config.token || !config.phoneNumberId) {
+  if (!config.gatewayUrl || !config.instanceName) {
     return { ok: false, message: 'WhatsApp no configurado' }
   }
 

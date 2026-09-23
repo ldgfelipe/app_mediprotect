@@ -27,54 +27,76 @@ export default defineEventHandler(async (event) => {
     return { ok: true }
   }
 
-  const entry = payload.entry?.[0]
-  if (!entry) {
+  if (payload.event !== 'messages.upsert') {
     return { ok: true }
   }
 
-  const changes = entry.changes?.[0]
-  if (!changes) {
-    return { ok: true }
-  }
+  const mensajes = Array.isArray(payload.data) ? payload.data : [payload.data]
 
-  const value = changes.value
-
-  if (value.messages) {
-    for (const msg of value.messages) {
-      await processIncomingMessage(msg, value.contacts, pool)
-    }
-  }
-
-  if (value.statuses) {
-    for (const status of value.statuses) {
-      console.log(`[WhatsApp Webhook] Status update: ${status.status} for ${status.id}`)
-    }
+  for (const msg of mensajes) {
+    if (!msg || msg.key?.fromMe === true) continue
+    await processIncomingMessage(msg, pool)
   }
 
   return { ok: true }
 })
 
-async function processIncomingMessage(msg: any, contacts: any[], pool: any) {
-  const telefono = msg.from
-  const tipo = msg.type
+function extraerMensajeEvolution(msg: any) {
+  const remoteJid = msg.key?.remoteJid || ''
+  const telefono = String(remoteJid).replace(/@.*$/, '')
+
+  const m = msg.message || {}
+  let tipo = 'text'
   let texto = ''
 
-  if (tipo === 'text') {
-    texto = msg.text?.body || ''
-  } else if (tipo === 'interactive') {
-    if (msg.interactive.type === 'list_reply') {
-      texto = msg.interactive.list_reply.id
-    } else if (msg.interactive.type === 'button_reply') {
-      texto = msg.interactive.button_reply.id
+  if (m.conversation) {
+    texto = String(m.conversation || '')
+  } else if (m.extendedTextMessage?.text) {
+    texto = String(m.extendedTextMessage.text || '')
+  } else if (m.buttonsResponseMessage?.selectedButtonId) {
+    tipo = 'button'
+    texto = String(m.buttonsResponseMessage.selectedButtonId || '')
+  } else if (m.listResponseMessage?.singleSelectReply?.selectedRowId) {
+    tipo = 'list'
+    texto = String(m.listResponseMessage.singleSelectReply.selectedRowId || '')
+  } else if (m.interactiveMessage?.nativeFlowResponseMessage?.paramsJson) {
+    tipo = 'button'
+    try {
+      const params = JSON.parse(m.interactiveMessage.nativeFlowResponseMessage.paramsJson)
+      texto = String(params.id || params.title || '')
+    } catch {
+      texto = String(m.interactiveMessage.nativeFlowResponseMessage.paramsJson || '')
     }
+  } else if (m.templateButtonReplyMessage?.selectedId) {
+    tipo = 'button'
+    texto = String(m.templateButtonReplyMessage.selectedId || '')
+  } else if (
+    m.imageMessage || m.videoMessage || m.audioMessage || m.documentMessage ||
+    m.stickerMessage || m.voiceMessage || m.ptvMessage
+  ) {
+    tipo = 'media'
+    texto = String(
+      m.imageMessage?.caption || m.videoMessage?.caption || m.documentMessage?.title || ''
+    )
   }
 
-  const contacto = contacts?.find((c: any) => c.wa_id === telefono)
-  const nombre = contacto?.profile?.name || ''
+  const msgId = String(msg.key?.id || `wa_${Date.now()}`)
+  const nombre = String(msg.pushName || '')
+
+  return { telefono, tipo, texto, msgId, nombre }
+}
+
+async function processIncomingMessage(msg: any, pool: any) {
+  const { telefono, tipo, texto, msgId, nombre } = extraerMensajeEvolution(msg)
+
+  if (!telefono) {
+    console.log('[WhatsApp Webhook] Mensaje sin remitente, ignorando')
+    return
+  }
 
   console.log(`[WhatsApp Webhook] Mensaje de ${telefono}: "${texto}" (tipo: ${tipo})`)
 
-  await logMensaje(pool, telefono, 'in', texto, tipo, msg.id)
+  await logMensaje(pool, telefono, 'in', texto, tipo, msgId)
 
   const conv = await getOrCreateConversation(pool, telefono, nombre)
 
@@ -91,132 +113,28 @@ async function processIncomingMessage(msg: any, contacts: any[], pool: any) {
   if (respuesta) {
     const config = await getWhatsAppConfig(pool)
 
-    // Determinar modo y URL de envío
-    const modo = config.modo
-    const apiBaseUrl = config.apiBaseUrl
-    const token = config.token
-
-    console.log(`[WhatsApp Webhook] Modo de envío: ${modo}`)
-    console.log(`[WhatsApp Webhook] URL base: ${apiBaseUrl}`)
-
-    // Si el modo es producción y no hay token, usar defaults
-    const effectiveToken = modo === 'produccion' ? (token || '') : ''
-    const effectivePhoneNumberId = modo === 'produccion' ? config.phoneNumberId || '' : ''
-
-    try {
-      // Construir endpoint según modo
-      let sendUrl: string
-      let sendConfig: any
-
-      if (modo === 'pruebas') {
-        // Modo pruebas: enviar al simulador
-        // El simulador acepta POST a /whook/wame
-        // Extraemos phoneNumberId de la configuración o usamos el telefono directamente
-        sendUrl = `${apiBaseUrl}/whook/wame`
-        sendConfig = {
-          // En modo pruebas, enviamos el cuerpo completo como viene de Meta
-          // El simulador procesará el cuerpo tal como lo haría Meta
-          telefono,
-          token: effectiveToken,
-          // No enviamos phoneNumberId en modo pruebas, el simulador lo ignora
-        }
-      } else {
-        // Modo producción: enviar a Meta real
-        if (!effectiveToken || !effectivePhoneNumberId) {
-          console.log('[WhatsApp Webhook] WhatsApp no configurado en producción, no se puede enviar')
-          return
-        }
-        sendUrl = `${apiBaseUrl}/${effectivePhoneNumberId}/messages`
-        sendConfig = {
-          messaging_product: 'whatsapp',
-          to: telefono,
-          type: 'text',
-          text: { preview_url: false, body: respuesta.texto }
-        }
-      }
-
-      // Determinar tipo de mensaje a enviar
-      if (respuesta.lista) {
-        // En modo pruebas, pasar las opciones completas
-        if (modo === 'pruebas') {
-          // Encontrar las opciones del response
-          const opciones = respuesta.lista?.opciones || []
-          sendConfig = {
-            messaging_product: 'whatsapp',
-            to: telefono,
-            type: 'interactive',
-            interactive: {
-              type: 'list',
-              header: { type: 'text', text: 'MediProtect' },
-              body: { text: respuesta.texto },
-              action: {
-                button: 'Seleccionar',
-                sections: [{
-                  title: respuesta.lista.titulo_seccion || 'Opciones',
-                  rows: opciones.map((o: any) => ({
-                    id: o.id,
-                    title: o.titulo,
-                    description: o.descripcion || ''
-                  }))
-                }]
-              }
-            }
-          }
+    if (!config.gatewayUrl || !config.instanceName) {
+      console.log('[WhatsApp Webhook] Pasarela Evolution no configurada, no se puede enviar')
+      await logMensaje(
+        pool,
+        telefono,
+        'out',
+        '❌ Pasarela de WhatsApp no configurada',
+        'text',
+        `err_${Date.now()}`,
+        { pasarela: 'evolution', error: 'gateway_no_configurado' }
+      )
+    } else {
+      try {
+        let envio: any
+        if (respuesta.lista) {
+          envio = await enviarLista(config, telefono, respuesta.texto, respuesta.lista.opciones, respuesta.lista.titulo_seccion)
+        } else if (respuesta.botones) {
+          envio = await enviarBotones(config, telefono, respuesta.texto, respuesta.botones)
         } else {
-          // Modo producción usar la función existente
-          await enviarLista(config, telefono, respuesta.texto, respuesta.lista.opciones, respuesta.lista.titulo_seccion)
+          envio = await enviarMensaje(config, telefono, respuesta.texto)
         }
-      } else if (respuesta.botones) {
-        if (modo === 'pruebas') {
-          // En modo pruebas, enviar botones al simulador
-          const botones = respuesta.botones || []
-          sendConfig = {
-            messaging_product: 'whatsapp',
-            to: telefono,
-            type: 'interactive',
-            interactive: {
-              type: 'button',
-              body: { text: respuesta.texto },
-              action: {
-                buttons: botones.map((b: any) => ({
-                  type: 'reply',
-                  reply: { id: b.id, title: b.titulo }
-                }))
-              }
-            }
-          }
-        } else {
-          await enviarBotones(config, telefono, respuesta.texto, respuesta.botones)
-        }
-      } else {
-        // Mensaje de texto simple
-        if (modo === 'pruebas') {
-          sendConfig = {
-            messaging_product: 'whatsapp',
-            to: telefono,
-            type: 'text',
-            text: { preview_url: false, body: respuesta.texto }
-          }
-        } else {
-          await enviarMensaje(config, telefono, respuesta.texto)
-        }
-      }
 
-      // Enviar el mensaje
-      if (modo === 'pruebas' && sendUrl) {
-        const metaRes = await fetch(sendUrl, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${effectiveToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(sendConfig)
-        })
-
-        const metaData = await metaRes.json()
-        const statusCode = metaRes.status
-
-        // Loguear el envío independientemente del modo
         await logMensaje(
           pool,
           telefono,
@@ -225,32 +143,27 @@ async function processIncomingMessage(msg: any, contacts: any[], pool: any) {
           respuesta.lista ? 'list' : (respuesta.botones ? 'button' : 'text'),
           `msg_${Date.now()}`,
           {
-            ambiente: modo,
-            url_destino: sendUrl,
-            status_http: statusCode,
-            meta_respuesta: metaData
+            pasarela: 'evolution',
+            url_destino: envio.url,
+            status_http: envio.status,
+            evolution_respuesta: envio.data
           }
         )
 
-        console.log(`[WhatsApp Webhook] Mensaje ${modo} enviado. Status: ${statusCode}`)
-        console.log(`[WhatsApp Webhook] Respuesta Meta:`, metaData)
-      }
-    } catch (err: any) {
-      console.error(`[WhatsApp Webhook] Error enviando mensaje ${modo}:`, err.message)
+        console.log(`[WhatsApp Webhook] Mensaje enviado vía Evolution. Status: ${envio.status}`)
+      } catch (err: any) {
+        console.error(`[WhatsApp Webhook] Error enviando mensaje vía Evolution:`, err.message)
 
-      // Loguear el error
-      await logMensaje(
-        pool,
-        telefono,
-        'out',
-        `❌ Error enviando mensaje: ${err.message}`,
-        'text',
-        `err_${Date.now()}`,
-        {
-          ambiente: modo,
-          error: err.message
-        }
-      )
+        await logMensaje(
+          pool,
+          telefono,
+          'out',
+          `❌ Error enviando mensaje: ${err.message}`,
+          'text',
+          `err_${Date.now()}`,
+          { pasarela: 'evolution', error: err.message }
+        )
+      }
     }
   }
 

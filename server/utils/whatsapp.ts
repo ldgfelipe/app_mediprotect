@@ -1,32 +1,45 @@
-interface WhatsAppConfig {
-  token: string
-  phoneNumberId: string
+export interface WhatsAppConfig {
+  gatewayUrl: string
+  instanceName: string
+  apiKey: string
+}
+
+function normalizarTelefono(telefono: string): string {
+  return (telefono || '').replace(/[^0-9]/g, '')
+}
+
+function resolverUrl(config: WhatsAppConfig, recurso: string): string {
+  const base = (config.gatewayUrl || '').replace(/\/+$/, '')
+  const instancia = encodeURIComponent(config.instanceName || '')
+  return `${base}/${recurso}/${instancia}`
+}
+
+function cabeceras(config: WhatsAppConfig) {
+  return {
+    'Content-Type': 'application/json',
+    'apikey': config.apiKey || ''
+  }
+}
+
+async function parsearRespuesta(res: Response, url: string): Promise<{ status: number; ok: boolean; data: any; url: string }> {
+  const data = await res.json().catch(() => null)
+  if (!res.ok) {
+    throw new Error(`Evolution API error ${res.status}: ${JSON.stringify(data)}`)
+  }
+  return { status: res.status, ok: res.ok, data, url }
 }
 
 export async function enviarMensaje(config: WhatsAppConfig, telefono: string, texto: string) {
-  const url = `https://graph.facebook.com/v19.0/${config.phoneNumberId}/messages`
-
+  const url = resolverUrl(config, 'message/sendText')
   const res = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${config.token}`,
-      'Content-Type': 'application/json',
-    },
+    headers: cabeceras(config),
     body: JSON.stringify({
-      messaging_product: 'whatsapp',
-      recipient_type: 'individual',
-      to: telefono,
-      type: 'text',
-      text: { preview_url: false, body: texto }
+      number: normalizarTelefono(telefono),
+      text: texto
     })
   })
-
-  if (!res.ok) {
-    const error = await res.text()
-    throw new Error(`WhatsApp API error ${res.status}: ${error}`)
-  }
-
-  return await res.json()
+  return parsearRespuesta(res, url)
 }
 
 export async function enviarLista(
@@ -36,46 +49,28 @@ export async function enviarLista(
   opciones: { id: string; titulo: string; descripcion?: string }[],
   tituloSeccion = 'Opciones'
 ) {
-  const url = `https://graph.facebook.com/v19.0/${config.phoneNumberId}/messages`
+  const sections = [{
+    title: tituloSeccion,
+    rows: opciones.map(o => ({
+      title: o.titulo,
+      description: o.descripcion || '',
+      rowId: o.id
+    }))
+  }]
 
-  const rows = opciones.map(o => ({
-    id: o.id,
-    title: o.titulo,
-    ...(o.descripcion ? { description: o.descripcion } : {})
-  }))
-
+  const url = resolverUrl(config, 'message/sendList')
   const res = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${config.token}`,
-      'Content-Type': 'application/json',
-    },
+    headers: cabeceras(config),
     body: JSON.stringify({
-      messaging_product: 'whatsapp',
-      recipient_type: 'individual',
-      to: telefono,
-      type: 'interactive',
-      interactive: {
-        type: 'list',
-        header: { type: 'text', text: 'MediProtect' },
-        body: { text: texto },
-        action: {
-          button: 'Seleccionar',
-          sections: [{
-            title: tituloSeccion,
-            rows
-          }]
-        }
-      }
+      number: normalizarTelefono(telefono),
+      title: 'MediProtect',
+      description: texto,
+      buttonText: 'Seleccionar',
+      sections
     })
   })
-
-  if (!res.ok) {
-    const error = await res.text()
-    throw new Error(`WhatsApp API error ${res.status}: ${error}`)
-  }
-
-  return await res.json()
+  return parsearRespuesta(res, url)
 }
 
 export async function enviarBotones(
@@ -84,79 +79,21 @@ export async function enviarBotones(
   texto: string,
   botones: { id: string; titulo: string }[]
 ) {
-  const url = `https://graph.facebook.com/v19.0/${config.phoneNumberId}/messages`
-
+  const url = resolverUrl(config, 'message/sendButtons')
   const res = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${config.token}`,
-      'Content-Type': 'application/json',
-    },
+    headers: cabeceras(config),
     body: JSON.stringify({
-      messaging_product: 'whatsapp',
-      recipient_type: 'individual',
-      to: telefono,
-      type: 'interactive',
-      interactive: {
-        type: 'button',
-        body: { text: texto },
-        action: {
-          buttons: botones.map(b => ({
-            type: 'reply',
-            reply: { id: b.id, title: b.titulo }
-          }))
-        }
-      }
+      number: normalizarTelefono(telefono),
+      title: 'MediProtect',
+      description: texto,
+      footer: 'MediProtect',
+      buttons: botones.map(b => ({
+        type: 'reply',
+        title: b.titulo,
+        id: b.id
+      }))
     })
   })
-
-  if (!res.ok) {
-    const error = await res.text()
-    throw new Error(`WhatsApp API error ${res.status}: ${error}`)
-  }
-
-  return await res.json()
-}
-
-export async function enviarTemplate(
-  config: WhatsAppConfig,
-  telefono: string,
-  templateName: string,
-  language: string,
-  parameters: string[]
-) {
-  const url = `https://graph.facebook.com/v19.0/${config.phoneNumberId}/messages`
-
-  const components: any[] = []
-  if (parameters.length > 0) {
-    components.push({
-      type: 'body',
-      parameters: parameters.map(p => ({ type: 'text', text: p }))
-    })
-  }
-
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${config.token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      messaging_product: 'whatsapp',
-      to: telefono,
-      type: 'template',
-      template: {
-        name: templateName,
-        language: { code: language },
-        components
-      }
-    })
-  })
-
-  if (!res.ok) {
-    const error = await res.text()
-    throw new Error(`WhatsApp API error ${res.status}: ${error}`)
-  }
-
-  return await res.json()
+  return parsearRespuesta(res, url)
 }

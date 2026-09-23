@@ -4,23 +4,17 @@ export default defineEventHandler(async (event) => {
   try {
     const pool = await useDbPool(event)
     const body = await readBody(event)
-    const { modo, apiBaseUrl, token } = body
+    const { gatewayUrl, instanceName, apiKey } = body
 
-    if (!modo || !apiBaseUrl) {
-      throw createError({ statusCode: 400, message: 'Se requieren modo y apiBaseUrl' })
+    if (!gatewayUrl || !instanceName) {
+      throw createError({ statusCode: 400, message: 'Se requieren gatewayUrl e instanceName' })
     }
 
-    // Validar modo
-    if (modo !== 'produccion' && modo !== 'pruebas') {
-      throw createError({ statusCode: 400, message: 'Modo inválido. Use "produccion" o "pruebas"' })
+    if (!/^https?:\/\//i.test(gatewayUrl)) {
+      throw createError({ statusCode: 400, message: 'gatewayUrl debe ser una URL http(s) válida' })
     }
 
-    const result = await updateWhatsAppConfig(
-      pool,
-      modo,
-      apiBaseUrl,
-      modo === 'produccion' ? token || null : undefined
-    )
+    const result = await updateWhatsAppConfig(pool, gatewayUrl, instanceName, apiKey || undefined)
 
     return {
       ok: true,

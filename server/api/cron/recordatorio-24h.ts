@@ -1,5 +1,5 @@
 import { getWhatsAppConfig } from '../../utils/whatsapp-db'
-import { enviarTemplate } from '../../utils/whatsapp'
+import { enviarMensaje } from '../../utils/whatsapp'
 
 export default defineEventHandler(async (event) => {
   const pool = await useDbPool(event)
@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
   if (!authHeader) throw createError({ statusCode: 401, message: 'No autorizado' })
 
   const config = await getWhatsAppConfig(pool)
-  if (!config.token || !config.phoneNumberId) {
+  if (!config.gatewayUrl || !config.instanceName) {
     return { ok: false, message: 'WhatsApp no configurado' }
   }
 
@@ -31,13 +31,11 @@ export default defineEventHandler(async (event) => {
     if (!cita.paciente_telefono) continue
 
     try {
-      await enviarTemplate(config, cita.paciente_telefono, 'recordatorio_cita_24h', 'es', [
-        cita.paciente_nombre || 'Paciente',
-        `Dr. ${cita.medico_nombre} ${cita.medico_apellido} — ${cita.especialidad || ''}`,
-        new Date(cita.fecha_hora).toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-        cita.folio || 'N/A',
-        `$${cita.precio_acordado || 0} MXN`,
-      ])
+      const fechaFormateada = new Date(cita.fecha_hora).toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+
+      await enviarMensaje(config, cita.paciente_telefono,
+        `Hola ${cita.paciente_nombre || 'Paciente'} 👋\n\nTe recordamos tu cita con *Dr. ${cita.medico_nombre} ${cita.medico_apellido}* (${cita.especialidad || ''}) el próximo *${fechaFormateada}*.\n\n📌 Folio: ${cita.folio || 'N/A'}\n💰 Costo: $${cita.precio_acordado || 0} MXN\n\nPara confirmar o reprogramar, responde a este mensaje.`
+      )
 
       await pool.query(
         `UPDATE citas SET recordatorio_24h_enviado = true WHERE id = $1`,

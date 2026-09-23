@@ -1,71 +1,48 @@
 interface WhatsAppConfig {
-  token: string
-  phoneNumberId: string
-  modo: string
+  gatewayUrl: string
+  instanceName: string
+  apiKey: string
 }
 
-export async function updateWhatsAppConfig(pool: any, modo: string, apiBaseUrl: string, token?: string) {
-  // Si modo es 'produccion', requerimos token
-  if (modo === 'produccion' && !token) {
-    throw new Error('Token es requerido para modo produccion')
+export async function updateWhatsAppConfig(pool: any, gatewayUrl: string, instanceName: string, apiKey?: string) {
+  if (!gatewayUrl || !instanceName) {
+    throw new Error('gatewayUrl e instanceName son requeridos')
   }
 
   await pool.query(
     `INSERT INTO configuracion_sistema (clave, valor, categoria) VALUES
-     ('whatsapp_modo', $1, 'whatsapp'),
-     ('whatsapp_api_base_url', $2, 'whatsapp')
+     ('whatsapp_gateway_url', $1, 'whatsapp'),
+     ('whatsapp_instance_name', $2, 'whatsapp')
      ON CONFLICT (clave) DO UPDATE SET valor = EXCLUDED.valor`,
-    [modo, apiBaseUrl]
+    [gatewayUrl, instanceName]
   )
 
-  if (modo === 'produccion' && token) {
+  if (apiKey) {
     await pool.query(
       `INSERT INTO configuracion_sistema (clave, valor, categoria) VALUES
-       ('whatsapp_token', $1, 'whatsapp')
+       ('whatsapp_gateway_apikey', $1, 'whatsapp')
        ON CONFLICT (clave) DO UPDATE SET valor = EXCLUDED.valor`,
-      [token]
-    )
-  } else if (modo === 'pruebas') {
-    // En modo pruebas, removemos o limpiamos el token
-    await pool.query(
-      `DELETE FROM configuracion_sistema WHERE clave = 'whatsapp_token' AND categoria = 'whatsapp'`
+      [apiKey]
     )
   }
 
-  return { ok: true, modo, apiBaseUrl }
+  return { ok: true, gatewayUrl, instanceName }
 }
 
-export async function getWhatsAppConfig(pool: any): Promise<{
-  modo: string
-  apiBaseUrl: string
-  token: string | null
-  phoneNumberId: string | null
-}> {
-  // Leer modo
-  const modoResult = await pool.query(
-    `SELECT valor FROM configuracion_sistema WHERE clave = 'whatsapp_modo' AND categoria = 'whatsapp'`
+export async function getWhatsAppConfig(pool: any): Promise<WhatsAppConfig> {
+  const result = await pool.query(
+    `SELECT clave, valor FROM configuracion_sistema WHERE categoria = 'whatsapp'`
   )
-  const modo = modoResult.rows[0]?.valor || 'produccion'
+  const configMap: Record<string, string> = {}
+  for (const row of result.rows) {
+    configMap[row.clave] = row.valor || ''
+  }
 
-  // Leer URL base
-  const urlResult = await pool.query(
-    `SELECT valor FROM configuracion_sistema WHERE clave = 'whatsapp_api_base_url' AND categoria = 'whatsapp'`
-  )
-  const apiBaseUrl = urlResult.rows[0]?.valor || 'https://graph.facebook.com/v19.0'
-
-  // Leer token si existe
-  const tokenResult = await pool.query(
-    `SELECT valor FROM configuracion_sistema WHERE clave = 'whatsapp_token' AND categoria = 'whatsapp'`
-  )
-  const token = tokenResult.rows[0]?.valor || null
-
-  // Leer phoneNumberId
-  const pnResult = await pool.query(
-    `SELECT valor FROM configuracion_sistema WHERE clave = 'whatsapp_phone_number_id' AND categoria = 'whatsapp'`
-  )
-  const phoneNumberId = pnResult.rows[0]?.valor || null
-
-  return { modo, apiBaseUrl, token, phoneNumberId }
+  return {
+    gatewayUrl: configMap['whatsapp_gateway_url'] || 'http://127.0.0.1:8080',
+    instanceName: configMap['whatsapp_instance_name'] || '',
+    apiKey: configMap['whatsapp_gateway_apikey'] || '',
+  }
 }
 
 export async function logMensaje(

@@ -96,14 +96,10 @@ CREATE TABLE IF NOT EXISTS whatsapp_rate_limit (
 
 -- 8. Configuración WhatsApp en configuracion_sistema
 INSERT INTO configuracion_sistema (clave, valor, descripcion, categoria, tipo) VALUES
-  ('whatsapp_verify_token', 'mediprotect_wa_verify_2026', 'Token de verificación del webhook WhatsApp', 'whatsapp', 'text'),
-  ('whatsapp_token', '', 'Token de acceso Meta Cloud API', 'whatsapp', 'password'),
-  ('whatsapp_phone_number_id', '', 'ID del número WhatsApp Business (Producción)', 'whatsapp', 'text'),
-  ('whatsapp_app_secret', '', 'Secret de la app Meta para firma HMAC', 'whatsapp', 'password'),
-  ('whatsapp_webhook_activo', 'true', 'Activar/desactivar webhook WhatsApp', 'whatsapp', 'toggle'),
-  ('whatsapp_modo', 'sandbox', 'Modo: sandbox (pruebas) o produccion', 'whatsapp', 'select'),
-  ('whatsapp_token_sandbox', '', 'Token de acceso Meta - Sandbox', 'whatsapp', 'password'),
-  ('whatsapp_phone_number_id_sandbox', '', 'ID del número WhatsApp Business - Sandbox', 'whatsapp', 'text')
+  ('whatsapp_gateway_url', 'http://127.0.0.1:8080', 'URL base de la pasarela Evolution API autohospedada (ej. http://127.0.0.1:8080)', 'whatsapp', 'text'),
+  ('whatsapp_instance_name', '', 'Nombre de la instancia creada en Evolution API', 'whatsapp', 'text'),
+  ('whatsapp_gateway_apikey', '', 'API Key (apikey) de la instancia Evolution API', 'whatsapp', 'password'),
+  ('whatsapp_webhook_activo', 'true', 'Activar/desactivar webhook WhatsApp', 'whatsapp', 'toggle')
 ON CONFLICT (clave) DO NOTHING;
 
 -- 9. Tabla de recordatorios enviados (para evitar duplicados)
