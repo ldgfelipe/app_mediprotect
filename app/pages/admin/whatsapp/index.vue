@@ -31,6 +31,7 @@
       <div class="tabs-bar">
         <button class="tab-btn" :class="{ active: tabActiva === 'conversaciones' }" @click="tabActiva = 'conversaciones'">📋 Conversaciones</button>
         <button class="tab-btn" :class="{ active: tabActiva === 'simulador' }" @click="tabActiva = 'simulador'">🧪 Simulador</button>
+        <button class="tab-btn" :class="{ active: tabActiva === 'vincular' }" @click="abrirVincular">📱 Vincular número</button>
         <button class="tab-btn" :class="{ active: tabActiva === 'configuracion' }" @click="tabActiva = 'configuracion'">⚙️ Configuración</button>
       </div>
 
@@ -287,6 +288,57 @@
       </template>
 
       <!-- TAB: Configuración -->
+      <template v-if="tabActiva === 'vincular'">
+        <div class="vinculacion-card">
+          <h3>📱 Vincular número de WhatsApp</h3>
+          <p class="config-desc">Conecta la instancia <strong>{{ instanceNameWhatsApp || '(pendiente)' }}</strong> escaneando el código QR con WhatsApp: <em>Ajustes → Dispositivos vinculados → Vincular un dispositivo</em>.</p>
+
+          <div class="vinculacion-actions">
+            <button
+              class="btn-save-config"
+              @click="conectarInstancia"
+              :disabled="vinculando"
+            >
+              {{ estadoInstancia === 'open' ? 'Volver a generar QR' : 'Conectar / ver QR' }}
+            </button>
+            <button
+              v-if="estadoInstancia === 'open'"
+              class="btn-reset-config"
+              @click="desconectarInstancia"
+              :disabled="desconectando"
+            >
+              Desconectar
+            </button>
+          </div>
+          <div v-if="vinculando || desconectando" class="cargando">⏳ Procesando…</div>
+
+          <div v-if="estadoMensaje" class="config-error">
+            <p>❌ {{ estadoMensaje }}</p>
+          </div>
+          <div v-else-if="estadoExito" class="config-exito">
+            <p>✅ {{ estadoExito }}</p>
+          </div>
+
+          <div v-if="estadoInstancia === 'open'" class="estado-conectado">🟢 Conectado</div>
+
+          <div v-else-if="qrBase64" class="qr-container">
+            <img :src="`data:image/png;base64,${qrBase64}`" alt="Código QR de WhatsApp" class="qr-img" />
+            <p class="config-desc">Escanea con WhatsApp desde el celular antes de que caduque el código.</p>
+          </div>
+
+          <div class="vinculacion-webhook">
+            <button
+              class="btn-save-config"
+              @click="configurarWebhook"
+              :disabled="configurandoWebhook"
+            >
+              Configurar webhook automáticamente
+            </button>
+            <p class="config-desc">Apuntará a <code>{{ urlWebhook }}</code> con el header <code>x-mediprotect-apikey</code>. Luego activa el toggle <em>webhook WhatsApp</em> en la página Configuración.</p>
+          </div>
+        </div>
+      </template>
+
       <template v-if="tabActiva === 'configuracion'">
         <div class="config-layout">
           <div class="config-card">
@@ -661,6 +713,124 @@ const guardarConfiguracionWhatsApp = async () => {
   }
 }
 
+const abrirVincular = async () => {
+  tabActiva.value = 'vincular'
+  try {
+    const data: any = await $fetch('/api/admin/whatsapp-vincular', {
+      headers: { Authorization: `Bearer ${useCookie('admin_token').value}` }
+    })
+    estadoInstancia.value = data.state || 'close'
+  } catch (e: any) {
+    estadoMensaje.value = e.data?.message || e.message || 'Error al verificar el estado de la instancia.'
+  }
+}
+
+const vinculando = ref(false)
+const desconectando = ref(false)
+const configurandoWebhook = ref(false)
+const qrBase64 = ref('')
+const estadoInstancia = ref('')
+const estadoMensaje = ref('')
+const estadoExito = ref('')
+let pollTimer: any = null
+
+const urlWebhook = computed(() => {
+  if (import.meta.client) return `${window.location.origin}/whook/wame`
+  return '/whook/wame'
+})
+
+const conectarInstancia = async () => {
+  estadoMensaje.value = ''
+  estadoExito.value = ''
+  vinculando.value = true
+  qrBase64.value = ''
+  try {
+    const data: any = await $fetch('/api/admin/whatsapp-vincular', {
+      method: 'POST',
+      body: { action: 'connect' },
+      headers: { Authorization: `Bearer ${useCookie('admin_token').value}` }
+    })
+    estadoInstancia.value = data.state || 'close'
+    qrBase64.value = data.base64 || ''
+    if (estadoInstancia.value === 'open') {
+      estadoExito.value = 'Número conectado correctamente.'
+    } else {
+      iniciarPollEstado()
+    }
+  } catch (e: any) {
+    estadoMensaje.value = e.data?.message || e.message || 'Error al conectar la instancia.'
+  } finally {
+    vinculando.value = false
+  }
+}
+
+const desconectarInstancia = async () => {
+  estadoMensaje.value = ''
+  estadoExito.value = ''
+  desconectando.value = true
+  try {
+    await $fetch('/api/admin/whatsapp-vincular', {
+      method: 'POST',
+      body: { action: 'logout' },
+      headers: { Authorization: `Bearer ${useCookie('admin_token').value}` }
+    })
+    estadoInstancia.value = 'close'
+    qrBase64.value = ''
+    estadoExito.value = 'Instancia desconectada.'
+    detenerPollEstado()
+  } catch (e: any) {
+    estadoMensaje.value = e.data?.message || e.message || 'Error al desconectar la instancia.'
+  } finally {
+    desconectando.value = false
+  }
+}
+
+const iniciarPollEstado = () => {
+  detenerPollEstado()
+  pollTimer = setInterval(async () => {
+    try {
+      const data: any = await $fetch('/api/admin/whatsapp-vincular', {
+        headers: { Authorization: `Bearer ${useCookie('admin_token').value}` }
+      })
+      estadoInstancia.value = data.state || 'close'
+      if (estadoInstancia.value === 'open') {
+        qrBase64.value = ''
+        estadoExito.value = 'Número conectado correctamente.'
+        detenerPollEstado()
+      }
+    } catch (e: any) {}
+  }, 5000)
+}
+
+const detenerPollEstado = () => {
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
+  }
+}
+
+const configurarWebhook = async () => {
+  estadoMensaje.value = ''
+  estadoExito.value = ''
+  configurandoWebhook.value = true
+  try {
+    const data: any = await $fetch('/api/admin/whatsapp-webhook', {
+      method: 'POST',
+      body: {},
+      headers: { Authorization: `Bearer ${useCookie('admin_token').value}` }
+    })
+    estadoExito.value = data.secreto
+      ? 'Webhook configurado correctamente.'
+      : 'Webhook configurado. Aviso: WHATSAPP_WEBHOOK_APIKEY no está definido en el entorno; revisa la guía de despliegue.'
+  } catch (e: any) {
+    estadoMensaje.value = e.data?.message || e.message || 'Error al configurar el webhook.'
+  } finally {
+    configurandoWebhook.value = false
+  }
+}
+
+onUnmounted(detenerPollEstado)
+
 const resetearConfiguracion = async () => {
   errorConfig.value = ''
   exitoConfig.value = ''
@@ -822,6 +992,17 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 0.25rem; margin-top: 
 .sim-typing span:nth-child(2) { animation-delay: 0.2s; }
 .sim-typing span:nth-child(3) { animation-delay: 0.4s; }
 @keyframes typing { 0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); } 30% { opacity: 1; transform: scale(1); } }
+
+/* Vinculación WhatsApp */
+.vinculacion-card { background: white; border: 1px solid #e0e0e0; border-radius: 12px; padding: 2rem; max-width: 640px; margin: 0 auto; }
+.vinculacion-card h3 { margin: 0 0 0.5rem; color: #2d3436; }
+.vinculacion-actions { display: flex; gap: 0.75rem; margin-top: 1rem; flex-wrap: wrap; }
+.vinculacion-webhook { margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid #f0f0f0; }
+.vinculacion-webhook .config-desc { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.estado-conectado { margin-top: 1rem; font-weight: 700; color: #2e7d32; font-size: 1rem; }
+.qr-container { margin-top: 1.5rem; text-align: center; }
+.qr-img { width: 260px; height: 260px; border: 2px solid #e0e0e0; border-radius: 12px; padding: 0.5rem; background: white; }
+.cargando { margin-top: 1rem; color: #636e72; }
 
 @media (max-width: 768px) {
   .sidebar { display: none; }
