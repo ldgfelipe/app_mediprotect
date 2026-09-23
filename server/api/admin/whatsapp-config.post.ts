@@ -2,6 +2,7 @@ import { updateWhatsAppConfig } from '../../utils/whatsapp-db'
 
 export default defineEventHandler(async (event) => {
   try {
+    const pool = await useDbPool(event)
     const body = await readBody(event)
     const { modo, apiBaseUrl, token } = body
 
@@ -15,7 +16,7 @@ export default defineEventHandler(async (event) => {
     }
 
     const result = await updateWhatsAppConfig(
-      event.context.pool,
+      pool,
       modo,
       apiBaseUrl,
       modo === 'produccion' ? token || null : undefined

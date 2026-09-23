@@ -2,7 +2,8 @@ import { getWhatsAppConfig } from '../../utils/whatsapp-db'
 
 export default defineEventHandler(async (event) => {
   try {
-    const config = await getWhatsAppConfig(event.context.pool)
+    const pool = await useDbPool(event)
+    const config = await getWhatsAppConfig(pool)
     return {
       ok: true,
       config: {
