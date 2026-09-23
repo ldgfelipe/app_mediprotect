@@ -203,7 +203,7 @@ async function processIncomingMessage(msg: any, contacts: any[], pool: any) {
       }
 
       // Enviar el mensaje
-      if (modo !== 'pruebas' || (modo === 'pruebas' && sendUrl)) {
+      if (modo === 'pruebas' && sendUrl) {
         const metaRes = await fetch(sendUrl, {
           method: 'POST',
           headers: {

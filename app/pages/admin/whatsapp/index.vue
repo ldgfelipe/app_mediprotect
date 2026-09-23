@@ -624,6 +624,63 @@ const actualizarConfiguracionWhatsApp = async (modo: string, url: string, token:
     throw e
   }
 }
+
+const guardandoConfig = ref(false)
+const errorConfig = ref('')
+const exitoConfig = ref('')
+
+const guardarConfiguracionWhatsApp = async () => {
+  errorConfig.value = ''
+  exitoConfig.value = ''
+
+  let url = urlBaseWhatsApp.value.trim()
+  const token = tokenWhatsApp.value.trim()
+
+  if (modoWhatsApp.value === 'produccion') {
+    if (!token) {
+      errorConfig.value = 'El token de Meta es requerido en modo Producción.'
+      return
+    }
+    url = 'https://graph.facebook.com/v19.0'
+  } else {
+    if (!url) {
+      errorConfig.value = 'Ingresa la URL del simulador (ej. https://w-atest.vercel.app).'
+      return
+    }
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      errorConfig.value = 'La URL del simulador debe comenzar con http:// o https://.'
+      return
+    }
+  }
+
+  guardandoConfig.value = true
+  try {
+    await actualizarConfiguracionWhatsApp(modoWhatsApp.value, url, token)
+    exitoConfig.value = 'Configuración guardada correctamente.'
+  } catch (e: any) {
+    errorConfig.value = e.data?.message || e.message || 'Error al guardar la configuración.'
+  } finally {
+    guardandoConfig.value = false
+  }
+}
+
+const resetearConfiguracion = async () => {
+  errorConfig.value = ''
+  exitoConfig.value = ''
+  modoWhatsApp.value = 'pruebas'
+  urlBaseWhatsApp.value = 'https://w-atest.vercel.app'
+  tokenWhatsApp.value = ''
+
+  guardandoConfig.value = true
+  try {
+    await actualizarConfiguracionWhatsApp('pruebas', 'https://w-atest.vercel.app', '')
+    exitoConfig.value = 'Configuración restablecida a Pruebas.'
+  } catch (e: any) {
+    errorConfig.value = e.data?.message || e.message || 'Error al restablecer la configuración.'
+  } finally {
+    guardandoConfig.value = false
+  }
+}
 </script>
 
 <style scoped>
