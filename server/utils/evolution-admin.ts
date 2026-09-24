@@ -36,6 +36,10 @@ export async function evolutionCall<T = any>(cfg: EvolutionCon, path: string, op
   return await res.json()
 }
 
+export function normalizarQR(s: string): string {
+  return String(s || '').replace(/^data:image\/(png|jpeg|webp|jpg);base64,/, '').replace(/\s+/g, '')
+}
+
 export async function getInstanceState(cfg: EvolutionCon): Promise<string> {
   try {
     const r = await evolutionCall<any>(cfg, `/instance/connectionState/${cfg.instanceName}`)

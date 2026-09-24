@@ -1,6 +1,6 @@
 import { verifyAdminToken } from '../../utils/auth'
 import { getWhatsAppConfig } from '../../utils/whatsapp-db'
-import { deleteInstance, connectInstance, setWebhook } from '../../utils/evolution-admin'
+import { deleteInstance, connectInstance, setWebhook, normalizarQR } from '../../utils/evolution-admin'
 
 export default defineEventHandler(async (event) => {
   verifyAdminToken(event)
@@ -28,7 +28,7 @@ export default defineEventHandler(async (event) => {
     await pool.query(
       `INSERT INTO configuracion_sistema (clave, valor, categoria) VALUES ('whatsapp_link_qr', $1, 'whatsapp_link')
        ON CONFLICT (clave) DO UPDATE SET valor = EXCLUDED.valor, updated_at = NOW()`,
-      [inst.base64]
+      [normalizarQR(inst.base64)]
     )
     await pool.query(
       `INSERT INTO configuracion_sistema (clave, valor, categoria) VALUES ('whatsapp_link_state', 'connecting', 'whatsapp_link')

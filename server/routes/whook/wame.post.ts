@@ -2,6 +2,7 @@ import { getWhatsAppConfig, logMensaje, getOrCreateConversation, updateConversat
 import { processMessage, parsearSolicitudCita } from '../../utils/whatsapp-flow'
 import { enviarMensaje, enviarLista, enviarBotones } from '../../utils/whatsapp'
 import { estaAutorizadoWebhook } from '../../utils/whook-guard'
+import { normalizarQR } from '../../utils/evolution-admin'
 import { permiteMensaje } from '../../utils/whatsapp-security'
 
 export default defineEventHandler(async (event) => {
@@ -29,7 +30,7 @@ export default defineEventHandler(async (event) => {
   if (payload.event === 'qrcode.updated') {
     const qr = payload.data?.qrcode?.base64 || payload.data?.base64 || ''
     if (qr) {
-      const base64 = String(qr).replace(/^data:image\/png;base64,/, '')
+      const base64 = normalizarQR(String(qr))
       await pool.query(
         `INSERT INTO configuracion_sistema (clave, valor, categoria) VALUES ('whatsapp_link_qr', $1, 'whatsapp_link')
          ON CONFLICT (clave) DO UPDATE SET valor = EXCLUDED.valor, updated_at = NOW()`,
