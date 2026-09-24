@@ -32,6 +32,15 @@ async function main() {
   await c.query(`CREATE EXTENSION IF NOT EXISTS pgcrypto;`)
 
   await correrUsuarios(c)
+
+  console.log('Deduplicando centros_medicos...')
+  await c.query(`
+    DELETE FROM centros_medicos a USING centros_medicos b WHERE a.nombre = b.nombre AND a.id > b.id;
+    DO $$ BEGIN
+      ALTER TABLE centros_medicos ADD CONSTRAINT centros_medicos_nombre_unique UNIQUE (nombre);
+    EXCEPTION WHEN duplicate_table THEN NULL; WHEN duplicate_object THEN NULL; END $$;
+  `)
+
   await correr(c, 'schema-directorio-medico.sql')
 
   const { rows: [{ n: medicos }] } = await c.query(`select count(*)::int as n from medicos`)
