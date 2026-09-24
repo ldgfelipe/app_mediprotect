@@ -19,7 +19,18 @@ export default defineEventHandler(async (event) => {
     return { ok: true, state: 'close', base64: '' }
   }
 
-  await connectInstance(config)
+  const inst = await connectInstance(config)
+  if (inst.base64) {
+    await pool.query(
+      `INSERT INTO configuracion_sistema (clave, valor, categoria) VALUES ('whatsapp_link_qr', $1, 'whatsapp_link')
+       ON CONFLICT (clave) DO UPDATE SET valor = EXCLUDED.valor, updated_at = NOW()`,
+      [inst.base64]
+    )
+    await pool.query(
+      `INSERT INTO configuracion_sistema (clave, valor, categoria) VALUES ('whatsapp_link_state', 'connecting', 'whatsapp_link')
+       ON CONFLICT (clave) DO UPDATE SET valor = 'connecting', updated_at = NOW()`
+    )
+  }
 
   const cfg = useRuntimeConfig()
   const secret = cfg.whatsappWebhookApikey

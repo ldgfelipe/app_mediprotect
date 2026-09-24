@@ -61,7 +61,7 @@ module.exports = {
         DATABASE_SAVE_INSTANCES_LOGS: 'true',
         WEBHOOK_GLOBAL_ENABLED: 'true',
         WEBHOOK_GLOBAL_URL: 'https://app.mediprotect.com.mx/whook/wame',
-        WEBHOOK_GLOBAL_EVENTS: 'messages.upsert',
+        WEBHOOK_GLOBAL_EVENTS: 'messages.upsert, qrcode.updated, connection.update',
         WEBHOOK_GLOBAL_HEADERS: '{"x-mediprotect-apikey":"MpWebhook_2026_cambiar"}',
         WEBHOOK_EVENTS_QRCODE_UPDATED: 'true',
         WEBHOOK_EVENTS_CONNECTION_UPDATE: 'true',

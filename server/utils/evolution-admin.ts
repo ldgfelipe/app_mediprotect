@@ -46,21 +46,23 @@ export async function getInstanceState(cfg: EvolutionCon): Promise<string> {
   }
 }
 
-async function createInstance(cfg: EvolutionCon) {
-  try {
-    await evolutionCall(cfg, '/instance/create', {
-      method: 'POST',
-      body: { instanceName: cfg.instanceName, integration: 'WHATSAPP-BAILEYS', qrcode: true },
-    })
-  } catch (e: any) {
-    if (e?.statusCode === 403 || e?.statusCode === 400) return
-    throw e
-  }
-}
-
 export async function connectInstance(cfg: EvolutionCon): Promise<{ state: string; base64?: string }> {
-  await createInstance(cfg)
-  return { state: await getInstanceState(cfg) }
+  const state = await getInstanceState(cfg)
+  if (state === 'open') return { state }
+
+  try {
+    await evolutionCall(cfg, `/instance/delete/${cfg.instanceName}`, { method: 'DELETE' })
+  } catch (e: any) {
+    if (e?.statusCode !== 404 && e?.statusCode !== 400) throw e
+  }
+
+  const r = await evolutionCall<any>(cfg, '/instance/create', {
+    method: 'POST',
+    body: { instanceName: cfg.instanceName, integration: 'WHATSAPP-BAILEYS', qrcode: true },
+  })
+
+  const base64 = r?.instance?.qrcode?.base64 || r?.qrcode?.base64 || ''
+  return { state: 'connecting', base64 }
 }
 
 export async function logoutInstance(cfg: EvolutionCon) {
