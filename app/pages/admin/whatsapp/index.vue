@@ -419,6 +419,7 @@
 </template>
 
 <script setup lang="ts">
+import FlujosPanel from '@/components/admin/FlujosPanel.vue'
 definePageMeta({ middleware: 'admin-auth' })
 
 const adminUsuario = useCookie('admin_usuario')
