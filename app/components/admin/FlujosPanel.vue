@@ -25,7 +25,10 @@ async function cargarFlujos() {
   }
 }
 
-onMounted(cargarFlujos)
+onMounted(() => {
+    console.log('[FlujosPanel] montado, cargando flujos…')
+    cargarFlujos()
+  })
 
 function keywordsDe(texto: string): string[] {
   return texto.split(',').map((k) => k.trim()).filter(Boolean)

@@ -412,12 +412,7 @@
 
       <!-- TAB: Flujos (editor visual estilo n8n) -->
       <template v-if="tabActiva === 'flujos'">
-        <ClientOnly>
-          <FlujosPanel />
-          <template #fallback>
-            <div class="loading">Cargando editor de flujos...</div>
-          </template>
-        </ClientOnly>
+        <FlujosPanel />
       </template>
     </main>
   </div>

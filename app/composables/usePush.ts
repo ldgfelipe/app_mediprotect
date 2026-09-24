@@ -16,7 +16,22 @@ export function usePush() {
   async function registerServiceWorker() {
     if (!import.meta.client || !isSupported.value) return null
     try {
-      return await navigator.serviceWorker.register('/sw.js', { scope: '/' })
+      const reg = await navigator.serviceWorker.register('/sw.js?v=' + Date.now(), {
+        scope: '/',
+        updateViaCache: 'none'
+      })
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing
+        if (newWorker) {
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              console.log('[SW] Nueva versión disponible, recargando…')
+              window.location.reload()
+            }
+          })
+        }
+      })
+      return reg
     } catch {
       return null
     }
