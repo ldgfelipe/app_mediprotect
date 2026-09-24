@@ -7,7 +7,7 @@ import { permiteMensaje } from '../../utils/whatsapp-security'
 export default defineEventHandler(async (event) => {
   const pool = await useDbPool(event)
 
-  if (!estaAutorizadoWebhook(event)) {
+  if (!(await estaAutorizadoWebhook(event))) {
     console.log('[WhatsApp Webhook] Acceso no autorizado, rechazado')
     throw createError({ statusCode: 403, message: 'Acceso denegado' })
   }

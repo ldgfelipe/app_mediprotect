@@ -1,4 +1,24 @@
 import { createHash, timingSafeEqual } from 'node:crypto'
+import { resolve4 } from 'node:dns/promises'
+
+const dnsCache = new Map<string, string>()
+
+async function dnsIp(host: string): Promise<string> {
+  const h = String(host).toLowerCase().replace(/:\d+$/, '')
+  if (!h) return ''
+  if (dnsCache.has(h)) return dnsCache.get(h)!
+  try {
+    const ips = await resolve4(h)
+    const ip = ips[0] || ''
+    if (h && ip) {
+      dnsCache.set(h, ip)
+      setTimeout(() => dnsCache.delete(h), 10 * 60 * 1000).unref()
+    }
+    return ip
+  } catch {
+    return ''
+  }
+}
 
 function ipNormalizada(ip: string): string {
   if (!ip) return ''
@@ -26,7 +46,7 @@ function ipCliente(event: any): string {
   return ipNormalizada(remote)
 }
 
-export function estaAutorizadoWebhook(event: any): boolean {
+export async function estaAutorizadoWebhook(event: any): Promise<boolean> {
   const cfg = useRuntimeConfig()
 
   const secreto = cfg.whatsappWebhookApikey || ''
@@ -46,5 +66,13 @@ export function estaAutorizadoWebhook(event: any): boolean {
     return permitidas.some((p) => ipNormalizada(p) === ip)
   }
 
-  return esLoopback(ip)
+  if (esLoopback(ip)) return true
+
+  const host = getHeader(event, 'host') || ''
+  if (host) {
+    const dns = await dnsIp(host)
+    if (dns && ip === dns) return true
+  }
+
+  return false
 }

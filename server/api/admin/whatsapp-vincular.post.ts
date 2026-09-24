@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
 
   const cfg = useRuntimeConfig()
   const secret = cfg.whatsappWebhookApikey
-  const url = `${getRequestProtocol(event)}://${getRequestHost(event)}/whook/wame`
+  const url = `https://${getRequestHost(event)}/whook/wame`
   await setWebhook(config, url, secret || undefined)
 
   const link = await pool.query(
