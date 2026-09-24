@@ -33,6 +33,7 @@
         <button class="tab-btn" :class="{ active: tabActiva === 'simulador' }" @click="tabActiva = 'simulador'">🧪 Simulador</button>
         <button class="tab-btn" :class="{ active: tabActiva === 'vincular' }" @click="abrirVincular">📱 Vincular número</button>
         <button class="tab-btn" :class="{ active: tabActiva === 'configuracion' }" @click="tabActiva = 'configuracion'">⚙️ Configuración</button>
+        <button class="tab-btn" :class="{ active: tabActiva === 'flujos' }" @click="tabActiva = 'flujos'">🧩 Flujos</button>
       </div>
 
       <!-- TAB: Conversaciones -->
@@ -407,6 +408,16 @@
             <p>Apuntar la URL de la instancia a tu VPS donde corre la pasarela (ej. <code>http://127.0.0.1:8080</code>).</p>
           </div>
         </div>
+      </template>
+
+      <!-- TAB: Flujos (editor visual estilo n8n) -->
+      <template v-if="tabActiva === 'flujos'">
+        <ClientOnly>
+          <FlujosPanel />
+          <template #fallback>
+            <div class="loading">Cargando editor de flujos...</div>
+          </template>
+        </ClientOnly>
       </template>
     </main>
   </div>

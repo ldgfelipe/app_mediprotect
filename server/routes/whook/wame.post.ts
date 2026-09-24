@@ -1,5 +1,6 @@
 import { getWhatsAppConfig, logMensaje, getOrCreateConversation, updateConversationState } from '../../utils/whatsapp-db'
 import { processMessage, parsearSolicitudCita } from '../../utils/whatsapp-flow'
+import { proseguirOIniciarFlujo } from '../../utils/whatsapp-flow-runner'
 import { enviarMensaje, enviarLista, enviarBotones } from '../../utils/whatsapp'
 import { estaAutorizadoWebhook } from '../../utils/whook-guard'
 import { normalizarQR } from '../../utils/evolution-admin'
@@ -152,15 +153,28 @@ async function processIncomingMessage(msg: any, pool: any) {
 
   const conv = await getOrCreateConversation(pool, telefono, nombre)
 
-  if (conv.estado === 'bienvenida' && tipo === 'text') {
-    const solicitud = parsearSolicitudCita(texto)
-    if (solicitud.esSolicitudDirecta) {
-      await updateConversationState(pool, conv.id, 'solicitud_directa', conv.datos_temp || {})
-      conv.estado = 'solicitud_directa'
+  let respuesta: any = null
+  let flujoUsado = false
+
+  if (tipo === 'text') {
+    const flowRes = await proseguirOIniciarFlujo(pool, conv, texto, nombre)
+    if (flowRes.flujoDetectado) {
+      respuesta = flowRes.respuesta
+      flujoUsado = true
     }
   }
 
-  const respuesta = await processMessage(conv, texto, nombre, pool)
+  if (!flujoUsado) {
+    if (conv.estado === 'bienvenida' && tipo === 'text') {
+      const solicitud = parsearSolicitudCita(texto)
+      if (solicitud.esSolicitudDirecta) {
+        await updateConversationState(pool, conv.id, 'solicitud_directa', conv.datos_temp || {})
+        conv.estado = 'solicitud_directa'
+      }
+    }
+
+    respuesta = await processMessage(conv, texto, nombre, pool)
+  }
 
   if (respuesta) {
     const config = await getWhatsAppConfig(pool)

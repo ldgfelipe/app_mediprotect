@@ -7,6 +7,7 @@ const FILES = [
   'schema-push-subscriptions.sql',
   'schema-migration-completa.sql',
   'schema-consultorios.sql',
+  'schema-whatsapp-flows.sql',
 ]
 
 async function main() {
