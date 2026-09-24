@@ -54,8 +54,12 @@ export async function deleteInstance(cfg: EvolutionCon) {
   try {
     await evolutionCall(cfg, `/instance/delete/${cfg.instanceName}`, { method: 'DELETE' })
   } catch (e: any) {
-    if (e?.statusCode !== 404 && e?.statusCode !== 400) throw e
+    if (e?.statusCode !== 404 && e?.statusCode !== 400 && e?.statusCode !== 403) throw e
   }
+}
+
+function espera(ms: number) {
+  return new Promise((r) => setTimeout(r, ms))
 }
 
 export async function connectInstance(cfg: EvolutionCon): Promise<{ state: string; base64?: string }> {
@@ -64,12 +68,22 @@ export async function connectInstance(cfg: EvolutionCon): Promise<{ state: strin
 
   await deleteInstance(cfg)
 
-  const r = await evolutionCall<any>(cfg, '/instance/create', {
-    method: 'POST',
-    body: { instanceName: cfg.instanceName, integration: 'WHATSAPP-BAILEYS', qrcode: true },
-  })
+  let base64 = ''
+  let creado = false
+  for (let i = 0; i < 6 && !creado; i++) {
+    if (i > 0) await espera(1500)
+    try {
+      const r = await evolutionCall<any>(cfg, '/instance/create', {
+        method: 'POST',
+        body: { instanceName: cfg.instanceName, integration: 'WHATSAPP-BAILEYS', qrcode: true },
+      })
+      base64 = r?.instance?.qrcode?.base64 || r?.qrcode?.base64 || ''
+      creado = true
+    } catch (e: any) {
+      if (e?.statusCode !== 403 && e?.statusCode !== 400) throw e
+    }
+  }
 
-  const base64 = r?.instance?.qrcode?.base64 || r?.qrcode?.base64 || ''
   return { state: 'connecting', base64 }
 }
 
