@@ -42,6 +42,7 @@ async function main() {
   `)
 
   await correr(c, 'schema-directorio-medico.sql')
+  await correr(c, 'seed-planes-test.sql')
 
   const { rows: [{ n: medicos }] } = await c.query(`select count(*)::int as n from medicos`)
   if (FORCE || medicos === 0) {
