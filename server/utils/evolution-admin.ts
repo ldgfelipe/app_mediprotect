@@ -46,15 +46,19 @@ export async function getInstanceState(cfg: EvolutionCon): Promise<string> {
   }
 }
 
-export async function connectInstance(cfg: EvolutionCon): Promise<{ state: string; base64?: string }> {
-  const state = await getInstanceState(cfg)
-  if (state === 'open') return { state }
-
+export async function deleteInstance(cfg: EvolutionCon) {
   try {
     await evolutionCall(cfg, `/instance/delete/${cfg.instanceName}`, { method: 'DELETE' })
   } catch (e: any) {
     if (e?.statusCode !== 404 && e?.statusCode !== 400) throw e
   }
+}
+
+export async function connectInstance(cfg: EvolutionCon): Promise<{ state: string; base64?: string }> {
+  const state = await getInstanceState(cfg)
+  if (state === 'open') return { state }
+
+  await deleteInstance(cfg)
 
   const r = await evolutionCall<any>(cfg, '/instance/create', {
     method: 'POST',
