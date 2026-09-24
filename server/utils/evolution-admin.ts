@@ -77,6 +77,6 @@ export async function setWebhook(
   if (secret) headers['x-mediprotect-apikey'] = secret
   await evolutionCall(cfg, `/webhook/set/${cfg.instanceName}`, {
     method: 'POST',
-    body: { url, enabled: true, events, webhookByEvents: false, headers },
+    body: { webhook: { url, enabled: true, events, byEvents: false, headers } },
   })
 }
