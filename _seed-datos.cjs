@@ -10,13 +10,21 @@ async function correr(c, f) {
   await c.query(readFileSync(f, 'utf8'))
 }
 
+async function correrUsuarios(c) {
+  const f = 'seed-usuarios-test.sql'
+  if (!existsSync(f)) { console.error('NO EXISTE', f); return }
+  console.log('Aplicando', f)
+  const limpio = readFileSync(f, 'utf8').replace(/DO \$\$ BEGIN\s*[\s\S]*?END \$\$;/gi, '')
+  await c.query(limpio)
+}
+
 async function main() {
   const c = new Client({ connectionString: URL, ssl: { rejectUnauthorized: false }, family: 4 })
   await c.connect()
 
   await c.query(`CREATE EXTENSION IF NOT EXISTS pgcrypto;`)
 
-  await correr(c, 'seed-usuarios-test.sql')
+  await correrUsuarios(c)
   await correr(c, 'schema-directorio-medico.sql')
 
   const { rows: [{ n: medicos }] } = await c.query(`select count(*)::int as n from medicos`)
