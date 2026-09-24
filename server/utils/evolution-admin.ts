@@ -47,27 +47,40 @@ export async function getInstanceState(cfg: EvolutionCon): Promise<string> {
 }
 
 async function createInstance(cfg: EvolutionCon) {
-  return evolutionCall(cfg, '/instance/create', {
-    method: 'POST',
-    body: { instanceName: cfg.instanceName, integration: 'WHATSAPP-BAILEYS', qrcode: true },
-  })
+  try {
+    await evolutionCall(cfg, '/instance/create', {
+      method: 'POST',
+      body: { instanceName: cfg.instanceName, integration: 'WHATSAPP-BAILEYS', qrcode: true },
+    })
+  } catch (e: any) {
+    if (e?.statusCode === 403 || e?.statusCode === 400) return
+    throw e
+  }
+}
+
+function extraerResultado(r: any): { state: string; base64?: string } {
+  const q = r?.qrcode || r?.data?.qrcode
+  if (q?.base64) return { state: 'close', base64: q.base64 }
+  if (r?.base64) return { state: 'close', base64: r.base64 }
+  return { state: r?.instance?.state || 'close' }
 }
 
 export async function connectInstance(cfg: EvolutionCon): Promise<{ state: string; base64?: string }> {
   try {
-    const r = await evolutionCall<any>(cfg, `/instance/connect/${cfg.instanceName}`, { method: 'POST' })
-    const q = r?.qrcode || r?.data?.qrcode
-    if (q?.base64) return { state: 'close', base64: q.base64 }
-    if (r?.base64) return { state: 'close', base64: r.base64 }
-    if (r?.instance?.state) return { state: r.instance.state }
-    return { state: r?.instance?.state || 'close' }
+    return extraerResultado(await evolutionCall<any>(cfg, `/instance/connect/${cfg.instanceName}`, { method: 'POST' }))
   } catch (e: any) {
-    if (e?.statusCode === 404) {
-      await createInstance(cfg)
-      return connectInstance(cfg)
-    }
-    throw e
+    if (e?.statusCode !== 404 && e?.statusCode !== 403) throw e
   }
+  await createInstance(cfg)
+  for (let i = 0; i < 5; i++) {
+    try {
+      return extraerResultado(await evolutionCall<any>(cfg, `/instance/connect/${cfg.instanceName}`, { method: 'POST' }))
+    } catch (e2: any) {
+      if (e2?.statusCode !== 404 && e2?.statusCode !== 403) throw e2
+      await new Promise((r) => setTimeout(r, 900))
+    }
+  }
+  return { state: await getInstanceState(cfg) }
 }
 
 export async function logoutInstance(cfg: EvolutionCon) {
