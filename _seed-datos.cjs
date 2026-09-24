@@ -13,10 +13,15 @@ async function correr(c, f) {
 async function correrUsuarios(c) {
   const f = 'seed-usuarios-test.sql'
   if (!existsSync(f)) { console.error('NO EXISTE', f); return }
+  console.log('Provisionando columnas necesarias...')
+  await c.query(`
+    ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT true;
+    ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS plan_contratado TEXT;
+    ALTER TABLE asistentes ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT true;
+    ALTER TABLE usuarios_sistema ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT true;
+  `)
   console.log('Aplicando', f)
-  const limpio = readFileSync(f, 'utf8')
-    .replace(/DO \$\$ BEGIN[\s\S]*?ALTER TABLE roles ADD CONSTRAINT roles_nombre_unique[\s\S]*?END \$\$;/gi, '')
-    .replace(/DO \$\$ BEGIN[\s\S]*?ALTER TABLE usuarios_sistema ADD CONSTRAINT usuarios_sistema_email_unique[\s\S]*?END \$\$;/gi, '')
+  const limpio = readFileSync(f, 'utf8').replace(/DO \$\$ BEGIN\s*[\s\S]*?END \$\$;/gi, '')
   await c.query(limpio)
 }
 
