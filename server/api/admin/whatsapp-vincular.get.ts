@@ -10,22 +10,30 @@ export default defineEventHandler(async (event) => {
     return { ok: true, state: 'close', conectado: false, base64: '' }
   }
 
+  let state: string | null = null
+  try {
+    state = await getInstanceState(config)
+  } catch (e: any) {
+    console.error('[Vincular] No se pudo consultar Evolution:', e?.message)
+  }
+
   const link = await pool.query(
     `SELECT clave, valor FROM configuracion_sistema WHERE clave IN ('whatsapp_link_state', 'whatsapp_link_qr')`
   )
-  let state = 'close'
-  let base64 = ''
-  for (const row of link.rows) {
-    if (row.clave === 'whatsapp_link_state') state = row.valor || 'close'
-    if (row.clave === 'whatsapp_link_qr') base64 = row.valor || ''
+  const db: Record<string, string> = {}
+  for (const row of link.rows) db[row.clave] = row.valor || ''
+  const dbBase64 = db.whatsapp_link_qr || ''
+
+  if (!state) {
+    state = db.whatsapp_link_state || 'close'
+  } else if (state === 'open') {
+    await pool.query(
+      `INSERT INTO configuracion_sistema (clave, valor, categoria) VALUES ('whatsapp_link_state', 'open', 'whatsapp_link')
+       ON CONFLICT (clave) DO UPDATE SET valor = 'open', updated_at = NOW()`
+    )
+    await pool.query(`UPDATE configuracion_sistema SET valor = '' WHERE clave = 'whatsapp_link_qr'`)
   }
 
-  if (state !== 'open') {
-    try {
-      const real = await getInstanceState(config)
-      if (real === 'open') state = 'open'
-    } catch {}
-  }
-
+  const base64 = state === 'open' ? '' : dbBase64
   return { ok: true, state, conectado: state === 'open', base64 }
 })

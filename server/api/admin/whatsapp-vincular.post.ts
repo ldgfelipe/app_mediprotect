@@ -30,6 +30,12 @@ export default defineEventHandler(async (event) => {
       `INSERT INTO configuracion_sistema (clave, valor, categoria) VALUES ('whatsapp_link_state', 'connecting', 'whatsapp_link')
        ON CONFLICT (clave) DO UPDATE SET valor = 'connecting', updated_at = NOW()`
     )
+  } else if (inst.state === 'open') {
+    await pool.query(
+      `INSERT INTO configuracion_sistema (clave, valor, categoria) VALUES ('whatsapp_link_state', 'open', 'whatsapp_link')
+       ON CONFLICT (clave) DO UPDATE SET valor = 'open', updated_at = NOW()`
+    )
+    await pool.query(`UPDATE configuracion_sistema SET valor = '' WHERE clave = 'whatsapp_link_qr'`)
   }
 
   const cfg = useRuntimeConfig()
