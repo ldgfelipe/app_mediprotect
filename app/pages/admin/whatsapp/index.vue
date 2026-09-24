@@ -33,7 +33,7 @@
         <button class="tab-btn" :class="{ active: tabActiva === 'simulador' }" @click="tabActiva = 'simulador'">🧪 Simulador</button>
         <button class="tab-btn" :class="{ active: tabActiva === 'vincular' }" @click="abrirVincular">📱 Vincular número</button>
         <button class="tab-btn" :class="{ active: tabActiva === 'configuracion' }" @click="tabActiva = 'configuracion'">⚙️ Configuración</button>
-        <button class="tab-btn" :class="{ active: tabActiva === 'flujos' }" @click="tabActiva = 'flujos'">🧩 Flujos</button>
+        <button class="tab-btn" :class="{ active: tabActiva === 'flujos' }" @click="() => { console.log('[Tab] click Flujos'); tabActiva = 'flujos' }">🧩 Flujos</button>
       </div>
 
       <!-- TAB: Conversaciones -->

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+console.log('[FlujosPanel] script setup ejecutado')
 
 const flows = ref<any[]>([])
 const cargando = ref(true)
