@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS roles (
   id SERIAL PRIMARY KEY,
   nombre VARCHAR(50) UNIQUE NOT NULL
 );
-INSERT INTO roles (nombre) VALUES ('Administrador'), ('Editor'), ('Visualizador') ON CONFLICT (nombre) DO NOTHING;
+INSERT INTO roles (nombre) VALUES ('Administrador'), ('Editor'), ('Visualizador') ON CONFLICT DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS usuarios_sistema (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
