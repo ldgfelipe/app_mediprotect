@@ -720,6 +720,7 @@ const abrirVincular = async () => {
       headers: { Authorization: `Bearer ${useCookie('admin_token').value}` }
     })
     estadoInstancia.value = data.state || 'close'
+    qrBase64.value = data.base64 || ''
   } catch (e: any) {
     estadoMensaje.value = e.data?.message || e.message || 'Error al verificar el estado de la instancia.'
   }
@@ -797,6 +798,9 @@ const iniciarPollEstado = () => {
         qrBase64.value = ''
         estadoExito.value = 'Número conectado correctamente.'
         detenerPollEstado()
+      } else {
+        qrBase64.value = data.base64 || ''
+        if (estadoExito.value !== 'Número conectado correctamente.') estadoExito.value = ''
       }
     } catch (e: any) {}
   }, 5000)

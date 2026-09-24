@@ -58,28 +58,8 @@ async function createInstance(cfg: EvolutionCon) {
   }
 }
 
-function extraerResultado(r: any): { state: string; base64?: string } {
-  const q = r?.qrcode || r?.data?.qrcode
-  if (q?.base64) return { state: 'close', base64: q.base64 }
-  if (r?.base64) return { state: 'close', base64: r.base64 }
-  return { state: r?.instance?.state || 'close' }
-}
-
 export async function connectInstance(cfg: EvolutionCon): Promise<{ state: string; base64?: string }> {
-  try {
-    return extraerResultado(await evolutionCall<any>(cfg, `/instance/connect/${cfg.instanceName}`, { method: 'POST' }))
-  } catch (e: any) {
-    if (e?.statusCode !== 404 && e?.statusCode !== 403) throw e
-  }
   await createInstance(cfg)
-  for (let i = 0; i < 5; i++) {
-    try {
-      return extraerResultado(await evolutionCall<any>(cfg, `/instance/connect/${cfg.instanceName}`, { method: 'POST' }))
-    } catch (e2: any) {
-      if (e2?.statusCode !== 404 && e2?.statusCode !== 403) throw e2
-      await new Promise((r) => setTimeout(r, 900))
-    }
-  }
   return { state: await getInstanceState(cfg) }
 }
 
@@ -87,11 +67,16 @@ export async function logoutInstance(cfg: EvolutionCon) {
   await evolutionCall(cfg, `/instance/logout/${cfg.instanceName}`, { method: 'POST' })
 }
 
-export async function setWebhook(cfg: EvolutionCon, url: string, secret?: string) {
+export async function setWebhook(
+  cfg: EvolutionCon,
+  url: string,
+  secret?: string,
+  events: string[] = ['MESSAGES_UPSERT', 'QRCODE_UPDATED', 'CONNECTION_UPDATE']
+) {
   const headers: Record<string, string> = {}
   if (secret) headers['x-mediprotect-apikey'] = secret
   await evolutionCall(cfg, `/webhook/set/${cfg.instanceName}`, {
     method: 'POST',
-    body: { url, enabled: true, events: ['messages.upsert'], webhookByEvents: false, headers },
+    body: { url, enabled: true, events, webhookByEvents: false, headers },
   })
 }

@@ -12,14 +12,6 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, message: 'Acceso denegado' })
   }
 
-  const webhookActivo = await pool.query(
-    `SELECT valor FROM configuracion_sistema WHERE clave = 'whatsapp_webhook_activo'`
-  )
-  if (webhookActivo.rows[0]?.valor !== 'true') {
-    console.log('[WhatsApp Webhook] Webhook desactivado, ignorando')
-    return { ok: true }
-  }
-
   const rawBody = await readRawBody(event)
 
   if (!rawBody) {
@@ -34,7 +26,49 @@ export default defineEventHandler(async (event) => {
     return { ok: true }
   }
 
+  if (payload.event === 'qrcode.updated') {
+    const qr = payload.data?.qrcode?.base64 || payload.data?.base64 || ''
+    if (qr) {
+      const base64 = String(qr).replace(/^data:image\/png;base64,/, '')
+      await pool.query(
+        `INSERT INTO configuracion_sistema (clave, valor, categoria) VALUES ('whatsapp_link_qr', $1, 'whatsapp_link')
+         ON CONFLICT (clave) DO UPDATE SET valor = EXCLUDED.valor, updated_at = NOW()`,
+        [base64]
+      )
+      await pool.query(
+        `INSERT INTO configuracion_sistema (clave, valor, categoria) VALUES ('whatsapp_link_state', 'close', 'whatsapp_link')
+         ON CONFLICT (clave) DO UPDATE SET valor = 'close', updated_at = NOW()`
+      )
+      console.log('[WhatsApp Webhook] QR actualizado y guardado')
+    }
+    return { ok: true }
+  }
+
+  if (payload.event === 'connection.update') {
+    const state = String(payload.data?.state || payload.data?.instance?.state || '')
+    if (state === 'open' || state === 'close') {
+      await pool.query(
+        `INSERT INTO configuracion_sistema (clave, valor, categoria) VALUES ('whatsapp_link_state', $1, 'whatsapp_link')
+         ON CONFLICT (clave) DO UPDATE SET valor = EXCLUDED.valor, updated_at = NOW()`,
+        [state]
+      )
+      if (state === 'open') {
+        await pool.query(`UPDATE configuracion_sistema SET valor = '' WHERE clave = 'whatsapp_link_qr'`)
+      }
+      console.log(`[WhatsApp Webhook] Estado de conexión: ${state}`)
+    }
+    return { ok: true }
+  }
+
   if (payload.event !== 'messages.upsert') {
+    return { ok: true }
+  }
+
+  const webhookActivo = await pool.query(
+    `SELECT valor FROM configuracion_sistema WHERE clave = 'whatsapp_webhook_activo'`
+  )
+  if (webhookActivo.rows[0]?.valor !== 'true') {
+    console.log('[WhatsApp Webhook] Webhook desactivado, ignorando')
     return { ok: true }
   }
 
