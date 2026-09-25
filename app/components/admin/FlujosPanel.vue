@@ -183,7 +183,12 @@ async function guardarMetadata() {
           <button class="btn" @click="cancelarEdit">← Volver a la lista</button>
         </div>
 
-        <FlowCanvas :initial-def="editDef" @save="guardarDef" @cancel="cancelarEdit" />
+        <ClientOnly>
+          <FlowCanvas :initial-def="editDef" @save="guardarDef" @cancel="cancelarEdit" />
+          <template #fallback>
+            <div class="loading">Cargando editor...</div>
+          </template>
+        </ClientOnly>
       </template>
   </div>
 </template>
