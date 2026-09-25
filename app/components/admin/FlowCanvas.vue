@@ -10,6 +10,8 @@ import '@vue-flow/background/dist/style.css'
 import '@vue-flow/controls/dist/style.css'
 
 console.log('[FlowCanvas] script setup ejecutado')
+import { onMounted } from 'vue'
+onMounted(() => console.log('[FlowCanvas] montado'))
 
 const props = defineProps<{ initialDef?: any }>()
 const emit = defineEmits<{ (e: 'save', def: any): void; (e: 'cancel'): void }>()

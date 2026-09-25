@@ -173,22 +173,17 @@ async function guardarMetadata() {
       </div>
     </template>
 
-    <template v-else>
-      <div class="flujo-edit-bar">
-        <input v-model="editarFlow.nombre" class="fi" disabled />
-        <input v-model="editarFlow.keywords" class="fi editable-keywords" placeholder="Keywords separadas por coma; * = todos" />
-        <label class="chk"><input v-model="editarFlow.activo" type="checkbox" /> Activo</label>
-        <button class="btn" @click="guardarMetadata">💾 Guardar datos</button>
-        <button class="btn" @click="cancelarEdit">← Volver a la lista</button>
-      </div>
+<template v-else>
+        <div class="flujo-edit-bar">
+          <input v-model="editarFlow.nombre" class="fi" disabled />
+          <input v-model="editarFlow.keywords" class="fi editable-keywords" placeholder="Keywords separadas por coma; * = todos" />
+          <label class="chk"><input v-model="editarFlow.activo" type="checkbox" /> Activo</label>
+          <button class="btn" @click="guardarMetadata">💾 Guardar datos</button>
+          <button class="btn" @click="cancelarEdit">← Volver a la lista</button>
+        </div>
 
-      <ClientOnly>
         <FlowCanvas :initial-def="editDef" @save="guardarDef" @cancel="cancelarEdit" />
-        <template #fallback>
-          <div class="loading">Cargando editor...</div>
-        </template>
-      </ClientOnly>
-    </template>
+      </template>
   </div>
 </template>
 
