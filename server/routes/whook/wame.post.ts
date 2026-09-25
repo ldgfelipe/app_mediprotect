@@ -156,7 +156,7 @@ async function processIncomingMessage(msg: any, pool: any) {
   let respuesta: any = null
   let flujoUsado = false
 
-  if (tipo === 'text') {
+  if (tipo === 'text' || tipo === 'list' || tipo === 'button') {
     const flowRes = await proseguirOIniciarFlujo(pool, conv, texto, nombre)
     if (flowRes.flujoDetectado) {
       respuesta = flowRes.respuesta

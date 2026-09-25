@@ -273,7 +273,7 @@ export async function ejecutarFlujo(
       }
       case 'pregunta': {
         const opciones = (node.config?.opciones || [])
-        const idxMatch = texto.match(/^op_(\d+)$/)
+        const idxMatch = texto.match(/^op_(\d+)(?:_.*)?$/)
         let destino: string | null = null
         if (idxMatch) {
           const idx = parseInt(idxMatch[1])
@@ -295,11 +295,18 @@ export async function ejecutarFlujo(
       case 'lista': {
         const fuente = node.config?.fuente || 'especialidades'
         const opciones = await generarLista(pool, fuente, vars, node.config || {})
-        const idxMatch = texto.match(/^op_(\d+)$/)
+        const idxMatch = texto.match(/^op_(\d+)(?:_.*)?$/)
         if (idxMatch) {
           const idx = parseInt(idxMatch[1])
           const op = opciones[idx]
           if (op && node.config?.campo) vars[node.config.campo] = op.id
+          else if (op) vars[node.config?.campo || 'seleccion'] = op.id
+          nodeId = siguienteNodo(def, node.id)
+          continue
+        }
+        const matchDirecto = opciones.find((o: any) => norm(o.titulo) === norm(texto) || norm(o.id) === norm(texto))
+        if (matchDirecto && node.config?.campo) {
+          vars[node.config.campo] = matchDirecto.id
           nodeId = siguienteNodo(def, node.id)
           continue
         }
