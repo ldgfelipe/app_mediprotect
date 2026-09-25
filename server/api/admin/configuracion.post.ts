@@ -37,5 +37,10 @@ const _user = verifyAdminToken(event)
     resultados.push(result.rows[0])
   }
 
+  if (configuraciones.some((c: any) => String(c?.clave || '').startsWith('curp_'))) {
+    const purgados = await purgarCacheCurp(pool)
+    console.log(`[CURP] Config cambiada, cache purgada: ${purgados} entradas`)
+  }
+
   return { success: true, actualizados: resultados.length, configuracion: resultados }
 })
