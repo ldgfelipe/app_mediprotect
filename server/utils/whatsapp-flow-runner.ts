@@ -341,7 +341,9 @@ export async function ejecutarFlujo(
   }
 
   if (prompt) {
-    if (prompt.modo === 'lista' && prompt.opciones.length > 0) {
+    if (!prompt.opciones || prompt.opciones.length === 0) {
+      respuesta.texto = (respuesta.texto ? respuesta.texto + '\n\n' : '') + prompt.titulo
+    } else if (prompt.modo === 'lista' && prompt.opciones.length > 0) {
       respuesta.lista = {
         titulo_seccion: prompt.titulo,
         opciones: prompt.opciones.map((o, i) => ({
@@ -351,13 +353,15 @@ export async function ejecutarFlujo(
         })),
       }
     } else {
-      const opcionesReales = prompt.opciones.filter(Boolean)
-      if (opcionesReales.length <= 3) {
-        respuesta.botones = opcionesReales.map((o, i) => ({ id: `op_${i}`, titulo: o.label }))
+      const opcionesReales = prompt.opciones.filter((o: any) => o && (o.label || o.titulo))
+      if (opcionesReales.length === 0) {
+        respuesta.texto = (respuesta.texto ? respuesta.texto + '\n\n' : '') + prompt.titulo
+      } else if (opcionesReales.length <= 3) {
+        respuesta.botones = opcionesReales.map((o: any, i: number) => ({ id: `op_${i}`, titulo: o.label || o.titulo }))
       } else {
         respuesta.lista = {
           titulo_seccion: prompt.titulo,
-          opciones: opcionesReales.map((o, i) => ({ id: `op_${i}`, titulo: o.label })),
+          opciones: opcionesReales.map((o: any, i: number) => ({ id: `op_${i}`, titulo: o.label || o.titulo })),
         }
       }
     }
