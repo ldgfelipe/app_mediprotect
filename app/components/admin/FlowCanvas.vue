@@ -9,6 +9,8 @@ import '@vue-flow/core/dist/theme-default.css'
 import '@vue-flow/background/dist/style.css'
 import '@vue-flow/controls/dist/style.css'
 
+console.log('[FlowCanvas] script setup ejecutado')
+
 const props = defineProps<{ initialDef?: any }>()
 const emit = defineEmits<{ (e: 'save', def: any): void; (e: 'cancel'): void }>()
 
