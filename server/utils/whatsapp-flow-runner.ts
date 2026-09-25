@@ -354,7 +354,7 @@ export async function ejecutarFlujo(
   }
 
   const respuesta: Respuesta = {
-    texto: textos.join('\n\n'),
+    texto: textos.filter((t) => t && t.trim()).join('\n\n'),
     nuevoEstado: finFlow ? 'bienvenida' : 'flow',
     datosTemp: { ...conv.datos_temp, flow: { flowId: flow.id, nodeId, vars } },
   }
