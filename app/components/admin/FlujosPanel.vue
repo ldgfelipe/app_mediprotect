@@ -92,6 +92,7 @@ async function eliminar(flow: any) {
 }
 
 function editar(flow: any) {
+  console.log('[FlujosPanel] editar llamado con:', flow?.id)
   editarFlow.value = flow
   editDef.value = flow.definicion || { nodes: [], edges: [] }
 }
