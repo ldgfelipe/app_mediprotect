@@ -244,7 +244,7 @@ export async function ejecutarFlujo(
   const vars: Record<string, any> = { ...(ctx.vars || {}) }
   let nodeId: string | null = ctx.nodeId || nodoInicial(def)
   const textos: string[] = []
-  let prompt: { modo: string; titulo: string; opciones: any[] } | null = null
+  let prompt: { modo: string; titulo: string; opciones: any[]; aviso?: string } | null = null
   let finFlow = false
   let esperando = false
   let guard = 0
@@ -288,6 +288,9 @@ export async function ejecutarFlujo(
           continue
         }
         prompt = { modo: node.config?.modo || 'botones', titulo: interpolar(node.config?.titulo || 'Elige una opción:', vars), opciones }
+        if (texto.trim() && opciones.length > 0) {
+          prompt.aviso = `⚠️ No reconocí «${texto.trim()}». Elige una de las opciones:`
+        }
         nodeId = node.id
         esperando = true
         break
@@ -310,7 +313,16 @@ export async function ejecutarFlujo(
           nodeId = siguienteNodo(def, node.id)
           continue
         }
+        const parcial = texto.trim() ? opciones.find((o: any) => norm(o.titulo).includes(norm(texto)) || norm(texto).includes(norm(o.titulo))) : null
+        if (parcial && node.config?.campo) {
+          vars[node.config.campo] = parcial.id
+          nodeId = siguienteNodo(def, node.id)
+          continue
+        }
         prompt = { modo: 'lista', titulo: interpolar(node.config?.titulo || 'Selecciona una opción:', vars), opciones }
+        if (texto.trim() && opciones.length > 0) {
+          prompt.aviso = `⚠️ No reconocí «${texto.trim()}». Toca una opción de la lista para continuar:`
+        }
         nodeId = node.id
         esperando = true
         break
@@ -348,6 +360,9 @@ export async function ejecutarFlujo(
   }
 
   if (prompt) {
+    if (prompt.aviso) {
+      respuesta.texto = (respuesta.texto ? respuesta.texto + '\n\n' : '') + prompt.aviso
+    }
     if (!prompt.opciones || prompt.opciones.length === 0) {
       respuesta.texto = (respuesta.texto ? respuesta.texto + '\n\n' : '') + prompt.titulo
     } else if (prompt.modo === 'lista' && prompt.opciones.length > 0) {
@@ -406,8 +421,16 @@ export async function proseguirOIniciarFlujo(
   if (flowActual?.flowId && flowActual.nodeId) {
     const flow = await obtenerFlujo(pool, flowActual.flowId)
     if (flow) {
-      const res = await ejecutarFlujo(pool, flow, flowActual, conv, texto, nombre)
-      if (res.respuesta) return { respuesta: res.respuesta, flujoDetectado: true }
+      const activos = await listarFlujosActivos(pool)
+      const nuevo = detectarFlujoPorKeywords(activos, texto)
+      const esKeywordExacta = !!nuevo && (activos.find((f) => f.id === nuevo.id)?.keywords || []).some((k) => norm(k) === norm(texto))
+      if (nuevo && esKeywordExacta) {
+        const res = await ejecutarFlujo(pool, nuevo, { flowId: nuevo.id, nodeId: null, vars: {}, esperando: false }, conv, texto, nombre)
+        if (res.respuesta) return { respuesta: res.respuesta, flujoDetectado: true }
+      } else {
+        const res = await ejecutarFlujo(pool, flow, flowActual, conv, texto, nombre)
+        if (res.respuesta) return { respuesta: res.respuesta, flujoDetectado: true }
+      }
     }
   }
 
