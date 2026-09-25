@@ -1,4 +1,4 @@
-import { verifyAdminToken } from '../../utils/auth'
+import { verifyAdminToken } from '../../../utils/auth'
 
 export default defineEventHandler(async (event) => {
   verifyAdminToken(event)

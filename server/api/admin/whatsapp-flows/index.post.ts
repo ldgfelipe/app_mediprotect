@@ -1,5 +1,5 @@
-import { verifyAdminToken } from '../../utils/auth'
-import { plantillaCitas, plantillaAsesor } from '../../utils/flow-templates'
+import { verifyAdminToken } from '../../../utils/auth'
+import { plantillaCitas, plantillaAsesor } from '../../../utils/flow-templates'
 
 export default defineEventHandler(async (event) => {
   verifyAdminToken(event)
