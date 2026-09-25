@@ -16,13 +16,18 @@ const authHeaders = () => ({ Authorization: `Bearer ${useCookie('admin_token').v
 
 async function cargarFlujos() {
   cargando.value = true
+  error.value = ''
   try {
+    console.log('[FlujosPanel] fetch flujos...')
     const data: any = await $fetch('/api/admin/whatsapp-flows', { headers: authHeaders() })
+    console.log('[FlujosPanel] flujos recibidos:', data?.flows?.length)
     flows.value = data.flows || []
   } catch (e: any) {
+    console.error('[FlujosPanel] error fetch:', e)
     error.value = e?.data?.message || e?.message || 'Error cargando flujos'
   } finally {
     cargando.value = false
+    console.log('[FlujosPanel] cargando=false, flows:', flows.value.length)
   }
 }
 
