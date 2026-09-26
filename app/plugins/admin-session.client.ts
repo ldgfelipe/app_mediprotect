@@ -11,6 +11,7 @@ export default defineNuxtPlugin(() => {
     if (!cookie.value) return true
     try {
       const r: any = await $fetch('/api/auth/refresh', {
+        method: 'POST',
         headers: { Authorization: `Bearer ${cookie.value}` },
       })
       if (r?.token) cookie.value = r.token
