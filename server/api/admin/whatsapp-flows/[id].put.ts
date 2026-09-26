@@ -10,7 +10,16 @@ export default defineEventHandler(async (event) => {
   if (!cur.rows[0]) throw createError({ statusCode: 404, message: 'Flujo no encontrado' })
 
   const nombre = typeof body?.nombre === 'string' && body.nombre.trim() ? body.nombre.trim() : null
-  const keywords = Array.isArray(body?.keywords) ? body.keywords : null
+  let keywords: string[] | null = null
+  if (body?.keywords !== undefined) {
+    if (Array.isArray(body.keywords)) {
+      keywords = body.keywords.map((keyword: unknown) => String(keyword).trim()).filter(Boolean)
+    } else if (typeof body.keywords === 'string') {
+      keywords = body.keywords.split(',').map((keyword: string) => keyword.trim()).filter(Boolean)
+    } else {
+      throw createError({ statusCode: 400, message: 'Las keywords deben ser una lista o texto separado por comas' })
+    }
+  }
   const definicion = typeof body?.definicion === 'object' ? body.definicion : null
   const activo = typeof body?.activo === 'boolean' ? body.activo : null
   const descripcion = typeof body?.descripcion === 'string' ? body.descripcion : null
