@@ -198,9 +198,12 @@ async function ejecutarAccion(
       const fecha = vars.fecha
       const hora = vars.hora
       if (!doctorId || !fecha || !hora) {
+        console.warn('[Flujo] crear_cita sin datos suficientes:', { doctorId, fecha, hora })
         return { texto: 'Faltan datos para crear la cita. Intenta de nuevo.', vars }
       }
       const paciente = await searchPatientByPhone(pool, conv.telefono)
+      // Regla MediProtect: la cita NUNCA se guarda confirmada, queda en PENDIENTE_DE_COORDINACION
+      // para que un asistente coordine manualmente con el consultorio.
       const cita = await createCitaFromWhatsApp(
         pool,
         doctorId,
@@ -208,7 +211,8 @@ async function ejecutarAccion(
         fecha,
         hora,
         conv.telefono,
-        conv.nombre_paciente || nombre || 'Paciente WhatsApp'
+        conv.nombre_paciente || nombre || 'Paciente WhatsApp',
+        'PENDIENTE_DE_COORDINACION'
       )
       const precio = vars.precio_con_descuento || vars.precio || 'preferencial'
       const texto = interpolar(
@@ -217,6 +221,45 @@ async function ejecutarAccion(
         { ...vars, folio: cita.folio, doctor_nombre: vars.doctor_nombre, fecha, hora, precio }
       )
       return { texto, vars: { ...vars, cita_id: cita.id, folio: cita.folio } }
+    }
+    case 'registrar_asistencia': {
+      // MediProtect: el paciente responde "si" / "no" al recordatorio post-cita.
+      // El nombre de las variables es configurable en el config del nodo.
+      const campoCita = config.campo_cita || 'cita_id'
+      const campoRespuesta = config.campo_respuesta || 'respuesta_asistencia'
+      const citaId = vars[campoCita]
+      const respuesta = String(vars[campoRespuesta] ?? config.respuesta ?? '').trim().toLowerCase()
+
+      if (!citaId) {
+        console.warn(`[Flujo] registrar_asistencia: falta la variable "${campoCita}" en vars`)
+        return { texto: config.texto || '', vars }
+      }
+      if (respuesta !== 'si' && respuesta !== 'no') {
+        console.warn(`[Flujo] registrar_asistencia: respuesta invalida "${respuesta}" (esperado si|no)`)
+        return { texto: config.texto || '', vars }
+      }
+
+      const r = await pool.query(
+        `UPDATE citas
+            SET respuesta_paciente_asistio = $1,
+                respuesta_paciente_at = NOW(),
+                updated_at = NOW()
+          WHERE id = $2
+          RETURNING id, folio`,
+        [respuesta, citaId]
+      )
+
+      if (r.rowCount === 0) {
+        console.warn(`[Flujo] registrar_asistencia: no existe la cita ${citaId}`)
+        return { texto: config.texto || '', vars }
+      }
+
+      console.log(`[Flujo] registrar_asistencia: cita ${citaId} -> ${respuesta}`)
+      const texto = respuesta === 'si'
+        ? (config.texto_si || 'Gracias por confirmar tu asistencia. ¡Nos vemos pronto! 🩺')
+        : (config.texto_no || 'Entendido, lamentamos que no hayas podido asistir. ¿Quieres reagendar? Escribe *cita* y con gusto te ayudamos.')
+
+      return { texto, vars: { ...vars, asistencia_registrada: true } }
     }
     case 'info_general': {
       return { texto: config.texto || 'Nosotros te ayudamos.', vars }
@@ -275,13 +318,19 @@ export async function ejecutarFlujo(
         const opciones = (node.config?.opciones || [])
         const idxMatch = texto.match(/^op_(\d+)(?:_.*)?$/)
         let destino: string | null = null
+        let elegido: any = null
         if (idxMatch) {
           const idx = parseInt(idxMatch[1])
           const op = opciones[idx]
-          if (op) destino = siguienteNodo(def, node.id, op.valor || op.label)
+          if (op) { elegido = op; destino = siguienteNodo(def, node.id, op.valor || op.label) }
         } else {
           const directa = opciones.find((o: any) => norm(o.label) === norm(texto) || norm(o.valor) === norm(texto))
-          if (directa) destino = siguienteNodo(def, node.id, directa.valor || directa.label)
+          if (directa) { elegido = directa; destino = siguienteNodo(def, node.id, directa.valor || directa.label) }
+        }
+        // Si el nodo declara `campo`, la opcion elegida se guarda en vars
+        // (ej. campo="respuesta_asistencia" -> vars.respuesta_asistencia = "si")
+        if (elegido && destino && node.config?.campo) {
+          vars[node.config.campo] = String(elegido.valor ?? elegido.label ?? '').trim().toLowerCase()
         }
         if (destino) {
           nodeId = destino
@@ -341,7 +390,7 @@ export async function ejecutarFlujo(
         continue
       }
       case 'fin': {
-        textos.push(interpolar(node.config?.texto || '¡Gracias por contactarnos!', vars))
+        textos.push(interpolar(node.config?.texto ?? '¡Gracias por contactarnos!', vars))
         finFlow = true
         nodeId = null
         break

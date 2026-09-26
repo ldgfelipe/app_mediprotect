@@ -24,6 +24,7 @@ const estados: Record<string, string> = {
   no_asistida: 'No Asistida',
   paciente_llego: 'Paciente llegó',
   en_atencion: 'En atención',
+  PENDIENTE_DE_COORDINACION: 'En coordinación',
 }
 
 const colores: Record<string, string> = {
@@ -35,6 +36,7 @@ const colores: Record<string, string> = {
   no_asistida: '#636e72',
   paciente_llego: '#e17055',
   en_atencion: '#6c5ce7',
+  PENDIENTE_DE_COORDINACION: '#f39c12',
 }
 
 async function cargarCitas() {

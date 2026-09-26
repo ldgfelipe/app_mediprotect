@@ -355,13 +355,26 @@ async function guardarMetadata() {
                   <option value="info_general">Info general</option>
                   <option value="crear_cita">Crear cita</option>
                   <option value="capturar_doctor">Capturar doctor</option>
+                  <option value="registrar_asistencia">Registrar asistencia</option>
                 </select>
-                <label class="insp-label">Texto</label>
-                <textarea v-model="n.config.texto" rows="2" class="insp-input" />
-                <p class="insp-help">
-                  ℹ️ <b>Crear cita</b> usa doctor_id, fecha y hora. <b>Capturar doctor</b> calcula precio y nombre.
-                  <b>Info general</b> envía el texto de abajo.
-                </p>
+                <template v-if="n.config.accion === 'registrar_asistencia'">
+                  <label class="insp-label">Variable de la cita</label>
+                  <input v-model="n.config.campo_cita" class="insp-input" placeholder="cita_id" />
+                  <label class="insp-label">Variable de la respuesta</label>
+                  <input v-model="n.config.campo_respuesta" class="insp-input" placeholder="respuesta_asistencia" />
+                  <label class="insp-label">Texto si asistió</label>
+                  <textarea v-model="n.config.texto_si" rows="2" class="insp-input" />
+                  <label class="insp-label">Texto si no asistió</label>
+                  <textarea v-model="n.config.texto_no" rows="2" class="insp-input" />
+                </template>
+                <template v-else>
+                  <label class="insp-label">Texto</label>
+                  <textarea v-model="n.config.texto" rows="2" class="insp-input" />
+                  <p class="insp-help">
+                    ℹ️ <b>Crear cita</b> usa doctor_id, fecha y hora. <b>Capturar doctor</b> calcula precio y nombre.
+                    <b>Info general</b> envía el texto de abajo.
+                  </p>
+                </template>
               </template>
               <template v-if="(n.nodeType || n.type) === 'condicion'">
                 <label class="insp-label">Campo (variable o «texto»)</label>

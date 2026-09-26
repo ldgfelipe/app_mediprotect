@@ -355,7 +355,8 @@ export async function processMessage(conv: Conversacion, texto: string, nombre: 
             data.fechaSeleccionada,
             data.horaSeleccionada,
             conv.telefono,
-            conv.nombre_paciente || nombre || 'Paciente WhatsApp'
+            conv.nombre_paciente || nombre || 'Paciente WhatsApp',
+            'pendiente'
           )
 
           const nombrePaciente = conv.nombre_paciente || nombre || 'Paciente'
@@ -605,7 +606,8 @@ export async function processMessage(conv: Conversacion, texto: string, nombre: 
             data.fechaSeleccionada,
             data.horaSeleccionada,
             telefono,
-            nombrePaciente
+            nombrePaciente,
+            'pendiente'
           )
 
           return {

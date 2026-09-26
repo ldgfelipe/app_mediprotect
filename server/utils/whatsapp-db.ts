@@ -298,7 +298,10 @@ export async function createCitaFromWhatsApp(
   fecha: string,
   hora: string,
   telefonoPaciente: string,
-  nombrePaciente: string
+  nombrePaciente: string,
+  // MediProtect: las citas creadas por el motor de flujos quedan PENDIENTE_DE_COORDINACION
+  // para que un asistente las coordine manualmente (nunca se confirman solas).
+  estado: string = 'PENDIENTE_DE_COORDINACION'
 ) {
   const fechaHora = `${fecha}T${hora}:00`
 
@@ -314,9 +317,9 @@ export async function createCitaFromWhatsApp(
 
   const result = await pool.query(
     `INSERT INTO citas (id_paciente, id_medico, fecha_hora, precio_acordado, notas_paciente, estado)
-     VALUES ($1, $2, $3::timestamptz, $4, $5, 'pendiente')
+     VALUES ($1, $2, $3::timestamptz, $4, $5, $6)
      RETURNING *`,
-    [pacienteId, medicoId, fechaHora, precioAcordado, `Cita agendada vía WhatsApp por ${nombrePaciente}`]
+    [pacienteId, medicoId, fechaHora, precioAcordado, `Cita agendada vía WhatsApp por ${nombrePaciente}`, estado]
   )
 
   return result.rows[0]

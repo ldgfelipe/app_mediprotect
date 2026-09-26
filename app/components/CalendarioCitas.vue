@@ -125,7 +125,8 @@ const coloresEstado = {
   asistida: '#00cec9',
   no_asistida: '#d63031',
   cancelada: '#b2bec3',
-  reagendada: '#e17055'
+  reagendada: '#e17055',
+  PENDIENTE_DE_COORDINACION: '#fdcb6e'
 }
 
 const legendItems = [

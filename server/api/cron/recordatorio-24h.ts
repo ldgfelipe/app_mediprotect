@@ -21,7 +21,7 @@ export default defineEventHandler(async (event) => {
      JOIN pacientes p ON c.id_paciente = p.id
      LEFT JOIN medicos m ON c.id_medico = m.id
      WHERE c.fecha_hora BETWEEN NOW() + INTERVAL '22 hours' AND NOW() + INTERVAL '26 hours'
-     AND c.estado IN ('pendiente', 'confirmada')
+     AND c.estado IN ('pendiente', 'confirmada', 'PENDIENTE_DE_COORDINACION')
      AND c.recordatorio_24h_enviado = false`
   )
 

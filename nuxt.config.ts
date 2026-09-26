@@ -11,6 +11,8 @@ export default defineNuxtConfig({
     whatsappGatewayApiKey: process.env.WHATSAPP_GATEWAY_APIKEY || '',
     whatsappWebhookApikey: process.env.WHATSAPP_WEBHOOK_APIKEY || '',
     whatsappWebhookAllowedIps: process.env.WHATSAPP_WEBHOOK_ALLOWED_IPS || '',
+    cronSecret: process.env.CRON_SECRET || '',
+    flujoAsistenciaId: process.env.FLUJO_ASISTENCIA_ID || '',
   },
   nitro: {
     experimental: {

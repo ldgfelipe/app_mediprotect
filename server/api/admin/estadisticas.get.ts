@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
   const [pacientes, medicos, citas, ingresos, empresas, pagos, planes, roles] = await Promise.all([
     pool.query('SELECT COUNT(*) FROM pacientes'),
     pool.query('SELECT COUNT(*) FROM medicos'),
-    pool.query("SELECT COUNT(*), COUNT(*) FILTER (WHERE estado = 'pendiente') as pendientes, COUNT(*) FILTER (WHERE estado = 'cancelada') as canceladas FROM citas"),
+    pool.query("SELECT COUNT(*), COUNT(*) FILTER (WHERE estado IN ('pendiente','PENDIENTE_DE_COORDINACION')) as pendientes, COUNT(*) FILTER (WHERE estado = 'cancelada') as canceladas FROM citas"),
     pool.query("SELECT COALESCE(SUM(monto),0) FROM pagos WHERE estado = 'pagado'"),
     pool.query('SELECT COUNT(*) FROM empresas'),
     pool.query("SELECT COUNT(*) FILTER (WHERE estado = 'pendiente') as pagos_pendientes, COUNT(*) FILTER (WHERE estado = 'pagado') as pagos_completados FROM pagos"),

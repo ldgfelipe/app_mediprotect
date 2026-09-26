@@ -101,7 +101,8 @@ function estadoColor(estado: string) {
   const colors: Record<string, string> = {
     pendiente: '#fdcb6e', confirmada: '#00b894', paciente_llego: '#0984e3',
     en_atencion: '#6c5ce7', asistida: '#00cec9', no_asistida: '#d63031',
-    cancelada: '#b2bec3', reagendada: '#e17055'
+    cancelada: '#b2bec3', reagendada: '#e17055',
+    PENDIENTE_DE_COORDINACION: '#fdcb6e'
   }
   return colors[estado] || '#636e72'
 }
@@ -334,9 +335,14 @@ const medicoCitasFiltradas = computed(() => {
   if (!medicoCitasData.value?.citas) return { pendientes: [], historial: [] }
   let citas = medicoCitasData.value.citas
   if (filtroEstadoMedico.value) {
-    citas = citas.filter((c: any) => c.estado === filtroEstadoMedico.value)
+    const f = filtroEstadoMedico.value
+    citas = citas.filter((c: any) =>
+      f === 'pendiente'
+        ? ['pendiente', 'PENDIENTE_DE_COORDINACION'].includes(c.estado)
+        : c.estado === f
+    )
   }
-  const pendientes = citas.filter((c: any) => ['pendiente', 'confirmada', 'paciente_llego', 'en_atencion'].includes(c.estado))
+  const pendientes = citas.filter((c: any) => ['pendiente', 'PENDIENTE_DE_COORDINACION', 'confirmada', 'paciente_llego', 'en_atencion'].includes(c.estado))
   const historial = citas.filter((c: any) => ['asistida', 'cancelada', 'no_asistida', 'reagendada'].includes(c.estado))
   return { pendientes, historial }
 })
@@ -614,7 +620,7 @@ const medicoCitasFiltradas = computed(() => {
           <div class="acciones">
             <h3>Acciones</h3>
             <div class="btn-group">
-              <button v-if="citaSeleccionada.estado === 'pendiente'" @click="cambiarEstado('confirmada', 'Confirmada por admin')" class="btn-action btn-confirm" :disabled="actionLoading">
+              <button v-if="['pendiente','PENDIENTE_DE_COORDINACION'].includes(citaSeleccionada.estado)" @click="cambiarEstado('confirmada', 'Confirmada por admin')" class="btn-action btn-confirm" :disabled="actionLoading">
                 {{ actionLoading === 'confirmada' ? 'Confirmando...' : 'Confirmar' }}
               </button>
               <button v-if="citaSeleccionada.estado === 'confirmada'" @click="cambiarEstado('paciente_llego', 'Paciente llego (reportado por admin)')" class="btn-action btn-arrival" :disabled="actionLoading">
@@ -626,7 +632,7 @@ const medicoCitasFiltradas = computed(() => {
               <button v-if="['en_atencion','paciente_llego'].includes(citaSeleccionada.estado)" @click="cambiarEstado('asistida', 'Cita completada')" class="btn-action btn-success" :disabled="actionLoading">
                 {{ actionLoading === 'asistida' ? 'Procesando...' : 'Marcar Asistida' }}
               </button>
-              <button v-if="['pendiente','confirmada','paciente_llego'].includes(citaSeleccionada.estado)" @click="cambiarEstado('cancelada', 'Cancelada por admin')" class="btn-action btn-cancel-action" :disabled="actionLoading">
+              <button v-if="['pendiente','PENDIENTE_DE_COORDINACION','confirmada','paciente_llego'].includes(citaSeleccionada.estado)" @click="cambiarEstado('cancelada', 'Cancelada por admin')" class="btn-action btn-cancel-action" :disabled="actionLoading">
                 {{ actionLoading === 'cancelada' ? 'Cancelando...' : 'Cancelar' }}
               </button>
             </div>

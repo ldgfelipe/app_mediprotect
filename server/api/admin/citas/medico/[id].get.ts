@@ -29,13 +29,13 @@ export default defineEventHandler(async (event) => {
   const stats = await pool.query(
     `SELECT
        COUNT(*) as total,
-       COUNT(*) FILTER (WHERE estado = 'pendiente') as pendientes,
+       COUNT(*) FILTER (WHERE estado IN ('pendiente','PENDIENTE_DE_COORDINACION')) as pendientes,
        COUNT(*) FILTER (WHERE estado = 'confirmada') as confirmadas,
        COUNT(*) FILTER (WHERE estado IN ('paciente_llego','en_atencion')) as en_curso,
        COUNT(*) FILTER (WHERE estado = 'asistida') as asistidas,
        COUNT(*) FILTER (WHERE estado = 'cancelada') as canceladas,
        COUNT(*) FILTER (WHERE estado = 'no_asistida') as no_asistidas,
-       COUNT(*) FILTER (WHERE fecha_hora >= NOW() AND estado IN ('pendiente','confirmada')) as proximas
+       COUNT(*) FILTER (WHERE fecha_hora >= NOW() AND estado IN ('pendiente','confirmada','PENDIENTE_DE_COORDINACION')) as proximas
      FROM citas WHERE id_medico = $1`,
     [id]
   )

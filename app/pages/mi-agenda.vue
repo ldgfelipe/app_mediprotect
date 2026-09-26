@@ -19,11 +19,13 @@ const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viern
 const estados: Record<string, string> = {
   pendiente: 'Pendiente', confirmada: 'Confirmada', reagendada: 'Reagendada',
   cancelada: 'Cancelada', asistida: 'Asistida', no_asistida: 'No Asistida',
+  PENDIENTE_DE_COORDINACION: 'Pend. Coordinación',
 }
 
 const colores: Record<string, string> = {
   pendiente: '#f39c12', confirmada: '#00b894', reagendada: '#0984e3',
   cancelada: '#d63031', asistida: '#2d3436', no_asistida: '#636e72',
+  PENDIENTE_DE_COORDINACION: '#f39c12',
 }
 
 async function cargarDatos() {
@@ -240,7 +242,7 @@ function cerrarSesion() {
             <small>Notas del paciente: {{ cita.notas_paciente }}</small>
           </div>
           <div class="cita-actions" style="margin-top:0.7rem;display:flex;gap:0.5rem;flex-wrap:wrap">
-            <button v-if="cita.estado === 'pendiente'" @click="confirmar(cita.id)" :disabled="actionLoading === cita.id" class="btn-aceptar">
+            <button v-if="['pendiente','PENDIENTE_DE_COORDINACION'].includes(cita.estado)" @click="confirmar(cita.id)" :disabled="actionLoading === cita.id" class="btn-aceptar">
               {{ actionLoading === cita.id ? '...' : 'Confirmar' }}
             </button>
             <button v-if="cita.estado === 'pendiente'" @click="cancelar(cita.id)" :disabled="actionLoading === cita.id" class="btn-cancelar">
