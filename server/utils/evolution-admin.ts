@@ -66,6 +66,26 @@ export async function connectInstance(cfg: EvolutionCon): Promise<{ state: strin
   const state = await getInstanceState(cfg)
   if (state === 'open') return { state }
 
+  // 1) Reutiliza la instancia existente: nunca destruye una sesion en curso.
+  //    /instance/connect devuelve el QR actual si esta "connecting",
+  //    lo reconecta si esta "close", o un error si la instancia no existe.
+  try {
+    const r = await evolutionCall<any>(cfg, `/instance/connect/${cfg.instanceName}`, { method: 'GET' })
+    if (r && !r.error) {
+      const qr =
+        typeof r === 'string'
+          ? r
+          : r?.base64 || r?.qrcode?.base64 || r?.qrcode || r?.instance?.qrcode?.base64 || ''
+      const st = r?.instance?.state || r?.instance?.status || 'connecting'
+      if (st === 'open') return { state: 'open' }
+      // El QR tambien llega por webhook (qrcode.updated) si aun no esta listo
+      return qr ? { state: 'connecting', base64: qr } : { state: 'connecting' }
+    }
+  } catch {
+    // gateway inaccesible o instancia inexistente: se recrea abajo
+  }
+
+  // 2) No hay instancia utilizable: crearla desde cero
   await deleteInstance(cfg)
 
   let base64 = ''

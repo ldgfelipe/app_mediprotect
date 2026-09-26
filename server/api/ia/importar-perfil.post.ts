@@ -1,88 +1,160 @@
 import jwt from 'jsonwebtoken'
+import { jwtSecret } from '../../utils/secrets'
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/** Segmentos que nunca identifican a un medico. */
+const SEGMENTOS_NO_MEDICO = new Set([
+  'api', 'www', 'mediprotect', 'mediprotect.com.mx', 'perfil', 'perfiles',
+  'red-medica', 'directorio', 'directorio-medico', 'medicos', 'medico',
+  'categorias', 'categoria', 'especialidades', 'especialidad', 'planes',
+  'contacto', 'about', 'beneficios', 'citas', 'agendar', 'inicio', 'home',
+])
+
+/** Prefijos de titulo que el slug del medico no lleva. */
+const PREFIJOS_TITULO = ['doctora-', 'doctor-', 'dra-', 'dr-']
+
+interface Candidatos {
+  slugs: string[]
+  ids: string[]
+}
+
+/**
+ * Acepta cualquier variante de URL usada por el LandingSite / CRM:
+ *   /perfil-dr-{slug}  /perfil-{slug}  /red-medica/{slug}
+ *   /directorio-medico/perfil/{id|slug}  /medicos/{uuid}
+ *   /directorio-medico-{categoria}/{slug}  /{categoria}/{slug}
+ *   slug simple sin dominio, con query, hash, mayusculas o barra final.
+ */
+function candidatosDesdeUrl(entrada: string): Candidatos {
+  const slugs: string[] = []
+  const ids: string[] = []
+  const vistos = new Set<string>()
+
+  const push = (valor?: string | null) => {
+    if (!valor) return
+    const s = String(valor).trim().toLowerCase().replace(/^\/+|\/+$/g, '')
+    if (!s || s.length < 3 || vistos.has(s)) return
+    if (UUID_RE.test(s)) {
+      vistos.add(s)
+      ids.push(s)
+      return
+    }
+    if (!/^[a-z0-9-]+$/.test(s)) return
+    if (SEGMENTOS_NO_MEDICO.has(s)) return
+    vistos.add(s)
+    slugs.push(s)
+    // variantes sin prefijo de titulo (dr-, dra-, ...)
+    for (const p of PREFIJOS_TITULO) {
+      if (s.startsWith(p) && s.length > p.length) {
+        const sin = s.slice(p.length)
+        if (!vistos.has(sin)) {
+          vistos.add(sin)
+          slugs.push(sin)
+        }
+      }
+    }
+  }
+
+  const limpia = String(entrada || '').trim().toLowerCase().split(/[?#]/)[0]
+  const sinProto = limpia.replace(/^https?:\/\//, '')
+  const barra = sinProto.indexOf('/')
+  const path = barra === -1 ? `/${sinProto}` : sinProto.slice(barra)
+  const segmentos = path.split('/').map((s) => s.trim()).filter(Boolean)
+
+  // 1) Patrones explicitos de perfil (mayor prioridad)
+  const patrones = [
+    /perfil[-_]dr[-_](.+)$/,
+    /perfil[-_](.+)$/,
+    /red-medica\/(.+)$/,
+    /directorio-medico\/perfil\/(.+)$/,
+    /medicos\/(.+)$/,
+  ]
+  for (const re of patrones) {
+    const m = path.match(re)
+    if (m && m[1]) push(m[1].split('/')[0])
+  }
+
+  // 2) Todos los segmentos: el slug del medico suele ser el ultimo
+  for (let i = segmentos.length - 1; i >= 0; i--) push(segmentos[i])
+
+  return { slugs, ids }
+}
 
 export default defineEventHandler(async (event) => {
-  // Verificar auth
+  // Verificar auth (mismo secreto que verifyAdminToken y login-admin)
   const token = getHeader(event, 'authorization')?.replace('Bearer ', '') || getCookie(event, 'admin_token')
   if (!token) throw createError({ statusCode: 401, message: 'No autorizado' })
-  try { jwt.verify(token, process.env.JWT_SECRET || 'mediprotect_jwt_secret_key_2026') }
-  catch { throw createError({ statusCode: 401, message: 'Token inv�lido' }) }
+  try {
+    jwt.verify(token, jwtSecret())
+  } catch (err: any) {
+    if (err?.name === 'TokenExpiredError') {
+      throw createError({ statusCode: 401, message: 'Tu sesion expiro, vuelve a iniciar sesion' })
+    }
+    throw createError({ statusCode: 401, message: 'Token invalido' })
+  }
 
   const body = await readBody(event)
   const { url } = body
-
-  if (!url) {
+  if (!url || !String(url).trim()) {
     throw createError({ statusCode: 400, message: 'La URL es requerida' })
   }
 
-  // Extraer slug de la URL
-  const slug = extraerSlug(url)
-  if (!slug) {
+  const { slugs, ids } = candidatosDesdeUrl(String(url))
+  if (slugs.length === 0 && ids.length === 0) {
     throw createError({
       statusCode: 400,
-      message: 'No se pudo extraer el slug de la URL. Formato esperado: https://www.mediprotect.com.mx/perfil-dr-{slug} o https://www.mediprotect.com.mx/{slug}'
+      message:
+        'No se pudo identificar el medico en la URL. Usa: https://www.mediprotect.com.mx/perfil-dr-{slug}',
     })
   }
 
-  // Llamar a la API de directorio para obtener el perfil
   const pool = await useDbPool(event)
 
   try {
-    // Buscar m�dico por slug en nuestra DB
-    const result = await pool.query(`
+    const SQL_SELECT = `
       SELECT m.*, e.nombre as especialidad_nombre, e.slug as especialidad_slug,
              e.color as especialidad_color, e.icono as especialidad_icono
       FROM medicos m
       LEFT JOIN especialidades e ON m.id_especialidad = e.id
-      WHERE m.slug = $1 AND m.activo = true
-      LIMIT 1
-    `, [slug])
+    `
 
-    if (result.rowCount === 0) {
+    let medico: any = null
+
+    // 3) Busqueda exacta por id, slug o perfil_url_path (respetando el orden de los candidatos)
+    const exacta = await pool.query(
+      `${SQL_SELECT}
+       WHERE m.activo = true
+         AND (
+           m.id = ANY($1::uuid[])
+           OR m.slug = ANY($2::text[])
+           OR m.perfil_url_path = ANY($2::text[])
+         )
+       ORDER BY array_position($2::text[], m.slug)
+       LIMIT 1`,
+      [ids, slugs]
+    )
+    medico = exacta.rows[0] || null
+
+    // 4) Fallback: coincidencia parcial con el primer candidato
+    if (!medico && slugs.length > 0) {
+      const parcial = await pool.query(
+        `${SQL_SELECT}
+         WHERE m.activo = true AND (m.slug ILIKE $1 OR m.perfil_url_path ILIKE $1)
+         ORDER BY length(m.slug) ASC
+         LIMIT 1`,
+        [`%${slugs[0]}%`]
+      )
+      medico = parcial.rows[0] || null
+    }
+
+    if (!medico) {
       throw createError({
         statusCode: 404,
-        message: `No se encontr� un m�dico con el slug "${slug}" en el directorio. Verifica que la URL sea correcta.`
+        message: `No se encontro un medico activo para "${slugs[0] || ids[0]}". Candidatos probados: ${slugs.join(', ') || ids.join(', ')}`,
       })
     }
 
-    const medico = result.rowCount > 0 ? result.rows[0] : null
-
-    // Si no est� en nuestra DB, intentar obtener datos b�sicos del slug
-    if (!medico) {
-      // Construir nombre desde el slug
-      const nombreFormateado = slug
-        .split('-')
-        .map((p: string) => p.charAt(0).toUpperCase() + p.slice(1))
-        .join(' ')
-
-      return {
-        success: true,
-        fuente: 'slug',
-        perfil: {
-          slug,
-          nombre_completo: nombreFormateado,
-          nombre: nombreFormateado.split(' ').slice(0, -2).join(' ') || nombreFormateado,
-          apellido: nombreFormateado.split(' ').slice(-2).join(' ') || '',
-          foto_url: null,
-          bio: null,
-          especialidad: null,
-          ciudad: null,
-          hospital: null,
-          universidad: null,
-          cedula_profesional: null,
-          servicios: [],
-          idiomas: ['Espa�ol'],
-          formacion_academica: [],
-          certificaciones: [],
-          horario_atencion: null,
-          precio_regular: null,
-          precio_miembro: null,
-          whatsapp: null,
-          frase_inspiradora: null
-        }
-      }
-    }
-
-    // Formatear datos desde la DB
     const perfil = {
       id: medico.id,
       slug: medico.slug,
@@ -95,13 +167,17 @@ export default defineEventHandler(async (event) => {
       especialidad: medico.especialidad_nombre,
       subespecialidad: medico.subespecialidad,
       ciudad: medico.consultorio_ciudad,
-      hospital: medico.hospital,
+      hospital: medico.hospital_consultorio || medico.hospital,
       universidad: medico.universidad,
       cedula_profesional: medico.cedula_profesional,
       servicios: medico.servicios || [],
-      idiomas: medico.idiomas || ['Espa�ol'],
+      idiomas: medico.idiomas || ['Espanol'],
       formacion_academica: medico.formacion_academica || [],
-      certificaciones: medico.certificaciones ? (typeof medico.certificaciones === 'string' ? medico.certificaciones.split(',').map((c: string) => c.trim()) : medico.certificaciones) : [],
+      certificaciones: medico.certificaciones
+        ? (typeof medico.certificaciones === 'string'
+            ? medico.certificaciones.split(',').map((c: string) => c.trim())
+            : medico.certificaciones)
+        : [],
       horario_atencion: medico.horario_atencion,
       precio_regular: medico.precio_regular,
       precio_miembro: medico.precio_miembro,
@@ -113,55 +189,16 @@ export default defineEventHandler(async (event) => {
       especialidad_nombre: medico.especialidad_nombre,
       especialidad_slug: medico.especialidad_slug,
       especialidad_color: medico.especialidad_color,
-      especialidad_icono: medico.especialidad_icono
+      especialidad_icono: medico.especialidad_icono,
     }
 
-    return {
-      success: true,
-      fuente: 'directorio',
-      perfil
-    }
-
+    return { success: true, fuente: 'directorio', perfil }
   } catch (err: any) {
     if (err.statusCode) throw err
+    console.error('[Importar Perfil] Error:', err)
     throw createError({
       statusCode: 500,
-      message: 'Error al consultar el directorio: ' + err.message
+      message: 'Error al consultar el directorio: ' + (err.message || 'error desconocido'),
     })
   }
 })
-
-function extraerSlug(url: string): string | null {
-  // Limpiar URL
-  const cleanUrl = url.trim().toLowerCase()
-
-  // Patr�n 1: https://www.mediprotect.com.mx/perfil-dr-{slug}
-  let match = cleanUrl.match(/mediprotect\.com\.mx\/perfil[-_]dr[-_]([a-z0-9-]+)/)
-  if (match) return match[1]
-
-  // Patr�n 2: https://www.mediprotect.com.mx/perfil-{slug}
-  match = cleanUrl.match(/mediprotect\.com\.mx\/perfil[-_]([a-z0-9-]+)/)
-  if (match) return match[1]
-
-  // Patr�n 3: https://www.mediprotect.com.mx/red-medica/{slug}
-  match = cleanUrl.match(/mediprotect\.com\.mx\/red-medica\/([a-z0-9-]+)/)
-  if (match) return match[1]
-
-  // Patr�n 4: https://www.mediprotect.com.mx/{slug} (directo)
-  match = cleanUrl.match(/mediprotect\.com\.mx\/([a-z0-9-]+)/)
-  if (match) {
-    const slug = match[1]
-    // Excluir p�ginas que no son perfiles
-    const excluded = ['red-medica', 'beneficios', 'directorio-medico', 'planes', 'contacto', 'about']
-    if (!excluded.some(e => slug.startsWith(e))) {
-      return slug
-    }
-  }
-
-  // Patr�n 5: Si es solo el slug (sin URL)
-  if (/^[a-z0-9-]+$/.test(cleanUrl) && cleanUrl.length > 3) {
-    return cleanUrl
-  }
-
-  return null
-}

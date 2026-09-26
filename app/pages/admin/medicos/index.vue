@@ -137,8 +137,12 @@ async function searchWithAI() {
     const data = result as any
     if (data.success && data.perfil) { aiResult.value = data.perfil; showAiPreview.value = true }
     else { aiError.value = 'No se pudo extraer informacion' }
-  } catch (err: any) { aiError.value = err.data?.message || err.message || 'Error' }
-  finally { searchingAI.value = false }
+  } catch (err: any) {
+    if (err?.status === 401 || err?.data?.statusCode === 401) {
+      token.value = null; aiError.value = 'Tu sesion expiro, vuelve a iniciar sesion'; await navigateTo('/admin/login'); return
+    }
+    aiError.value = err.data?.message || err.message || 'Error'
+  } finally { searchingAI.value = false }
 }
 
 async function importFromUrl() {
@@ -149,20 +153,32 @@ async function importFromUrl() {
     const data = result as any
     if (data.success && data.perfil) { aiResult.value = data.perfil; showAiPreview.value = true }
     else { aiError.value = 'No se pudo importar el perfil' }
-  } catch (err: any) { aiError.value = err.data?.message || 'Error' }
-  finally { searchingAI.value = false }
+  } catch (err: any) {
+    if (err?.status === 401 || err?.data?.statusCode === 401) {
+      token.value = null; aiError.value = 'Tu sesion expiro, vuelve a iniciar sesion'; await navigateTo('/admin/login'); return
+    }
+    aiError.value = err.data?.message || 'Error'
+  } finally { searchingAI.value = false }
 }
 
 function applyAiData() {
   if (!aiResult.value) return
   const p = aiResult.value
   const nm = newMedico.value
-  if (p.nombre) nm.nombre = p.nombre; if (p.apellido_paterno) nm.apellido_paterno = p.apellido_paterno
-  if (p.apellido_materno) nm.apellido_materno = p.apellido_materno
+  if (p.nombre) nm.nombre = p.nombre
+  if (p.apellido) {
+    const partes = String(p.apellido).trim().split(/\s+/)
+    nm.apellido_paterno = partes[0] || ''
+    nm.apellido_materno = partes.slice(1).join(' ')
+  } else {
+    if (p.apellido_paterno) nm.apellido_paterno = p.apellido_paterno
+    if (p.apellido_materno) nm.apellido_materno = p.apellido_materno
+  }
   if (p.titulo) nm.titulo = p.titulo; if (p.cedula_profesional) nm.cedula_profesional = p.cedula_profesional
   if (p.email) nm.email = p.email; if (p.telefono) nm.telefono = p.telefono
   if (p.especialidad) nm.especialidad = p.especialidad; if (p.ciudad) nm.ciudad = p.ciudad
-  if (p.hospital_consultorio) nm.hospital_consultorio = p.hospital_consultorio; if (p.bio) nm.bio = p.bio
+  const hosp = p.hospital_consultorio || p.hospital
+  if (hosp) nm.hospital_consultorio = hosp; if (p.bio) nm.bio = p.bio
   if (p.rfc) nm.rfc = p.rfc; if (p.tipo_consulta) nm.tipo_consulta = p.tipo_consulta
   if (p.universidad) nm.universidad = p.universidad
   if (p.horario_atencion) nm.horario_atencion = p.horario_atencion

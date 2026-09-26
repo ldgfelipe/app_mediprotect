@@ -21,11 +21,11 @@ export default defineEventHandler(async (event) => {
 
   const curpUpper = (curp || '').toUpperCase().trim()
   if (curpUpper && !/^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/.test(curpUpper)) {
-    throw createError({ statusCode: 400, message: 'El formato de CURP no es v�lido' })
+    throw createError({ statusCode: 400, message: 'El formato de CURP no es válido' })
   }
 
   if (codigo_postal && !/^\d{5}$/.test(codigo_postal)) {
-    throw createError({ statusCode: 400, message: 'El c�digo postal debe tener 5 d�gitos' })
+    throw createError({ statusCode: 400, message: 'El código postal debe tener 5 dígitos' })
   }
 
   const pool = await useDbPool(event)
@@ -33,14 +33,14 @@ export default defineEventHandler(async (event) => {
   if (email) {
     const existing = await pool.query('SELECT id FROM medicos WHERE email = $1', [email])
     if (existing.rows.length > 0) {
-      throw createError({ statusCode: 400, message: 'El email ya est� registrado' })
+      throw createError({ statusCode: 400, message: 'El email ya está registrado' })
     }
   }
 
   if (usuario) {
     const dupUser = await pool.query('SELECT id FROM medicos WHERE usuario = $1', [usuario])
     if (dupUser.rowCount > 0) {
-      throw createError({ statusCode: 400, message: 'Ya existe un m�dico con ese usuario' })
+      throw createError({ statusCode: 400, message: 'Ya existe un médico con ese usuario' })
     }
   }
 
@@ -69,7 +69,7 @@ export default defineEventHandler(async (event) => {
     .replace(/\s+/g, '-')
 
   const serviciosArray = servicios ? servicios.split(',').map((s: string) => s.trim()).filter(Boolean) : []
-  const idiomasArray = idiomas ? idiomas.split(',').map((i: string) => i.trim()).filter(Boolean) : ['Espa�ol']
+  const idiomasArray = idiomas ? idiomas.split(',').map((i: string) => i.trim()).filter(Boolean) : ['Español']
 
   let passwordHash = null
   if (password && password.trim()) {
@@ -124,8 +124,8 @@ export default defineEventHandler(async (event) => {
           email,
           'Confirma tu correo en MediProtect',
           `<h2>Bienvenido, ${nombre} ${apellido}!</h2>
-           <p>Tu cuenta de m�dico ha sido registrada exitosamente en <strong>MediProtect</strong>.</p>
-           <p>Para completar tu registro, confirma tu correo electr�nico:</p>
+           <p>Tu cuenta de médico ha sido registrada exitosamente en <strong>MediProtect</strong>.</p>
+           <p>Para completar tu registro, confirma tu correo electrónico:</p>
            <p><a href="${confirmUrl}" style="display:inline-block;background:#00b894;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">Confirmar mi correo</a></p>
            <p>Si no puedes hacer clic, copia y pega esta URL en tu navegador:</p>
            <p style="word-break:break-all;font-size:0.85rem;color:#636e72;">${confirmUrl}</p>
@@ -133,7 +133,7 @@ export default defineEventHandler(async (event) => {
            <p>Saludos,<br>Equipo MediProtect</p>`
         )
       } catch (e: any) {
-        console.error('Error enviando correo de confirmaci�n:', e.message)
+        console.error('Error enviando correo de confirmación:', e.message)
       }
     }
 

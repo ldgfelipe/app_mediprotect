@@ -9,7 +9,7 @@ const _user = verifyAdminOrAsistenteToken(event)
            p.telefono as paciente_telefono,
            CASE WHEN m.id IS NOT NULL THEN CONCAT(m.nombre, ' ', m.apellido)
                 ELSE COALESCE(
-                  NULLIF(TRIM(BOTH '[]' FROM SPLIT_PART(c.notas_paciente, '[M�dico:', 2)), ''),
+                  NULLIF(TRIM(BOTH '[]' FROM SPLIT_PART(c.notas_paciente, '[Médico:', 2)), ''),
                   'No especificado'
                 )
            END as medico_nombre

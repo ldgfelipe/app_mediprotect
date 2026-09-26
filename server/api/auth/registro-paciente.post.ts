@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
   const pool = await useDbPool(event)
   const existing = await pool.query('SELECT id FROM pacientes WHERE email = $1', [email])
   if (existing.rows.length > 0) {
-    throw createError({ statusCode: 400, message: 'El email ya est� registrado' })
+    throw createError({ statusCode: 400, message: 'El email ya está registrado' })
   }
 
   const password_hash = await bcrypt.hash(password, 10)
@@ -113,14 +113,14 @@ export default defineEventHandler(async (event) => {
   const confirmUrl = `${baseUrl}/confirmar-email?token=${confirmToken}&tipo=paciente`
 
   try {
-    const planText = esPlanPago && planInfo ? `Tu plan: ${planInfo.nombre}` : 'Plan gratuito MediProtect B�sico'
+    const planText = esPlanPago && planInfo ? `Tu plan: ${planInfo.nombre}` : 'Plan gratuito MediProtect Básico'
     await enviarCorreo(
       paciente.email,
       'Confirma tu correo en MediProtect',
       `<h2>Bienvenido, ${paciente.nombre} ${paciente.apellido}!</h2>
        <p>Tu cuenta de paciente ha sido registrada exitosamente en <strong>MediProtect</strong>.</p>
        <p><strong>${planText}</strong></p>
-       <p>Para completar tu registro, confirma tu correo electr�nico:</p>
+       <p>Para completar tu registro, confirma tu correo electrónico:</p>
        <p><a href="${confirmUrl}" style="display:inline-block;background:#00b894;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">Confirmar mi correo</a></p>
        <p>Si no puedes hacer clic, copia y pega esta URL en tu navegador:</p>
        <p style="word-break:break-all;font-size:0.85rem;color:#636e72;">${confirmUrl}</p>
@@ -128,7 +128,7 @@ export default defineEventHandler(async (event) => {
        <p>Saludos,<br>Equipo MediProtect</p>`
     )
   } catch (e: any) {
-    console.error('Error enviando correo de confirmaci�n:', e.message)
+    console.error('Error enviando correo de confirmación:', e.message)
   }
 
   setResponseStatus(event, 201)

@@ -327,6 +327,14 @@
             <p class="config-desc">Escanea con WhatsApp desde el celular antes de que caduque el código.</p>
           </div>
 
+          <div v-else-if="estadoInstancia === 'close'" class="qr-container">
+            <p class="config-desc">📴 Desconectado. Pulsa <strong>Conectar / ver QR</strong> para vincular el número.</p>
+          </div>
+
+          <div v-else class="qr-container">
+            <p class="config-desc">⏳ Esperando el código QR… se actualizará solo, no hace falta volver a conectar.</p>
+          </div>
+
           <div class="vinculacion-webhook">
             <button
               class="btn-save-config"

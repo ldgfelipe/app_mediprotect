@@ -6,7 +6,7 @@ const _user = verifyAdminToken(event)
   const { configuraciones } = body
 
   if (!configuraciones || !Array.isArray(configuraciones)) {
-    throw createError({ statusCode: 400, message: 'Formato inv�lido' })
+    throw createError({ statusCode: 400, message: 'Formato inválido' })
   }
 
   const pool = await useDbPool(event)
