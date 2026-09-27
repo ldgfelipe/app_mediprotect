@@ -10,7 +10,12 @@ export default defineEventHandler(async (event) => {
   if (!cur.rows[0]) throw createError({ statusCode: 404, message: 'Flujo no encontrado' })
 
   const nombre = typeof body?.nombre === 'string' && body.nombre.trim() ? body.nombre.trim() : null
-  const keywords = Array.isArray(body?.keywords) ? body.keywords : null
+  const parseKeywords = (val: any): string[] | null => {
+    if (Array.isArray(val)) return val.map((k: string) => String(k).trim()).filter(Boolean)
+    if (typeof val === 'string') return val.split(',').map((k: string) => k.trim()).filter(Boolean)
+    return null
+  }
+  const keywords = parseKeywords(body?.keywords)
   const definicion = typeof body?.definicion === 'object' ? body.definicion : null
   const activo = typeof body?.activo === 'boolean' ? body.activo : null
   const descripcion = typeof body?.descripcion === 'string' ? body.descripcion : null

@@ -170,7 +170,8 @@
 
       <!-- TAB: Simulador -->
       <template v-if="tabActiva === 'simulador'">
-          <!-- Panel de entrada -->
+        <div class="simulador-layout">
+          <!-- Panel de entrada (izquierda) -->
           <div class="sim-input-panel">
             <h3>🧪 Simulador de WhatsApp</h3>
             <p class="sim-desc">Simula mensajes entrantes de pacientes. El sistema procesa automáticamente y responde según el flujo.</p>
@@ -286,6 +287,7 @@
               </div>
             </div>
           </div>
+        </div>
       </template>
 
       <!-- TAB: Configuración -->
