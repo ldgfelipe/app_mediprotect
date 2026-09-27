@@ -19,12 +19,13 @@ export default defineEventHandler(async (event) => {
 
   let sql = `
     SELECT c.*,
-      p.nombre as paciente_nombre, p.apellido as paciente_apellido, p.telefono as paciente_telefono,
-      COALESCE(m.nombre, '') as medico_nombre, COALESCE(m.apellido, '') as medico_apellido,
+      COALESCE(p.nombre, c.whatsapp_nombre) as paciente_nombre,
+      p.apellido as paciente_apellido, COALESCE(c.whatsapp_telefono, p.telefono) as paciente_telefono,
+      COALESCE(c.whatsapp_medico_nombre, m.nombre, '') as medico_nombre, COALESCE(m.apellido, '') as medico_apellido,
       m.whatsapp as medico_whatsapp,
       a.nombre as asistente_nombre, a.apellido as asistente_apellido
     FROM citas c
-    JOIN pacientes p ON p.id = c.id_paciente
+    LEFT JOIN pacientes p ON p.id = c.id_paciente
     LEFT JOIN medicos m ON m.id = c.id_medico
     LEFT JOIN asistentes a ON a.id = c.asistente_id
     WHERE 1=1

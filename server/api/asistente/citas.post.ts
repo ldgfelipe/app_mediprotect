@@ -17,14 +17,15 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event)
   const { id_paciente, id_medico, medico_nombre, fecha_hora, notas_paciente, notas_asistente } = body
 
-  if (!id_paciente || !fecha_hora) {
-    throw createError({ statusCode: 400, message: 'Paciente y fecha/hora son requeridos' })
+  if (!id_paciente) {
+    throw createError({ statusCode: 400, message: 'El paciente es requerido' })
   }
 
-  // Validar formato de fecha_hora
-  const fechaValida = new Date(fecha_hora)
-  if (isNaN(fechaValida.getTime())) {
-    throw createError({ statusCode: 400, message: 'Formato de fecha/hora inválido' })
+  if (fecha_hora) {
+    const fechaValida = new Date(fecha_hora)
+    if (isNaN(fechaValida.getTime())) {
+      throw createError({ statusCode: 400, message: 'Formato de fecha/hora inválido' })
+    }
   }
   if (!id_medico && !medico_nombre) {
     throw createError({ statusCode: 400, message: 'Se requiere un médico (seleccionado o nombre manual)' })
@@ -40,7 +41,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // Verify patient exists
-  const paciente = await pool.query('SELECT id, nombre, apellido FROM pacientes WHERE id = $1', [id_paciente])
+  const paciente = await pool.query('SELECT id, nombre, apellido, telefono FROM pacientes WHERE id = $1', [id_paciente])
   if (paciente.rows.length === 0) {
     throw createError({ statusCode: 404, message: 'Paciente no encontrado' })
   }
@@ -72,18 +73,34 @@ export default defineEventHandler(async (event) => {
   }
 
   // Create the cita
-  const result = await pool.query(
-    `INSERT INTO citas (id_paciente, id_medico, fecha_hora, notas_paciente, notas_asistente, asistente_id, estado)
-     VALUES ($1, $2, COALESCE($3::timestamptz, NOW()), $4, $5, $6, 'pendiente')
-     RETURNING *`,
-    [id_paciente, id_medico || null, fecha_hora, notas_paciente || null, notasConMedico, asistenteId]
-  )
-
-  const cita = result.rows[0]
-
+  const estado = fecha_hora ? 'pendiente' : 'PENDIENTE_DE_COORDINACION'
+  const pacienteInfo = paciente.rows[0]
+  const pacienteNombre = `${pacienteInfo.nombre} ${pacienteInfo.apellido || ''}`.trim()
   const medicoDesc = medicoData
     ? `${medicoData.nombre} ${medicoData.apellido}`
     : medico_nombre || 'No especificado'
+  const result = await pool.query(
+    `INSERT INTO citas (
+       id_paciente, id_medico, fecha_hora, notas_paciente, notas_asistente, asistente_id, estado,
+       whatsapp_telefono, whatsapp_nombre, whatsapp_medico_nombre
+     )
+     VALUES ($1, $2, $3::timestamptz, $4, $5, $6, $7, $8, $9, $10)
+     RETURNING *`,
+    [
+      id_paciente,
+      id_medico || null,
+      fecha_hora || null,
+      notas_paciente || null,
+      notasConMedico,
+      asistenteId,
+      estado,
+      pacienteInfo.telefono || null,
+      pacienteNombre,
+      medicoDesc,
+    ]
+  )
+
+  const cita = result.rows[0]
 
   emitCitaEvento('cita:created', {
     id: cita.id,
@@ -91,14 +108,20 @@ export default defineEventHandler(async (event) => {
     medico_id: id_medico || null,
     paciente_nombre: paciente.rows[0].nombre,
     medico_nombre: medicoDesc,
-    estado: 'pendiente',
+    estado,
   })
 
   // Log in bitácora
   await pool.query(
     `INSERT INTO citas_bitacora (id_cita, id_usuario, tipo_usuario, accion, estado_nuevo, descripcion, created_at)
-     VALUES ($1, $2, 'asistente', 'creacion', 'pendiente', $3, NOW())`,
-    [cita.id, user.id, `Cita creada por asistente. Paciente: ${paciente.rows[0].nombre} ${paciente.rows[0].apellido}. Médico: ${medicoDesc}`]
+     VALUES ($1, $2, $3, 'creacion', $4, $5, NOW())`,
+    [
+      cita.id,
+      user.id,
+      user.tipo?.toLowerCase() === 'admin' ? 'admin' : 'asistente',
+      estado,
+      `Cita creada. Paciente: ${pacienteNombre}. Médico: ${medicoDesc}`,
+    ]
   )
 
   return { cita }

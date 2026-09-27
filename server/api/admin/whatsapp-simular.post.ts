@@ -1,7 +1,11 @@
 import { logMensaje, getOrCreateConversation, updateConversationState } from '../../utils/whatsapp-db'
 import { processMessage, parsearSolicitudCita } from '../../utils/whatsapp-flow'
+import { proseguirOIniciarFlujo } from '../../utils/whatsapp-flow-runner'
+import { verifyAdminToken } from '../../utils/auth'
+import { procesarSeleccionHorarioCita } from '../../utils/whatsapp-pending-appointments'
 
 export default defineEventHandler(async (event) => {
+  verifyAdminToken(event)
   const pool = await useDbPool(event)
   const body = await readBody(event)
 
@@ -16,16 +20,23 @@ export default defineEventHandler(async (event) => {
   await logMensaje(pool, telefono, 'in', mensaje, 'text', `sim_${Date.now()}`)
 
   const conv = await getOrCreateConversation(pool, telefono, 'Simulador')
+  const seleccionCita = await procesarSeleccionHorarioCita(pool, telefono, mensaje)
+  const flowResult = seleccionCita.matched
+    ? { respuesta: { texto: seleccionCita.respuesta, nuevoEstado: conv.estado, datosTemp: conv.datos_temp || {} }, flujoDetectado: true }
+    : await proseguirOIniciarFlujo(pool, conv, mensaje, 'Simulador')
+  let respuesta: any = flowResult.respuesta
 
-  if (conv.estado === 'bienvenida') {
-    const solicitud = parsearSolicitudCita(mensaje)
-    if (solicitud.esSolicitudDirecta) {
-      await updateConversationState(pool, conv.id, 'solicitud_directa', conv.datos_temp || {})
-      conv.estado = 'solicitud_directa'
+  if (!flowResult.flujoDetectado) {
+    if (conv.estado === 'bienvenida') {
+      const solicitud = parsearSolicitudCita(mensaje)
+      if (solicitud.esSolicitudDirecta) {
+        await updateConversationState(pool, conv.id, 'solicitud_directa', conv.datos_temp || {})
+        conv.estado = 'solicitud_directa'
+      }
     }
-  }
 
-  const respuesta = await processMessage(conv, mensaje, 'Simulador', pool)
+    respuesta = await processMessage(conv, mensaje, 'Simulador', pool)
+  }
 
   if (respuesta) {
     await logMensaje(

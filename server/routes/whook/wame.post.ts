@@ -5,6 +5,7 @@ import { enviarMensaje, enviarLista, enviarBotones } from '../../utils/whatsapp'
 import { estaAutorizadoWebhook } from '../../utils/whook-guard'
 import { normalizarQR } from '../../utils/evolution-admin'
 import { permiteMensaje } from '../../utils/whatsapp-security'
+import { procesarSeleccionHorarioCita } from '../../utils/whatsapp-pending-appointments'
 
 export default defineEventHandler(async (event) => {
   const pool = await useDbPool(event)
@@ -157,10 +158,16 @@ async function processIncomingMessage(msg: any, pool: any) {
   let flujoUsado = false
 
   if (tipo === 'text' || tipo === 'list' || tipo === 'button') {
-    const flowRes = await proseguirOIniciarFlujo(pool, conv, texto, nombre)
-    if (flowRes.flujoDetectado) {
-      respuesta = flowRes.respuesta
+    const seleccionCita = await procesarSeleccionHorarioCita(pool, telefono, texto)
+    if (seleccionCita.matched) {
+      respuesta = { texto: seleccionCita.respuesta, nuevoEstado: conv.estado, datosTemp: conv.datos_temp || {} }
       flujoUsado = true
+    } else {
+      const flowRes = await proseguirOIniciarFlujo(pool, conv, texto, nombre)
+      if (flowRes.flujoDetectado) {
+        respuesta = flowRes.respuesta
+        flujoUsado = true
+      }
     }
   }
 

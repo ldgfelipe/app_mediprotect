@@ -5,7 +5,9 @@ import { useNotifications } from '~/composables/useNotifications'
 definePageMeta({ middleware: 'admin-auth' })
 const adminToken = useCookie('admin_token')
 const citas = ref<any[]>([])
+const citasPendientesCoordinacion = ref<any[]>([])
 const loading = ref(true)
+const loadingCoordinacion = ref(false)
 const search = ref('')
 const filterEstado = ref('')
 const activeTab = ref('citas')
@@ -46,6 +48,9 @@ const bitacora = ref<any[]>([])
 const mensajesWA = ref<any[]>([])
 const notaText = ref('')
 const newMsg = ref({ remitente: '', destinatario: '', telefono: '', mensaje: '' })
+const opcionesCita = ref([{ fecha: '', hora: '' }, { fecha: '', hora: '' }])
+const enviandoOpciones = ref(false)
+const errorOpciones = ref('')
 
 const busquedaMedicoCitas = ref('')
 const medicosCitasList = ref<any[]>([])
@@ -85,16 +90,55 @@ async function cargarCitas() {
     citas.value = data?.citas || []
   } catch (e) { console.error(e) }
   loading.value = false
+  await cargarSolicitudesCoordinacion()
+}
+
+async function cargarSolicitudesCoordinacion() {
+  loadingCoordinacion.value = true
+  try {
+    const data: any = await $fetch('/api/asistente/citas/pendientes', {
+      headers: { Authorization: 'Bearer ' + adminToken.value }
+    })
+    citasPendientesCoordinacion.value = data?.citas || []
+  } catch (e) {
+    console.error(e)
+    citasPendientesCoordinacion.value = []
+  } finally {
+    loadingCoordinacion.value = false
+  }
 }
 
 const filtered = computed(() => {
   let r = citas.value
+  r = r.filter(c => !(c.estado === 'PENDIENTE_DE_COORDINACION' && !c.fecha_hora))
   if (filterEstado.value) r = r.filter(c => c.estado === filterEstado.value)
   if (search.value) {
     const s = search.value.toLowerCase()
-    r = r.filter(c => c.paciente_nombre?.toLowerCase().includes(s) || c.medico_nombre?.toLowerCase().includes(s))
+    r = r.filter(c =>
+      c.paciente_nombre?.toLowerCase().includes(s) ||
+      c.whatsapp_nombre?.toLowerCase().includes(s) ||
+      c.medico_nombre?.toLowerCase().includes(s) ||
+      String(c.paciente_telefono || '').toLowerCase().includes(s) ||
+      String(c.whatsapp_telefono || '').toLowerCase().includes(s)
+    )
   }
   return r
+})
+
+const solicitudesCoordinacion = computed(() => {
+  if (filterEstado.value && filterEstado.value !== 'PENDIENTE_DE_COORDINACION') return []
+  let solicitudes = citasPendientesCoordinacion.value
+  if (search.value) {
+    const s = search.value.toLowerCase()
+    solicitudes = solicitudes.filter(c =>
+      c.paciente_nombre?.toLowerCase().includes(s) ||
+      c.whatsapp_nombre?.toLowerCase().includes(s) ||
+      c.medico_nombre?.toLowerCase().includes(s) ||
+      String(c.paciente_telefono || '').toLowerCase().includes(s) ||
+      String(c.whatsapp_telefono || '').toLowerCase().includes(s)
+    )
+  }
+  return solicitudes
 })
 
 function estadoColor(estado: string) {
@@ -108,7 +152,9 @@ function estadoColor(estado: string) {
 }
 
 function formatearFecha(fechaISO: string) {
+  if (!fechaISO) return 'Sin fecha/hora — pendiente de coordinación'
   const fecha = new Date(fechaISO)
+  if (Number.isNaN(fecha.getTime())) return 'Sin fecha/hora — pendiente de coordinación'
   return fecha.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
@@ -204,14 +250,16 @@ async function parsearMensaje() {
 
 async function crearCita() {
   errorCita.value = ''
-  if (!pacienteSeleccionado.value) { errorCita.value = 'Selecciona un paciente en el paso 1'; pasoActual.value = 1; return }
   if (!nuevaCita.value.medico_search.trim()) { errorCita.value = 'Escribe el nombre del médico'; pasoActual.value = 2; return }
-  if (!nuevaCita.value.fecha || !nuevaCita.value.hora) { errorCita.value = 'Selecciona fecha y hora'; return }
+  if (Boolean(nuevaCita.value.fecha) !== Boolean(nuevaCita.value.hora)) { errorCita.value = 'Completa fecha y hora, o deja ambos campos vacíos para coordinar'; return }
+  if (!pacienteSeleccionado.value) { errorCita.value = 'Selecciona un paciente para poder coordinar y contactarlo por WhatsApp'; pasoActual.value = 1; return }
   creandoCita.value = true
   try {
-    const fecha_hora = nuevaCita.value.fecha + 'T' + nuevaCita.value.hora + ':00'
+    const fecha_hora = nuevaCita.value.fecha && nuevaCita.value.hora
+      ? nuevaCita.value.fecha + 'T' + nuevaCita.value.hora + ':00'
+      : null
     const body: any = {
-      id_paciente: pacienteSeleccionado.value.id,
+      id_paciente: pacienteSeleccionado.value?.id || null,
       medico_nombre: nuevaCita.value.medico_search.trim(),
       fecha_hora,
       notas_asistente: nuevaCita.value.notas || nuevaCita.value.wa_text
@@ -227,6 +275,8 @@ async function crearCita() {
 async function abrirCita(cita: any) {
   citaSeleccionada.value = cita
   showModal.value = true
+  errorOpciones.value = ''
+  opcionesCita.value = [{ fecha: '', hora: '' }, { fecha: '', hora: '' }]
   try {
     const data: any = await $fetch('/api/asistente/citas/' + cita.id + '/bitacora', {
       headers: { Authorization: 'Bearer ' + adminToken.value }
@@ -234,6 +284,50 @@ async function abrirCita(cita: any) {
     bitacora.value = data?.bitacora || []
     mensajesWA.value = data?.mensajes_whatsapp || []
   } catch (e) { console.error(e) }
+}
+
+function agregarOpcionCita() {
+  if (opcionesCita.value.length >= 10) return
+  opcionesCita.value.push({ fecha: '', hora: '' })
+}
+
+function eliminarOpcionCita(index: number) {
+  opcionesCita.value.splice(index, 1)
+}
+
+async function enviarOpcionesCita() {
+  errorOpciones.value = ''
+  const opciones = opcionesCita.value.filter(o => o.fecha && o.hora)
+  if (opcionesCita.value.length < 2 || opciones.length < 2) {
+    errorOpciones.value = 'Agrega al menos 2 opciones completas de fecha y hora'
+    return
+  }
+  if (opcionesCita.value.length > 10 || opciones.length > 10) {
+    errorOpciones.value = 'Puedes enviar un máximo de 10 opciones'
+    return
+  }
+  if (opciones.length !== opcionesCita.value.length) {
+    errorOpciones.value = 'Completa la fecha y hora de cada opción antes de enviar'
+    return
+  }
+
+  enviandoOpciones.value = true
+  try {
+    await $fetch('/api/asistente/citas/' + citaSeleccionada.value.id + '/opciones', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + adminToken.value },
+      body: { opciones }
+    })
+    actionSuccess.value = '✓ Opciones de horario enviadas al paciente'
+    setTimeout(() => { actionSuccess.value = '' }, 4000)
+    await cargarCitas()
+    const citaActualizada = citas.value.find(c => c.id === citaSeleccionada.value?.id)
+    if (citaActualizada) await abrirCita(citaActualizada)
+  } catch (e: any) {
+    errorOpciones.value = e.data?.message || e.data?.error || e.message || 'Error al enviar opciones de horario'
+  } finally {
+    enviandoOpciones.value = false
+  }
 }
 
 const actionLoading = ref<string | null>(null)
@@ -389,6 +483,7 @@ const medicoCitasFiltradas = computed(() => {
           <select v-model="filterEstado">
             <option value="">Todos</option>
             <option value="pendiente">Pendientes</option>
+            <option value="PENDIENTE_DE_COORDINACION">Solicitudes WhatsApp por coordinar</option>
             <option value="confirmada">Confirmadas</option>
             <option value="asistida">Asistidas</option>
             <option value="cancelada">Canceladas</option>
@@ -399,6 +494,33 @@ const medicoCitasFiltradas = computed(() => {
 
         <p v-if="loading" class="loading">Cargando...</p>
 
+        <section v-if="!loading && (loadingCoordinacion || solicitudesCoordinacion.length || filterEstado === 'PENDIENTE_DE_COORDINACION')" class="coordination-section">
+          <header class="coordination-header">
+            <h2>Solicitudes WhatsApp pendientes de coordinación <span class="count">({{ solicitudesCoordinacion.length }})</span></h2>
+            <button type="button" class="btn-secondary" @click="cargarSolicitudesCoordinacion" :disabled="loadingCoordinacion">
+              {{ loadingCoordinacion ? 'Actualizando...' : 'Actualizar solicitudes' }}
+            </button>
+          </header>
+          <p v-if="loadingCoordinacion" class="loading">Cargando solicitudes...</p>
+          <div class="table-container">
+            <table>
+              <thead><tr><th>Paciente / WhatsApp</th><th>Medico solicitado</th><th>Fecha y hora</th><th>Estado</th></tr></thead>
+              <tbody>
+                <tr v-for="c in solicitudesCoordinacion" :key="c.id" class="cita-row" @click="abrirCita(c)">
+                  <td>
+                    <strong>{{ c.paciente_nombre || c.whatsapp_nombre || 'Solicitud de WhatsApp' }}</strong>
+                    <span v-if="c.whatsapp_telefono || c.paciente_telefono" class="phone" @click.stop="abrirWA(c.paciente_telefono || c.whatsapp_telefono)">WhatsApp</span>
+                  </td>
+                  <td>{{ c.medico_nombre || '—' }}</td>
+                  <td>Sin fecha/hora — pendiente de coordinación</td>
+                  <td><span class="badge" :style="{ background: estadoColor(c.estado) }">Pendiente de coordinación</span></td>
+                </tr>
+                <tr v-if="!solicitudesCoordinacion.length && !loadingCoordinacion"><td colspan="4" class="empty">Sin solicitudes por coordinar</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
         <CalendarioCitas v-if="vistaCitas === 'calendar' && !loading" :citas="filtered" @seleccionar-cita="abrirCita" />
 
         <div v-if="vistaCitas === 'list' && !loading" class="table-container">
@@ -408,7 +530,7 @@ const medicoCitasFiltradas = computed(() => {
               <tr v-for="c in filtered" :key="c.id" class="cita-row" @click="abrirCita(c)">
                 <td><strong>{{ c.paciente_nombre || '—' }}</strong></td>
                 <td>{{ c.medico_nombre || '—' }}</td>
-                <td>{{ new Date(c.fecha_hora).toLocaleString('es-MX') }}</td>
+                <td>{{ formatearFecha(c.fecha_hora) }}</td>
                 <td><span class="badge" :style="{ background: estadoColor(c.estado) }">{{ c.estado }}</span></td>
               </tr>
               <tr v-if="!filtered.length"><td colspan="4" class="empty">Sin resultados</td></tr>
@@ -487,7 +609,7 @@ const medicoCitasFiltradas = computed(() => {
                   <tbody>
                     <tr v-for="c in medicoCitasFiltradas.pendientes" :key="c.id" class="cita-row" @click="abrirCita(c)">
                       <td><strong>{{ c.paciente_nombre || '—' }}</strong></td>
-                      <td>{{ new Date(c.fecha_hora).toLocaleString('es-MX') }}</td>
+                      <td>{{ formatearFecha(c.fecha_hora) }}</td>
                       <td><span class="badge" :style="{ background: estadoColor(c.estado) }">{{ c.estado }}</span></td>
                       <td><button v-if="c.paciente_telefono" class="btn-wa-sm" @click.stop="abrirWA(c.paciente_telefono)">WA</button></td>
                     </tr>
@@ -504,7 +626,7 @@ const medicoCitasFiltradas = computed(() => {
                   <tbody>
                     <tr v-for="c in medicoCitasFiltradas.historial" :key="c.id" class="cita-row" @click="abrirCita(c)">
                       <td><strong>{{ c.paciente_nombre || '—' }}</strong></td>
-                      <td>{{ new Date(c.fecha_hora).toLocaleString('es-MX') }}</td>
+                      <td>{{ formatearFecha(c.fecha_hora) }}</td>
                       <td><span class="badge" :style="{ background: estadoColor(c.estado) }">{{ c.estado }}</span></td>
                       <td><button v-if="c.paciente_telefono" class="btn-wa-sm" @click.stop="abrirWA(c.paciente_telefono)">WA</button></td>
                     </tr>
@@ -570,7 +692,10 @@ const medicoCitasFiltradas = computed(() => {
               </div>
             </div>
             <div v-if="pacienteSeleccionado" class="selected-card"><span class="check">✓</span><strong>{{ pacienteSeleccionado.nombre }} {{ pacienteSeleccionado.apellido }}</strong></div>
-            <button @click="pasoActual = 2" class="btn-primary" :disabled="!pacienteSeleccionado">Siguiente</button>
+            <p class="field-hint">Selecciona al paciente para asociar su teléfono y poder enviarle horarios por WhatsApp.</p>
+            <div class="btn-row">
+              <button @click="pasoActual = 2" class="btn-primary">Siguiente: médico</button>
+            </div>
           </div>
 
           <div v-if="pasoActual === 2">
@@ -585,7 +710,8 @@ const medicoCitasFiltradas = computed(() => {
           </div>
 
           <div v-if="pasoActual === 3">
-            <div class="form-row"><div class="form-group"><label>Fecha</label><input v-model="nuevaCita.fecha" type="date" /></div><div class="form-group"><label>Hora</label><input v-model="nuevaCita.hora" type="time" /></div></div>
+            <p class="field-hint">Deja fecha y hora vacías para registrar una solicitud pendiente de coordinación por WhatsApp.</p>
+            <div class="form-row"><div class="form-group"><label>Fecha (opcional para coordinar)</label><input v-model="nuevaCita.fecha" type="date" /></div><div class="form-group"><label>Hora</label><input v-model="nuevaCita.hora" type="time" /></div></div>
             <div class="form-group"><label>Notas</label><textarea v-model="nuevaCita.notas" rows="2"></textarea></div>
             <div class="btn-row"><button @click="pasoActual = 2" class="btn-cancel">Atras</button><button @click="crearCita" :disabled="creandoCita" class="btn-primary">{{ creandoCita ? 'Creando...' : 'Crear Cita' }}</button></div>
           </div>
@@ -602,10 +728,10 @@ const medicoCitasFiltradas = computed(() => {
         <div class="modal-body" v-if="citaSeleccionada">
           <div class="info-grid">
             <div><strong>Estado:</strong> <span class="badge" :style="{ background: estadoColor(citaSeleccionada.estado) }">{{ citaSeleccionada.estado }}</span></div>
-            <div><strong>Fecha:</strong> {{ new Date(citaSeleccionada.fecha_hora).toLocaleString('es-MX') }}</div>
+            <div><strong>Fecha:</strong> {{ formatearFecha(citaSeleccionada.fecha_hora) }}</div>
             <div>
-              <strong>Paciente:</strong> {{ citaSeleccionada.paciente_nombre }} {{ citaSeleccionada.paciente_apellido }}
-              <a v-if="citaSeleccionada.paciente_telefono" class="link-wa" @click="abrirWA(citaSeleccionada.paciente_telefono)">WhatsApp</a>
+              <strong>Paciente:</strong> {{ citaSeleccionada.paciente_nombre || citaSeleccionada.whatsapp_nombre || 'Solicitud de WhatsApp' }} {{ citaSeleccionada.paciente_apellido }}
+              <a v-if="citaSeleccionada.paciente_telefono || citaSeleccionada.whatsapp_telefono" class="link-wa" @click="abrirWA(citaSeleccionada.paciente_telefono || citaSeleccionada.whatsapp_telefono)">WhatsApp</a>
             </div>
             <div>
               <strong>Medico:</strong> {{ citaSeleccionada.medico_nombre }} {{ citaSeleccionada.medico_apellido }}
@@ -617,10 +743,25 @@ const medicoCitasFiltradas = computed(() => {
             {{ actionSuccess }}
           </div>
 
+          <section v-if="citaSeleccionada.estado === 'PENDIENTE_DE_COORDINACION'" class="coordination-options">
+            <h3>Proponer horarios al paciente</h3>
+            <p>Agrega una o más opciones de fecha y hora para enviar por WhatsApp.</p>
+            <div v-for="(opcion, index) in opcionesCita" :key="index" class="form-row option-row">
+              <div class="form-group"><label>Fecha</label><input v-model="opcion.fecha" type="date" /></div>
+              <div class="form-group"><label>Hora</label><input v-model="opcion.hora" type="time" /></div>
+              <button v-if="opcionesCita.length > 1" type="button" class="btn-cancel" @click="eliminarOpcionCita(index)">Quitar</button>
+            </div>
+            <button type="button" class="btn-secondary" @click="agregarOpcionCita" :disabled="opcionesCita.length >= 10">+ Agregar otro horario</button>
+            <div v-if="errorOpciones" class="error">{{ errorOpciones }}</div>
+            <button type="button" class="btn-primary" @click="enviarOpcionesCita" :disabled="enviandoOpciones">
+              {{ enviandoOpciones ? 'Enviando...' : 'Enviar opciones al paciente' }}
+            </button>
+          </section>
+
           <div class="acciones">
             <h3>Acciones</h3>
             <div class="btn-group">
-              <button v-if="['pendiente','PENDIENTE_DE_COORDINACION'].includes(citaSeleccionada.estado)" @click="cambiarEstado('confirmada', 'Confirmada por admin')" class="btn-action btn-confirm" :disabled="actionLoading">
+              <button v-if="['pendiente','PENDIENTE_DE_COORDINACION'].includes(citaSeleccionada.estado) && citaSeleccionada.fecha_hora" @click="cambiarEstado('confirmada', 'Confirmada por admin')" class="btn-action btn-confirm" :disabled="actionLoading">
                 {{ actionLoading === 'confirmada' ? 'Confirmando...' : 'Confirmar' }}
               </button>
               <button v-if="citaSeleccionada.estado === 'confirmada'" @click="cambiarEstado('paciente_llego', 'Paciente llego (reportado por admin)')" class="btn-action btn-arrival" :disabled="actionLoading">
@@ -743,6 +884,7 @@ th { background: #f8f9fa; color: #636e72; font-weight: 600; }
 .form-group label { font-size: 0.8rem; color: #636e72; margin-bottom: 0.3rem; font-weight: 500; }
 .form-group input, .form-group textarea { padding: 0.55rem 0.75rem; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 0.85rem; }
 .form-group input:focus, .form-group textarea:focus { outline: none; border-color: #00b894; }
+.field-hint { display: block; color: #636e72; font-size: 0.8rem; margin: 0 0 0.5rem; }
 .form-row { display: flex; gap: 1rem; }
 .form-row > .form-group { flex: 1; }
 .search-results { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #e0e0e0; border-radius: 8px; max-height: 200px; overflow-y: auto; z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
@@ -768,6 +910,7 @@ th { background: #f8f9fa; color: #636e72; font-weight: 600; }
 .info-grid div { font-size: 0.9rem; }
 .info-grid strong { color: #636e72; }
 .link-wa { color: #25d366; cursor: pointer; font-size: 0.8rem; margin-left: 0.5rem; text-decoration: underline; }
+.coordination-section .phone { color: #25d366; font-size: 0.8rem; margin-left: 0.5rem; cursor: pointer; text-decoration: underline; }
 .acciones { margin-bottom: 1.25rem; }
 .acciones h3, .nota-section h3, .bitacora-section h3, .wa-section h3 { margin: 0 0 0.75rem; font-size: 1rem; color: #2d3436; }
 .btn-group { display: flex; flex-wrap: wrap; gap: 0.5rem; }
@@ -823,4 +966,13 @@ th { background: #f8f9fa; color: #636e72; font-weight: 600; }
 .citas-section { margin-bottom: 1.5rem; }
 .section-title { margin: 0 0 0.75rem; font-size: 1rem; color: #2d3436; }
 .btn-wa-sm { background: #25d366; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer; font-size: 0.7rem; font-weight: 600; }
+.coordination-section { margin: 0 0 1.25rem; padding: 1rem; background: #fffaf0; border: 1px solid #fdcb6e; border-radius: 10px; }
+.coordination-header { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
+.coordination-section h2 { margin: 0; font-size: 1rem; color: #2d3436; }
+.coordination-section h2 .count { font-size: 0.85rem; color: #636e72; font-weight: 400; }
+.coordination-options { margin: 0 0 1.25rem; padding: 1rem; background: #f8f9fa; border: 1px solid #dfe6e9; border-radius: 8px; }
+.coordination-options h3 { margin: 0 0 0.4rem; font-size: 1rem; }
+.coordination-options > p { margin: 0 0 0.75rem; color: #636e72; font-size: 0.85rem; }
+.coordination-options .option-row { align-items: flex-end; }
+.coordination-options > button { margin-right: 0.5rem; margin-bottom: 0.5rem; }
 </style>

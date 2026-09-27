@@ -31,6 +31,9 @@ export default defineEventHandler(async (event) => {
 
   const cita = current.rows[0]
   const estadoAnterior = cita.estado
+  if (estado === 'confirmada' && !cita.fecha_hora) {
+    throw createError({ statusCode: 409, message: 'No se puede confirmar una cita sin fecha y hora' })
+  }
 
   // Build update
   const updates = ['estado = $1', 'updated_at = NOW()']

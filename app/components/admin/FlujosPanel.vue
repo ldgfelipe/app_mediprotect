@@ -99,7 +99,7 @@ async function eliminar(flow: any) {
 
 function editar(flow: any) {
   console.log('[FlujosPanel] editar llamado con:', flow?.id)
-  editarFlow.value = flow
+  editarFlow.value = { ...flow, keywords: (flow.keywords || []).join(', ') }
   editDef.value = JSON.parse(JSON.stringify(flow.definicion || { nodes: [], edges: [] }))
   bloqueSel.value = editDef.value.nodes?.[0]?.id || ''
 }
@@ -132,7 +132,7 @@ function agregarBloqueSimple(tipo: string) {
     pregunta: { titulo: '', modo: 'botones', opciones: [{ label: '', valor: '', destino: '' }] },
     lista: { titulo: '', fuente: 'especialidades', campo: '', parametro: '', parametro2: '' },
     capturar: { campo: '', regex: '' },
-    accion: { accion: 'info_general', texto: '' },
+    accion: { accion: 'info_general', texto: '', crear_pendiente: false },
     condicion: { campo: '', operador: 'igual', valor: '', destinoTrue: '', destinoFalse: '' },
     fin: { texto: '' },
     inicio: {},
@@ -186,7 +186,7 @@ async function guardarSimple() {
         if (destino) edges.push({ id: `e_${i}`, source: n.id, target: destino, label: '' })
       }
     })
-    await $fetch(`/api/admin/whatsapp-flows/${editarFlow.value.id}`, { method: 'PUT', headers: authHeaders(), body: { definicion: { nodes, edges }, keywords: editarFlow.value.keywords } })
+    await $fetch(`/api/admin/whatsapp-flows/${editarFlow.value.id}`, { method: 'PUT', headers: authHeaders(), body: { definicion: { nodes, edges }, keywords: keywordsDe(editarFlow.value.keywords) } })
     msg.value = 'Flujo guardado'
     editarFlow.value = null
     editDef.value = null
@@ -200,7 +200,7 @@ async function guardarDef(def: any) {
     await $fetch(`/api/admin/whatsapp-flows/${editarFlow.value.id}`, {
       method: 'PUT',
       headers: authHeaders(),
-      body: { definicion: def, keywords: editarFlow.value.keywords },
+      body: { definicion: def, keywords: keywordsDe(editarFlow.value.keywords) },
     })
     msg.value = 'Flujo guardado'
     editarFlow.value = null
@@ -222,7 +222,7 @@ async function guardarMetadata() {
     await $fetch(`/api/admin/whatsapp-flows/${editarFlow.value.id}`, {
       method: 'PUT',
       headers: authHeaders(),
-      body: { keywords: editarFlow.value.keywords, activo: editarFlow.value.activo },
+      body: { keywords: keywordsDe(editarFlow.value.keywords), activo: editarFlow.value.activo },
     })
     msg.value = 'Datos del flujo guardados'
   } catch (e: any) {
@@ -375,6 +375,10 @@ async function guardarMetadata() {
                     <b>Info general</b> envía el texto de abajo.
                   </p>
                 </template>
+                <label v-if="n.config.accion === 'crear_cita'" class="chk">
+                  <input v-model="n.config.crear_pendiente" type="checkbox" />
+                  Crear solicitud pendiente si no hay fecha u hora
+                </label>
               </template>
               <template v-if="(n.nodeType || n.type) === 'condicion'">
                 <label class="insp-label">Campo (variable o «texto»)</label>
