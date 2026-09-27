@@ -608,6 +608,7 @@ export async function proseguirOIniciarFlujo(
 
   // Parsear mensaje para extraer datos estructurados (pacienteId, doctor, email, etc.)
   const solicitudParseada = parsearSolicitudCita(texto)
+  console.log('[DEBUG parsearSolicitudCita]', { texto: texto.substring(0, 200), solicitudParseada })
 
   // Construir vars iniciales con datos parseados
   const initialVars: Record<string, any> = {}
@@ -616,6 +617,7 @@ export async function proseguirOIniciarFlujo(
   if (solicitudParseada.nombre) initialVars.paciente_nombre = solicitudParseada.nombre
   if (solicitudParseada.email) initialVars.paciente_email = solicitudParseada.email
   if (solicitudParseada.telefono) initialVars.paciente_telefono = solicitudParseada.telefono
+  console.log('[DEBUG initialVars]', initialVars)
 
   if (flowActual?.flowId && flowActual.nodeId) {
     const flow = await obtenerFlujo(pool, flowActual.flowId)

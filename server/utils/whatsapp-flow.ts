@@ -84,6 +84,7 @@ export function parsearSolicitudCita(texto: string) {
   if (idMatch) result.pacienteId = idMatch[1].trim()
 
   if (result.nombre || result.pacienteId || result.doctor) {
+    console.log('[DEBUG parsearSolicitudCita RESULT]', result)
     return result
   }
 
