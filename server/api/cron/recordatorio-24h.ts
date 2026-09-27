@@ -4,57 +4,77 @@ import { enviarMensaje } from '../../utils/whatsapp'
 export default defineEventHandler(async (event) => {
   const pool = await useDbPool(event)
 
-  const authHeader = getHeader(event, 'authorization')?.replace('Bearer ', '')
-  if (!authHeader) throw createError({ statusCode: 401, message: 'No autorizado' })
-
-  const config = await getWhatsAppConfig(pool)
-  if (!config.gatewayUrl || !config.instanceName) {
-    return { ok: false, message: 'WhatsApp no configurado' }
+  const secret = getHeader(event, 'x-cron-secret') || getHeader(event, 'authorization')?.replace('Bearer ', '')
+  const expected = process.env.CRON_SECRET
+  if (!expected || secret !== expected) {
+    throw createError({ statusCode: 401, message: 'No autorizado' })
   }
 
-  const citasPendientes = await pool.query(
-    `SELECT c.id, c.folio, c.fecha_hora, c.precio_acordado,
-            p.nombre as paciente_nombre, p.telefono as paciente_telefono,
-            m.nombre as medico_nombre, m.apellido as medico_apellido,
-            m.especialidad
-     FROM citas c
-     JOIN pacientes p ON c.id_paciente = p.id
-     LEFT JOIN medicos m ON c.id_medico = m.id
-     WHERE c.fecha_hora BETWEEN NOW() + INTERVAL '22 hours' AND NOW() + INTERVAL '26 hours'
-     AND c.estado IN ('pendiente', 'confirmada', 'PENDIENTE_DE_COORDINACION')
-     AND c.recordatorio_24h_enviado = false`
+  const ahora = new Date()
+  const manana = new Date(ahora)
+  manana.setDate(manana.getDate() + 1)
+  const mananaStr = manana.toISOString().split('T')[0]
+
+  const result = await pool.query(
+    `SELECT c.*, 
+            COALESCE(p.nombre, '') || ' ' || COALESCE(p.apellido, '') AS paciente_nombre,
+            p.telefono AS paciente_telefono,
+            COALESCE(m.nombre, '') || ' ' || COALESCE(m.apellido, '') AS medico_nombre,
+            m.whatsapp_telefono AS medico_whatsapp,
+            m.id AS medico_id
+       FROM citas c
+       LEFT JOIN pacientes p ON p.id = c.id_paciente
+       LEFT JOIN medicos m ON m.id = c.id_medico
+      WHERE c.fecha_hora::date = $1::date
+        AND c.estado IN ('pendiente', 'confirmada')
+        AND (c.recordatorio_enviado IS NULL OR c.recordatorio_enviado = false)`,
+    [mananaStr]
   )
 
-  let enviados = 0
+  const config = await getWhatsAppConfig(event)
+  if (!config.gatewayUrl || !config.instanceName) {
+    return { ok: true, message: 'WhatsApp no configurado, omitiendo recordatorios' }
+  }
 
-  for (const cita of citasPendientes.rows) {
-    if (!cita.paciente_telefono) continue
+  let enviados = 0
+  let errores = 0
+
+  for (const cita of result.rows) {
+    const fechaHora = new Date(cita.fecha_hora)
+    const horaStr = fechaHora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Mexico_City' })
+    const fechaStr = fechaHora.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Mexico_City' })
 
     try {
-      const fechaFormateada = new Date(cita.fecha_hora).toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+      // Recordatorio al paciente
+      if (cita.paciente_telefono) {
+        const textoPaciente = `⏰ *Recordatorio de cita - Mañana*\n\n👨‍⚕️ Dr. ${cita.medico_nombre}\n📅 ${fechaStr}\n🕐 ${horaStr}\n📋 Folio: *${cita.folio}*\n\nPor favor confirma tu asistencia respondiendo *SI* o *NO*.\n\n📍 Llegar 10 min antes con identificación oficial.`
+        await enviarMensaje(
+          { gatewayUrl: config.gatewayUrl, instanceName: config.instanceName, apiKey: config.apiKey },
+          cita.paciente_telefono,
+          textoPaciente
+        )
+      }
 
-      await enviarMensaje(config, cita.paciente_telefono,
-        `Hola ${cita.paciente_nombre || 'Paciente'} 👋\n\nTe recordamos tu cita con *Dr. ${cita.medico_nombre} ${cita.medico_apellido}* (${cita.especialidad || ''}) el próximo *${fechaFormateada}*.\n\n📌 Folio: ${cita.folio || 'N/A'}\n💰 Costo: $${cita.precio_acordado || 0} MXN\n\nPara confirmar o reprogramar, responde a este mensaje.`
-      )
+      // Recordatorio al médico
+      if (cita.medico_whatsapp) {
+        const textoMedico = `⏰ *Recordatorio de cita - Mañana*\n\n👤 Paciente: ${cita.paciente_nombre || 'Paciente WhatsApp'}\n📅 ${fechaStr}\n🕐 ${horaStr}\n📋 Folio: *${cita.folio}*\n\nPor favor confirma la asistencia del paciente respondiendo *SI* o *NO*.`
+        await enviarMensaje(
+          { gatewayUrl: config.gatewayUrl, instanceName: config.instanceName, apiKey: config.apiKey },
+          cita.medico_whatsapp,
+          textoMedico
+        )
+      }
 
       await pool.query(
-        `UPDATE citas SET recordatorio_24h_enviado = true WHERE id = $1`,
+        `UPDATE citas SET recordatorio_enviado = true, updated_at = NOW() WHERE id = $1`,
         [cita.id]
       )
-
-      await pool.query(
-        `INSERT INTO whatsapp_recordatorios (id_cita, tipo, enviado_a)
-         VALUES ($1, '24h', 'paciente')
-         ON CONFLICT (id_cita, tipo, enviado_a) DO NOTHING`,
-        [cita.id]
-      )
-
       enviados++
-      console.log(`[Cron 24h] ✅ Recordatorio enviado a ${cita.paciente_telefono} para cita ${cita.folio}`)
     } catch (err: any) {
-      console.error(`[Cron 24h] ❌ Error enviando a ${cita.paciente_telefono}:`, err.message)
+      console.error(`[Recordatorio 24h] Error en cita ${cita.id}:`, err.message)
+      errores++
     }
   }
 
-  return { ok: true, enviados, total: citasPendientes.rows.length }
+  return { ok: true, enviadas: result.rows.length, enviadas_ok: enviados, errores }
 })

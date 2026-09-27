@@ -66,3 +66,31 @@ export function plantillaAsesor() {
     definicion: { nodes, edges },
   }
 }
+
+export function plantillaSolicitudEstructurada() {
+  const nodes = [
+    nodo('n_inicio', 'inicio', {}, { x: 20, y: 120 }),
+    nodo('n_buscar_paciente', 'accion', { accion: 'buscar_paciente_por_id', texto: '' }, { x: 220, y: 40 }),
+    nodo('n_buscar_doctor', 'accion', { accion: 'buscar_doctor_por_nombre', texto: '' }, { x: 460, y: 40 }),
+    nodo('n_crear_cita_pendiente', 'accion', { accion: 'crear_cita_pendiente', texto: '' }, { x: 700, y: 40 }),
+    nodo('n_notificar_doctor', 'accion', { accion: 'notificar_doctor_whatsapp', texto: '' }, { x: 940, y: -60 }),
+    nodo('n_enviar_opciones', 'accion', { accion: 'enviar_opciones_fecha_hora', texto: '' }, { x: 940, y: 140 }),
+    nodo('n_fin', 'fin', { texto: '✅ *Solicitud registrada*\n\nHemos registrado tu solicitud de cita con *{{doctor_nombre}}*.\n\n📋 *Datos:*\n• Paciente: {{paciente_nombre}}\n• Médico: {{doctor_nombre}}\n• Estado: *Fecha por confirmar*\n\nUn asistente te contactará para coordinar fecha y hora.\n\n¿Hay algo más en lo que te pueda ayudar?' }, { x: 1180, y: 40 }),
+  ]
+
+  const edges = [
+    borde('e1', 'n_inicio', 'n_buscar_paciente'),
+    borde('e2', 'n_buscar_paciente', 'n_buscar_doctor'),
+    borde('e3', 'n_buscar_doctor', 'n_crear_cita_pendiente'),
+    borde('e4', 'n_crear_cita_pendiente', 'n_notificar_doctor'),
+    borde('e5', 'n_crear_cita_pendiente', 'n_enviar_opciones'),
+    borde('e6', 'n_notificar_doctor', 'n_fin'),
+    borde('e7', 'n_enviar_opciones', 'n_fin'),
+  ]
+
+  return {
+    keywords: ['solicitud_estructurada', 'cita_con_datos', 'paciente_id_doctor'],
+    descripcion: 'Procesa solicitud con ID paciente, nombre médico, email, teléfono desde URL',
+    definicion: { nodes, edges },
+  }
+}

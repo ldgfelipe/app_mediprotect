@@ -425,7 +425,7 @@ export function getDiasDisponibles(): { id: string; titulo: string; descripcion:
   return dias
 }
 
-export function getHorasDisponibles(): { id: string; titulo: string; descripcion: string }[] {
+export async function getHorasDisponibles(): { id: string; titulo: string; descripcion: string }[] {
   const horas: { id: string; titulo: string; descripcion: string }[] = []
   for (let h = 9; h <= 20; h++) {
     for (let m = 0; m < 60; m += 30) {
@@ -441,4 +441,186 @@ export function getHorasDisponibles(): { id: string; titulo: string; descripcion
     }
   }
   return horas
+}
+
+// ==================== NUEVAS FUNCIONES PARA FLUJO ESTRUCTURADO ====================
+
+export async function searchDoctorByFullName(pool: any, nombreCompleto: string) {
+  const result = await pool.query(
+    `SELECT id, nombre, apellido, slug, precio_regular, porcentaje_descuento, especialidad, telefono, whatsapp_telefono
+     FROM medicos
+     WHERE (
+       LOWER(CONCAT(nombre, ' ', apellido)) LIKE $1
+       OR LOWER(nombre) LIKE $1
+       OR LOWER(apellido) LIKE $1
+       OR LOWER(slug) LIKE $1
+     )
+     AND activo = true
+     AND (estatus_medico IS NULL OR estatus_medico = 'activo')
+     LIMIT 1`,
+    [`%${nombreCompleto.toLowerCase()}%`]
+  )
+  return result.rows[0] || null
+}
+
+export async function createCitaFechaPorConfirmar(
+  pool: any,
+  medicoId: string,
+  pacienteId: string | null,
+  telefonoPaciente: string,
+  nombrePaciente: string
+) {
+  const medicoRes = await pool.query(
+    `SELECT nombre, apellido, precio_regular, porcentaje_descuento, monto_comision
+     FROM medicos WHERE id = $1`,
+    [medicoId]
+  )
+  const medico = medicoRes.rows[0]
+  const precioRegular = medico?.precio_regular || 1000
+  const descuento = medico?.porcentaje_descuento || 10
+  const precioAcordado = precioRegular * (1 - descuento / 100)
+  const whatsappTelefono = telefonoPaciente
+  const whatsappNombre = nombrePaciente
+  const whatsappMedicoNombre = [medico?.nombre, medico?.apellido].filter(Boolean).join(' ') || null
+
+  const result = await pool.query(
+    `INSERT INTO citas (
+       id_paciente, id_medico, fecha_hora, precio_acordado, notas_paciente, estado,
+       whatsapp_telefono, whatsapp_nombre, whatsapp_medico_nombre
+     )
+     VALUES ($1, $2, NULL, $3, $4, 'PENDIENTE_DE_COORDINACION', $5, $6, $7)
+     RETURNING *`,
+    [
+      pacienteId,
+      medicoId,
+      precioAcordado,
+      `Cita agendada vía WhatsApp por ${nombrePaciente} - Fecha por confirmar`,
+      'PENDIENTE_DE_COORDINACION',
+      whatsappTelefono,
+      whatsappNombre,
+      whatsappMedicoNombre,
+    ]
+  )
+
+  return result.rows[0]
+}
+
+export async function sendWhatsAppToDoctor(
+  pool: any,
+  medicoId: string,
+  citaFolio: string,
+  pacienteNombre: string,
+  pacienteTelefono: string
+) {
+  const config = await getWhatsAppConfig(pool)
+  if (!config.gatewayUrl || !config.instanceName) return { ok: false, error: 'WhatsApp no configurado' }
+
+  const medicoRes = await pool.query(
+    `SELECT nombre, apellido, whatsapp_telefono FROM medicos WHERE id = $1`,
+    [medicoId]
+  )
+  const medico = medicoRes.rows[0]
+  if (!medico || !medico.whatsapp_telefono) return { ok: false, error: 'Médico sin WhatsApp' }
+
+  const { enviarMensaje } = await import('./whatsapp')
+  const texto = `🔔 *Nueva solicitud de cita*\n\n📋 Folio: *${citaFolio}*\n👤 Paciente: ${pacienteNombre}\n📱 Tel: ${pacienteTelefono || 'No disponible'}\n\n*Estado:* Fecha por confirmar\n\nResponde *FECHAS* para enviar tus disponibilidades.`
+  await enviarMensaje(
+    { gatewayUrl: (await import('./whatsapp-db')).getWhatsAppConfig(await import('#internal/nitro').then(m => m.useDbPool({}))).gatewayUrl, instanceName: '', apiKey: '' },
+    medico.whatsapp_telefono,
+    texto
+  )
+  return { ok: true }
+}
+
+// Función simplificada para usar desde el flow runner (evita import circular)
+export async function notificarDoctorWhatsApp(
+  pool: any,
+  medicoId: string,
+  citaFolio: string,
+  pacienteNombre: string,
+  pacienteTelefono: string,
+  gatewayUrl: string,
+  instanceName: string,
+  apiKey: string
+) {
+  const medicoRes = await pool.query(
+    `SELECT whatsapp_telefono FROM medicos WHERE id = $1`,
+    [medicoId]
+  )
+  const medico = medicoRes.rows[0]
+  if (!medico || !medico.whatsapp_telefono) return { ok: false, error: 'Médico sin WhatsApp' }
+
+  const { enviarMensaje } = await import('./whatsapp')
+  const texto = `🔔 *Nueva solicitud de cita*\n\n📋 Folio: *${citaFolio}*\n👤 Paciente: ${pacienteNombre}\n📱 Tel: ${pacienteTelefono || 'No disponible'}\n\n*Estado:* Fecha por confirmar\n\nResponde *FECHAS* para enviar tus disponibilidades.`
+  await enviarMensaje({ gatewayUrl, instanceName, apiKey }, medico.whatsapp_telefono, texto)
+  return { ok: true }
+}
+
+export async function enviarOpcionesFechaHoraPaciente(
+  pool: any,
+  telefonoPaciente: string,
+  doctorId: string,
+  doctorNombre: string,
+  citaId: string,
+  gatewayUrl: string,
+  instanceName: string,
+  apiKey: string
+) {
+  const dias = await getDiasDisponiblesParaMedico(pool, doctorId)
+  if (dias.length === 0) return { ok: false, error: 'Sin disponibilidad' }
+
+  const { enviarLista } = await import('./whatsapp')
+  const opciones = dias.slice(0, 10).map((d, i) => ({
+    id: `cita_dia_${i}_${d.descripcion}`,
+    titulo: d.titulo,
+    descripcion: d.descripcion,
+  }))
+
+  await enviarLista({ gatewayUrl, instanceName, apiKey: '' }, telefonoPaciente, `📅 *Elige una fecha para tu cita con ${doctorNombre}:*`, opciones, 'Fechas disponibles')
+
+  await pool.query(
+    `UPDATE citas SET whatsapp_opciones = $2, updated_at = NOW() WHERE id = $1`,
+    [citaId, JSON.stringify(dias.map((d, i) => ({ id: `cita_dia_${i}_${d.descripcion}`, fecha: d.descripcion })))]
+  )
+  return { ok: true }
+}
+
+export async function getCitasPendientesConfirmar(pool: any, medicoId?: string) {
+  let query = `SELECT c.*, p.nombre as paciente_nombre, p.apellido as paciente_apellido, p.email as paciente_email, p.telefono as paciente_telefono,
+               m.nombre as medico_nombre, m.apellido as medico_apellido, m.whatsapp_telefono as medico_whatsapp
+               FROM citas c
+               LEFT JOIN pacientes p ON p.id = c.id_paciente
+               LEFT JOIN medicos m ON m.id = c.id_medico
+               WHERE c.estado = 'PENDIENTE_DE_COORDINACION'`
+  const params: any[] = []
+  if (medicoId) {
+    query += ` AND c.id_medico = $1`
+    params.push(medicoId)
+  }
+  query += ` ORDER BY c.created_at DESC`
+  const result = await pool.query(query, params)
+  return result.rows
+}
+
+export async function confirmarFechaHoraCita(
+  pool: any,
+  citaId: string,
+  fecha: string,
+  hora: string,
+  confirmadoPor: 'paciente' | 'asistente' | 'medico'
+) {
+  const fechaHora = `${fecha}T${hora}:00`
+  const result = await pool.query(
+    `UPDATE citas
+       SET fecha_hora = $2::timestamptz,
+           estado = 'pendiente',
+           updated_at = NOW()
+     WHERE id = $1
+       AND estado = 'PENDIENTE_DE_COORDINACION'
+       AND fecha_hora IS NULL
+     RETURNING *`,
+    [citaId, fechaHora]
+  )
+  if (result.rows.length === 0) return { ok: false, error: 'Cita no encontrada o ya confirmada' }
+  return { ok: true, cita: result.rows[0] }
 }

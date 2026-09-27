@@ -5,8 +5,19 @@ import {
   getHorasDisponiblesParaMedico,
   createCitaFromWhatsApp,
   searchPatientByPhone,
+  searchPatientById,
+  searchDoctorByName,
+  getDisponibilidadMedico,
+  getAvailableDates,
+  getAvailableHours,
+  createCitaFromWhatsApp as createCita,
+  createCitaFechaPorConfirmar,
+  notificarDoctorWhatsApp,
+  enviarOpcionesFechaHoraPaciente,
+  getWhatsAppConfig,
 } from './whatsapp-db'
 import { emitCitaEvento } from './socket-emitter'
+import { getWhatsAppConfig as getWhatsAppConfigMain, enviarMensaje, enviarLista } from './whatsapp'
 
 interface FlowDef {
   id: string
@@ -281,6 +292,115 @@ async function ejecutarAccion(
     }
     case 'info_general': {
       return { texto: config.texto || 'Nosotros te ayudamos.', vars }
+    }
+    case 'buscar_paciente_por_id': {
+      const pacienteId = vars.paciente_id || vars.pacienteId || config.paciente_id
+      if (!pacienteId) return { texto: 'Falta ID de paciente', vars }
+      const paciente = await searchPatientById(pool, pacienteId)
+      if (!paciente) return { texto: 'Paciente no encontrado', vars }
+      return {
+        texto: '',
+        vars: {
+          ...vars,
+          paciente_id: paciente.id,
+          paciente_nombre: `${paciente.nombre} ${paciente.apellido}`,
+          paciente_email: paciente.email,
+          paciente_telefono: paciente.telefono,
+        },
+      }
+    }
+    case 'buscar_doctor_por_nombre': {
+      const doctorNombre = vars.doctor_nombre || vars.doctorNombre || config.doctor_nombre
+      if (!doctorNombre) return { texto: 'Falta nombre del médico', vars }
+      const doctor = await searchDoctorByName(pool, doctorNombre)
+      if (!doctor) return { texto: 'Médico no encontrado', vars }
+      return {
+        texto: '',
+        vars: {
+          ...vars,
+          doctor_id: doctor.id,
+          doctor_nombre: `${doctor.nombre} ${doctor.apellido}`,
+          doctor_slug: doctor.slug,
+          doctor_especialidad: doctor.especialidad,
+          doctor_precio_regular: doctor.precio_regular,
+          doctor_porcentaje_descuento: doctor.porcentaje_descuento,
+        },
+      }
+    }
+    case 'crear_cita_pendiente': {
+      const doctorId = vars.doctor_id
+      const pacienteId = vars.paciente_id
+      const telefonoPaciente = conv.telefono
+      const nombrePaciente = vars.paciente_nombre || conv.nombre_paciente || nombre || 'Paciente WhatsApp'
+      if (!doctorId) return { texto: 'Falta ID de médico para crear cita', vars }
+      const cita = await createCitaFechaPorConfirmar(pool, doctorId, pacienteId || null, telefonoPaciente, nombrePaciente)
+      return {
+        texto: '',
+        vars: {
+          ...vars,
+          cita_id: cita.id,
+          cita_folio: cita.folio,
+          estado_cita: 'PENDIENTE_DE_COORDINACION',
+        },
+      }
+    }
+    case 'notificar_doctor_whatsapp': {
+      const doctorId = vars.doctor_id
+      const citaId = vars.cita_id
+      if (!doctorId || !citaId) return { texto: 'Faltan datos para notificar al médico', vars }
+      const configWhatsApp = await getWhatsAppConfig(pool)
+      if (!configWhatsApp.gatewayUrl || !configWhatsApp.instanceName) {
+        return { texto: 'WhatsApp no configurado', vars }
+      }
+      const medicoRes = await pool.query(
+        `SELECT m.whatsapp_telefono, c.folio, c.whatsapp_nombre, c.whatsapp_telefono
+         FROM medicos m
+         JOIN citas c ON c.id_medico = m.id
+         WHERE m.id = $1 AND c.id = $2`,
+        [doctorId, citaId]
+      )
+      const medico = medicoRes.rows[0]
+      if (!medico || !medico.whatsapp_telefono) {
+        return { texto: 'Médico sin WhatsApp configurado', vars }
+      }
+      const textoNotificacion = `🔔 *Nueva solicitud de cita*\n\n📋 Folio: *${medico.folio}*\n👤 Paciente: ${medico.whatsapp_nombre || 'Paciente WhatsApp'}\n📱 Tel: ${medico.whatsapp_telefono || 'No disponible'}\n\n*Estado:* Fecha por confirmar\n\nResponde a este mensaje con *FECHAS* para enviar tus disponibilidades al paciente.`
+      await enviarMensaje(
+        { gatewayUrl: configWhatsApp.gatewayUrl, instanceName: configWhatsApp.instanceName, apiKey: configWhatsApp.apiKey },
+        medico.whatsapp_telefono,
+        textoNotificacion
+      )
+      return { texto: 'Médico notificado', vars }
+    }
+    case 'enviar_opciones_fecha_hora': {
+      const doctorId = vars.doctor_id
+      const citaId = vars.cita_id
+      const telefonoPaciente = conv.telefono
+      if (!doctorId || !citaId) return { texto: 'Faltan datos para enviar opciones', vars }
+      const configWhatsApp = await getWhatsAppConfig(pool)
+      if (!configWhatsApp.gatewayUrl || !configWhatsApp.instanceName) {
+        return { texto: 'WhatsApp no configurado', vars }
+      }
+      const dias = await getDiasDisponiblesParaMedico(pool, doctorId)
+      if (dias.length === 0) {
+        return { texto: 'Médico sin disponibilidad', vars }
+      }
+      const opciones = dias.slice(0, 10).map((d, i) => ({
+        id: `cita_dia_${i}_${d.descripcion}`,
+        titulo: d.titulo,
+        descripcion: d.descripcion,
+      }))
+      await enviarLista(
+        { gatewayUrl: configWhatsApp.gatewayUrl, instanceName: configWhatsApp.instanceName, apiKey: configWhatsApp.apiKey },
+        telefonoPaciente,
+        `📅 *Elige una fecha para tu cita con ${vars.doctor_nombre || 'el médico'}:*`,
+        opciones,
+        'Fechas disponibles'
+      )
+      await pool.query(
+        `UPDATE citas SET whatsapp_opciones = $2, updated_at = NOW() WHERE id = $1`,
+        [citaId, JSON.stringify(dias.map((d, i) => ({ id: `cita_dia_${i}_${d.descripcion}`, fecha: d.descripcion })))]
+      )
+      return { texto: 'Opciones de fecha enviadas al paciente', vars }
     }
     default:
       return { texto: config.texto || 'Acción ejecutada.', vars }
