@@ -10,11 +10,6 @@ import { procesarSeleccionHorarioCita } from '../../utils/whatsapp-pending-appoi
 export default defineEventHandler(async (event) => {
   const pool = await useDbPool(event)
 
-  if (!(await estaAutorizadoWebhook(event))) {
-    console.log('[WhatsApp Webhook] Acceso no autorizado, rechazado')
-    throw createError({ statusCode: 403, message: 'Acceso denegado' })
-  }
-
   const rawBody = await readRawBody(event)
 
   if (!rawBody) {
@@ -27,6 +22,15 @@ export default defineEventHandler(async (event) => {
   } catch {
     console.log('[WhatsApp Webhook] Body no es JSON válido')
     return { ok: true }
+  }
+
+  // Eventos que NO requieren autorización (callbacks de estado)
+  const eventosSinAuth = ['qrcode.updated', 'connection.update', 'messages.update']
+  const requiereAuth = !eventosSinAuth.includes(payload.event)
+
+  if (requiereAuth && !(await estaAutorizadoWebhook(event))) {
+    console.log('[WhatsApp Webhook] Acceso no autorizado, rechazado')
+    throw createError({ statusCode: 403, message: 'Acceso denegado' })
   }
 
   if (payload.event === 'qrcode.updated') {
