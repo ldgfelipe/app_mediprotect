@@ -132,7 +132,7 @@ function agregarBloqueSimple(tipo: string) {
     pregunta: { titulo: '', modo: 'botones', opciones: [{ label: '', valor: '', destino: '' }] },
     lista: { titulo: '', fuente: 'especialidades', campo: '', parametro: '', parametro2: '' },
     capturar: { campo: '', regex: '' },
-    accion: { accion: 'info_general', texto: '' },
+    accion: { accion: 'info_general', texto: '', crear_pendiente: false },
     condicion: { campo: '', operador: 'igual', valor: '', destinoTrue: '', destinoFalse: '' },
     fin: { texto: '' },
     inicio: {},
@@ -375,6 +375,10 @@ async function guardarMetadata() {
                     <b>Info general</b> envía el texto de abajo.
                   </p>
                 </template>
+                <label v-if="n.config.accion === 'crear_cita'" class="chk">
+                  <input v-model="n.config.crear_pendiente" type="checkbox" />
+                  Crear solicitud pendiente si no hay fecha u hora
+                </label>
               </template>
               <template v-if="(n.nodeType || n.type) === 'condicion'">
                 <label class="insp-label">Campo (variable o «texto»)</label>

@@ -180,10 +180,14 @@ CREATE INDEX IF NOT EXISTS idx_medicos_curp ON medicos(curp);
 -- ============================================
 CREATE TABLE IF NOT EXISTS citas (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  id_paciente UUID NOT NULL REFERENCES pacientes(id),
+  id_paciente UUID REFERENCES pacientes(id),
   id_medico UUID REFERENCES medicos(id),
   fecha_hora TIMESTAMPTZ,
   estado VARCHAR(30) DEFAULT 'pendiente',
+  whatsapp_telefono VARCHAR(30),
+  whatsapp_nombre VARCHAR(200),
+  whatsapp_medico_nombre VARCHAR(200),
+  whatsapp_opciones JSONB,
   notas_paciente TEXT,
   notas_medico TEXT,
   notas_asistente TEXT,

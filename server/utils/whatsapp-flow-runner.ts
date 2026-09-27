@@ -6,6 +6,7 @@ import {
   createCitaFromWhatsApp,
   searchPatientByPhone,
 } from './whatsapp-db'
+import { emitCitaEvento } from './socket-emitter'
 
 interface FlowDef {
   id: string
@@ -197,23 +198,40 @@ async function ejecutarAccion(
       const doctorId = vars.doctor_id
       const fecha = vars.fecha
       const hora = vars.hora
-      if (!doctorId || !fecha || !hora) {
+      const pendiente = !fecha && !hora
+      const horarioIncompleto = Boolean(fecha) !== Boolean(hora)
+      if (!doctorId || horarioIncompleto || (pendiente && config.crear_pendiente !== true)) {
         console.warn('[Flujo] crear_cita sin datos suficientes:', { doctorId, fecha, hora })
         return { texto: 'Faltan datos para crear la cita. Intenta de nuevo.', vars }
       }
       const paciente = await searchPatientByPhone(pool, conv.telefono)
-      // Regla MediProtect: la cita NUNCA se guarda confirmada, queda en PENDIENTE_DE_COORDINACION
-      // para que un asistente coordine manualmente con el consultorio.
       const cita = await createCitaFromWhatsApp(
         pool,
         doctorId,
         paciente?.id || null,
-        fecha,
-        hora,
+        fecha || null,
+        hora || null,
         conv.telefono,
         conv.nombre_paciente || nombre || 'Paciente WhatsApp',
         'PENDIENTE_DE_COORDINACION'
       )
+      const pacienteNombre = conv.nombre_paciente || nombre || 'Paciente WhatsApp'
+      emitCitaEvento('cita:created', {
+        id: cita.id,
+        paciente_id: paciente?.id,
+        medico_id: doctorId,
+        paciente_nombre: pacienteNombre,
+        medico_nombre: vars.doctor_nombre || 'Médico seleccionado',
+        estado: 'PENDIENTE_DE_COORDINACION',
+        data: cita,
+      })
+      if (pendiente) {
+        const texto = interpolar(
+          config.texto || 'Registramos tu solicitud de cita con {{doctor_nombre}}. Un asistente te contactará por WhatsApp para ofrecerte opciones de fecha y hora.',
+          { ...vars, doctor_nombre: vars.doctor_nombre || 'el médico seleccionado', folio: cita.folio }
+        )
+        return { texto, vars: { ...vars, cita_id: cita.id, folio: cita.folio } }
+      }
       const precio = vars.precio_con_descuento || vars.precio || 'preferencial'
       const texto = interpolar(
         config.texto ||

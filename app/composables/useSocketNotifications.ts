@@ -3,6 +3,7 @@ import { useNotifications } from '~/composables/useNotifications'
 
 const labels: Record<string, string> = {
   pendiente: 'Pendiente',
+  PENDIENTE_DE_COORDINACION: 'Pendiente por coordinar',
   confirmada: 'Confirmada',
   cancelada: 'Cancelada',
   paciente_llego: 'Paciente lleg\u00f3',

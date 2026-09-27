@@ -6,7 +6,9 @@ definePageMeta({ layout: false })
 
 const usuario = ref(null)
 const citas = ref([])
+const citasPendientesCoordinacion = ref([])
 const loading = ref(true)
+const loadingCoordinacion = ref(false)
 const filtroEstado = ref('')
 const busqueda = ref('')
 const citaSeleccionada = ref(null)
@@ -16,6 +18,9 @@ const showModal = ref(false)
 const showNuevaCita = ref(false)
 const notaText = ref('')
 const newMsg = ref({ remitente: '', destinatario: '', telefono: '', mensaje: '' })
+const opcionesCita = ref([{ fecha: '', hora: '' }, { fecha: '', hora: '' }])
+const enviandoOpciones = ref(false)
+const errorOpciones = ref('')
 
 // Nueva cita form
 const nuevaCita = ref({
@@ -39,6 +44,24 @@ const errorCita = ref('')
 const parseando = ref(false)
 const pasoActual = ref(1)
 const buscandoMedico = ref(false)
+const solicitudesCoordinacion = computed(() => {
+  if (filtroEstado.value && filtroEstado.value !== 'PENDIENTE_DE_COORDINACION') return []
+  let solicitudes = citasPendientesCoordinacion.value
+  if (busqueda.value) {
+    const termino = busqueda.value.toLowerCase()
+    solicitudes = solicitudes.filter(c =>
+      c.paciente_nombre?.toLowerCase().includes(termino) ||
+      c.whatsapp_nombre?.toLowerCase().includes(termino) ||
+      c.medico_nombre?.toLowerCase().includes(termino) ||
+      String(c.paciente_telefono || '').toLowerCase().includes(termino) ||
+      String(c.whatsapp_telefono || '').toLowerCase().includes(termino)
+    )
+  }
+  return solicitudes
+})
+const citasNormales = computed(() =>
+  citas.value.filter(c => !(c.estado === 'PENDIENTE_DE_COORDINACION' && !c.fecha_hora))
+)
 
 // Pestañas
 const activeTab = ref('citas')
@@ -144,6 +167,22 @@ async function cargarCitas() {
     citas.value = data?.citas || []
   } catch (e) { console.error(e) }
   loading.value = false
+  await cargarSolicitudesCoordinacion()
+}
+
+async function cargarSolicitudesCoordinacion() {
+  loadingCoordinacion.value = true
+  try {
+    const data = await $fetch('/api/asistente/citas/pendientes', {
+      headers: { Authorization: 'Bearer ' + authToken.value }
+    })
+    citasPendientesCoordinacion.value = data?.citas || []
+  } catch (e) {
+    console.error(e)
+    citasPendientesCoordinacion.value = []
+  } finally {
+    loadingCoordinacion.value = false
+  }
 }
 
 // Parse WhatsApp message
@@ -340,7 +379,9 @@ function seleccionarMedico(medico) {
 }
 
 function formatearFecha(fechaISO) {
+  if (!fechaISO) return 'Sin fecha/hora — pendiente de coordinación'
   const fecha = new Date(fechaISO)
+  if (Number.isNaN(fecha.getTime())) return 'Sin fecha/hora — pendiente de coordinación'
   const opciones = { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }
   return fecha.toLocaleDateString('es-MX', opciones)
 }
@@ -396,7 +437,9 @@ function cerrarPerfilMedico() {
 }
 
 function formatearFechaCita(fechaISO) {
+  if (!fechaISO) return 'Sin fecha/hora — pendiente de coordinación'
   const fecha = new Date(fechaISO)
+  if (Number.isNaN(fecha.getTime())) return 'Sin fecha/hora — pendiente de coordinación'
   const opciones = { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }
   return fecha.toLocaleDateString('es-MX', opciones)
 }
@@ -410,14 +453,16 @@ function seleccionarPaciente(p) {
 
 async function crearCita() {
   errorCita.value = ''
-  if (!pacienteSeleccionado.value) { errorCita.value = 'Selecciona un paciente en el paso 1'; pasoActual.value = 1; return }
   if (!nuevaCita.value.medico_search.trim()) { errorCita.value = 'Escribe el nombre del médico'; pasoActual.value = 2; return }
-  if (!nuevaCita.value.fecha || !nuevaCita.value.hora) { errorCita.value = 'Selecciona fecha y hora'; return }
+  if (Boolean(nuevaCita.value.fecha) !== Boolean(nuevaCita.value.hora)) { errorCita.value = 'Completa fecha y hora, o deja ambos campos vacíos para coordinar'; return }
+  if (!pacienteSeleccionado.value) { errorCita.value = 'Selecciona un paciente para poder coordinar y contactarlo por WhatsApp'; pasoActual.value = 1; return }
   creandoCita.value = true
   try {
-    const fecha_hora = nuevaCita.value.fecha + 'T' + nuevaCita.value.hora + ':00'
+    const fecha_hora = nuevaCita.value.fecha && nuevaCita.value.hora
+      ? nuevaCita.value.fecha + 'T' + nuevaCita.value.hora + ':00'
+      : null
     const body = {
-      id_paciente: pacienteSeleccionado.value.id,
+      id_paciente: pacienteSeleccionado.value?.id || null,
       medico_nombre: nuevaCita.value.medico_search.trim(),
       fecha_hora,
       notas_asistente: nuevaCita.value.notas || nuevaCita.value.wa_text,
@@ -446,6 +491,8 @@ async function crearCita() {
 async function abrirCita(cita) {
   citaSeleccionada.value = cita
   showModal.value = true
+  errorOpciones.value = ''
+  opcionesCita.value = [{ fecha: '', hora: '' }, { fecha: '', hora: '' }]
   try {
     const data = await $fetch('/api/asistente/citas/' + cita.id + '/bitacora', {
       headers: { Authorization: 'Bearer ' + authToken.value }
@@ -453,6 +500,51 @@ async function abrirCita(cita) {
     bitacora.value = data?.bitacora || []
     mensajesWA.value = data?.mensajes_whatsapp || []
   } catch (e) { console.error(e) }
+}
+
+function agregarOpcionCita() {
+  if (opcionesCita.value.length >= 10) return
+  opcionesCita.value.push({ fecha: '', hora: '' })
+}
+
+function eliminarOpcionCita(index) {
+  opcionesCita.value.splice(index, 1)
+}
+
+async function enviarOpcionesCita() {
+  errorOpciones.value = ''
+  const opciones = opcionesCita.value.filter(o => o.fecha && o.hora)
+  if (!citaSeleccionada.value) return
+  if (opcionesCita.value.length < 2 || opciones.length < 2) {
+    errorOpciones.value = 'Agrega al menos 2 opciones completas de fecha y hora'
+    return
+  }
+  if (opcionesCita.value.length > 10 || opciones.length > 10) {
+    errorOpciones.value = 'Puedes enviar un máximo de 10 opciones'
+    return
+  }
+  if (opciones.length !== opcionesCita.value.length) {
+    errorOpciones.value = 'Completa la fecha y hora de cada opción antes de enviar'
+    return
+  }
+
+  enviandoOpciones.value = true
+  try {
+    await $fetch('/api/asistente/citas/' + citaSeleccionada.value.id + '/opciones', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + authToken.value },
+      body: { opciones }
+    })
+    actionSuccess.value = '✓ Opciones de horario enviadas al paciente'
+    setTimeout(() => { actionSuccess.value = '' }, 4000)
+    await cargarCitas()
+    const citaActualizada = citas.value.find(c => c.id === citaSeleccionada.value?.id)
+    if (citaActualizada) await abrirCita(citaActualizada)
+  } catch (e) {
+    errorOpciones.value = e.data?.message || e.data?.error || e.message || 'Error al enviar opciones de horario'
+  } finally {
+    enviandoOpciones.value = false
+  }
 }
 
 const actionLoading = ref(null)
@@ -1053,7 +1145,7 @@ async function crearPacienteParaEmpresa() {
         <!-- Vista Calendario -->
         <CalendarioCitas
           v-if="vistaCitas === 'calendar'"
-          :citas="citas"
+          :citas="citasNormales"
           @seleccionar-cita="abrirCita"
         />
 
@@ -1064,6 +1156,7 @@ async function crearPacienteParaEmpresa() {
             <select v-model="filtroEstado" @change="cargarCitas">
               <option value="">Todos</option>
               <option value="pendiente">Pendientes</option>
+              <option value="PENDIENTE_DE_COORDINACION">Solicitudes WhatsApp por coordinar</option>
               <option value="confirmada">Confirmadas</option>
               <option value="asistida">Asistidas</option>
               <option value="cancelada">Canceladas</option>
@@ -1071,15 +1164,47 @@ async function crearPacienteParaEmpresa() {
             </select>
           </div>
 
+          <section v-if="loadingCoordinacion || solicitudesCoordinacion.length || filtroEstado === 'PENDIENTE_DE_COORDINACION'" class="coordination-section">
+            <header class="coordination-header">
+              <h2>Solicitudes WhatsApp pendientes de coordinación <span>({{ solicitudesCoordinacion.length }})</span></h2>
+              <button type="button" class="btn-secondary" @click="cargarSolicitudesCoordinacion" :disabled="loadingCoordinacion">
+                {{ loadingCoordinacion ? 'Actualizando...' : 'Actualizar solicitudes' }}
+              </button>
+            </header>
+            <div v-if="loadingCoordinacion" class="loading">Cargando solicitudes...</div>
+            <div class="citas-cards">
+              <div
+                v-for="cita in solicitudesCoordinacion"
+                :key="cita.id"
+                class="cita-card coordination-card"
+                :style="{ borderLeftColor: estadoColor(cita.estado) }"
+                @click="abrirCita(cita)"
+              >
+                <div class="cita-header">
+                  <span class="estado-badge" :style="{ background: estadoColor(cita.estado) }">Pendiente de coordinación</span>
+                  <span class="fecha">Sin fecha/hora — pendiente de coordinación</span>
+                </div>
+                <div class="cita-body">
+                  <div class="cita-col">
+                    <strong>Paciente:</strong> {{ cita.paciente_nombre || cita.whatsapp_nombre || 'Solicitud de WhatsApp' }} {{ cita.paciente_apellido }}
+                    <span v-if="cita.paciente_telefono || cita.whatsapp_telefono" class="phone" @click.stop="abrirWA(cita.paciente_telefono || cita.whatsapp_telefono)">📱 WhatsApp</span>
+                  </div>
+                  <div class="cita-col"><strong>Médico:</strong> {{ cita.medico_nombre || '—' }}</div>
+                </div>
+              </div>
+            </div>
+            <div v-if="!loadingCoordinacion && !solicitudesCoordinacion.length" class="empty-state">Sin solicitudes por coordinar</div>
+          </section>
+
           <div v-if="loading" class="loading">Cargando citas...</div>
 
-          <div v-else-if="citas.length === 0" class="empty">
+          <div v-else-if="!citasNormales.length && !solicitudesCoordinacion.length" class="empty">
             <p>No hay citas para mostrar</p>
           </div>
 
-          <div v-else class="citas-cards">
+          <div v-else-if="citasNormales.length" class="citas-cards">
             <div
-              v-for="cita in citas"
+              v-for="cita in citasNormales"
               :key="cita.id"
               class="cita-card"
               :style="{ borderLeftColor: estadoColor(cita.estado) }"
@@ -1091,8 +1216,8 @@ async function crearPacienteParaEmpresa() {
               </div>
               <div class="cita-body">
                 <div class="cita-col">
-                  <strong>Paciente:</strong> {{ cita.paciente_nombre }} {{ cita.paciente_apellido }}
-                  <span v-if="cita.paciente_telefono" class="phone" @click.stop="abrirWA(cita.paciente_telefono)">📱 WhatsApp</span>
+                  <strong>Paciente:</strong> {{ cita.paciente_nombre || cita.whatsapp_nombre || 'Paciente' }} {{ cita.paciente_apellido }}
+                  <span v-if="cita.paciente_telefono || cita.whatsapp_telefono" class="phone" @click.stop="abrirWA(cita.paciente_telefono || cita.whatsapp_telefono)">📱 WhatsApp</span>
                 </div>
                 <div class="cita-col">
                   <strong>Médico:</strong> {{ cita.medico_nombre }} {{ cita.medico_apellido }}
@@ -1482,6 +1607,7 @@ async function crearPacienteParaEmpresa() {
             <div class="btn-row">
               <button @click="siguientePaso" class="btn-primary">Siguiente: Médico →</button>
             </div>
+            <p class="field-hint">Para una solicitud de coordinación por WhatsApp puedes continuar sin asociar paciente; las citas con fecha y hora sí requieren uno.</p>
           </div>
 
           <!-- PASO 2: Médico -->
@@ -1585,7 +1711,7 @@ async function crearPacienteParaEmpresa() {
 
             <div class="field-row">
               <div class="field">
-                <label>Fecha</label>
+                <label>Fecha (opcional para coordinar)</label>
                 <input v-model="nuevaCita.fecha" type="date" />
               </div>
               <div class="field">
@@ -1593,6 +1719,7 @@ async function crearPacienteParaEmpresa() {
                 <input v-model="nuevaCita.hora" type="time" />
               </div>
             </div>
+            <p class="field-hint">Selecciona un paciente y deja fecha y hora vacías para registrar una solicitud pendiente que coordinaremos por WhatsApp.</p>
 
             <div class="field">
               <label>Notas (opcional)</label>
@@ -1621,10 +1748,10 @@ async function crearPacienteParaEmpresa() {
         <div class="modal-body" v-if="citaSeleccionada">
           <div class="info-grid">
             <div><strong>Estado:</strong> <span class="estado-badge" :style="{ background: estadoColor(citaSeleccionada.estado) }">{{ citaSeleccionada.estado }}</span></div>
-            <div><strong>Fecha:</strong> {{ new Date(citaSeleccionada.fecha_hora).toLocaleString('es-MX') }}</div>
+            <div><strong>Fecha:</strong> {{ formatearFechaCita(citaSeleccionada.fecha_hora) }}</div>
             <div>
-              <strong>Paciente:</strong> {{ citaSeleccionada.paciente_nombre }} {{ citaSeleccionada.paciente_apellido }}
-              <a v-if="citaSeleccionada.paciente_telefono" @click="abrirWA(citaSeleccionada.paciente_telefono)" class="link-wa">Abrir WhatsApp</a>
+              <strong>Paciente:</strong> {{ citaSeleccionada.paciente_nombre || citaSeleccionada.whatsapp_nombre || 'Solicitud de WhatsApp' }} {{ citaSeleccionada.paciente_apellido }}
+              <a v-if="citaSeleccionada.paciente_telefono || citaSeleccionada.whatsapp_telefono" @click="abrirWA(citaSeleccionada.paciente_telefono || citaSeleccionada.whatsapp_telefono)" class="link-wa">Abrir WhatsApp</a>
             </div>
             <div>
               <strong>Médico:</strong> {{ citaSeleccionada.medico_nombre }} {{ citaSeleccionada.medico_apellido }}
@@ -1636,10 +1763,25 @@ async function crearPacienteParaEmpresa() {
             {{ actionSuccess }}
           </div>
 
+          <section v-if="citaSeleccionada.estado === 'PENDIENTE_DE_COORDINACION'" class="coordination-options">
+            <h3>Proponer horarios al paciente</h3>
+            <p>Agrega una o más opciones de fecha y hora para enviar por WhatsApp.</p>
+            <div v-for="(opcion, index) in opcionesCita" :key="index" class="field-row option-row">
+              <div class="field"><label>Fecha</label><input v-model="opcion.fecha" type="date" /></div>
+              <div class="field"><label>Hora</label><input v-model="opcion.hora" type="time" /></div>
+              <button v-if="opcionesCita.length > 1" type="button" class="btn-cancel" @click="eliminarOpcionCita(index)">Quitar</button>
+            </div>
+            <button type="button" class="btn-secondary" @click="agregarOpcionCita" :disabled="opcionesCita.length >= 10">+ Agregar otro horario</button>
+            <div v-if="errorOpciones" class="error">{{ errorOpciones }}</div>
+            <button type="button" class="btn-primary" @click="enviarOpcionesCita" :disabled="enviandoOpciones">
+              {{ enviandoOpciones ? 'Enviando...' : 'Enviar opciones al paciente' }}
+            </button>
+          </section>
+
           <div class="acciones">
             <h3>Acciones</h3>
             <div class="btn-group">
-              <button v-if="['pendiente','PENDIENTE_DE_COORDINACION'].includes(citaSeleccionada.estado)" @click="cambiarEstado('confirmada', 'Confirmada por asistente')" class="btn-action btn-confirm" :disabled="actionLoading">
+              <button v-if="['pendiente','PENDIENTE_DE_COORDINACION'].includes(citaSeleccionada.estado) && citaSeleccionada.fecha_hora" @click="cambiarEstado('confirmada', 'Confirmada por asistente')" class="btn-action btn-confirm" :disabled="actionLoading">
                 {{ actionLoading === 'confirmada' ? 'Confirmando...' : 'Confirmar' }}
               </button>
               <button v-if="citaSeleccionada.estado === 'confirmada'" @click="cambiarEstado('paciente_llego', 'Paciente llegó (reportado por asistente)')" class="btn-action btn-arrival" :disabled="actionLoading">
@@ -2318,4 +2460,14 @@ h1 { font-size: 1.5rem; color: #2d3436; }
 .maps-link:hover { text-decoration: underline; }
 .checkbox-label { display: flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; color: #2d3436; cursor: pointer; }
 .consultorio-form { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 0.75rem; margin-bottom: 0.75rem; }
+.coordination-section { margin: 0 0 1.25rem; padding: 1rem; background: #fffaf0; border: 1px solid #fdcb6e; border-radius: 10px; }
+.coordination-header { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
+.coordination-section h2 { margin: 0; font-size: 1rem; color: #2d3436; }
+.coordination-section h2 span { color: #636e72; font-size: 0.85rem; font-weight: 400; }
+.coordination-card { border-left-color: #fdcb6e; }
+.coordination-options { margin: 0 0 1.25rem; padding: 1rem; background: #f8f9fa; border: 1px solid #dfe6e9; border-radius: 8px; }
+.coordination-options h3 { margin: 0 0 0.4rem; font-size: 1rem; }
+.coordination-options > p { margin: 0 0 0.75rem; color: #636e72; font-size: 0.85rem; }
+.coordination-options .option-row { align-items: flex-end; }
+.coordination-options > button { margin-right: 0.5rem; margin-bottom: 0.5rem; }
 </style>

@@ -15,11 +15,13 @@ export default defineEventHandler(async (event) => {
   // Get cita details
   const cita = await pool.query(
     `SELECT c.*,
-       p.nombre as paciente_nombre, p.apellido as paciente_apellido, p.telefono as paciente_telefono,
-       m.nombre as medico_nombre, m.apellido as medico_apellido, m.whatsapp as medico_whatsapp
+       COALESCE(p.nombre, c.whatsapp_nombre) as paciente_nombre,
+       p.apellido as paciente_apellido, COALESCE(c.whatsapp_telefono, p.telefono) as paciente_telefono,
+       COALESCE(m.nombre, c.whatsapp_medico_nombre) as medico_nombre,
+       m.apellido as medico_apellido, m.whatsapp as medico_whatsapp
      FROM citas c
-     JOIN pacientes p ON p.id = c.id_paciente
-     JOIN medicos m ON m.id = c.id_medico
+     LEFT JOIN pacientes p ON p.id = c.id_paciente
+     LEFT JOIN medicos m ON m.id = c.id_medico
      WHERE c.id = $1`,
     [id]
   )

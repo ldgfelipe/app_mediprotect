@@ -295,18 +295,21 @@ export async function createCitaFromWhatsApp(
   pool: any,
   medicoId: string,
   pacienteId: string | null,
-  fecha: string,
-  hora: string,
+  fecha: string | null,
+  hora: string | null,
   telefonoPaciente: string,
   nombrePaciente: string,
   // MediProtect: las citas creadas por el motor de flujos quedan PENDIENTE_DE_COORDINACION
   // para que un asistente las coordine manualmente (nunca se confirman solas).
   estado: string = 'PENDIENTE_DE_COORDINACION'
 ) {
-  const fechaHora = `${fecha}T${hora}:00`
+  if ((fecha === null) !== (hora === null)) {
+    throw new Error('fecha y hora deben ser ambas nulas o ambas definidas')
+  }
+  const fechaHora = fecha !== null && hora !== null ? `${fecha}T${hora}:00` : null
 
   const medicoRes = await pool.query(
-    `SELECT precio_regular, porcentaje_descuento, monto_comision
+    `SELECT nombre, apellido, precio_regular, porcentaje_descuento, monto_comision
      FROM medicos WHERE id = $1`,
     [medicoId]
   )
@@ -314,12 +317,30 @@ export async function createCitaFromWhatsApp(
   const precioRegular = medico?.precio_regular || 1000
   const descuento = medico?.porcentaje_descuento || 10
   const precioAcordado = precioRegular * (1 - descuento / 100)
+  const whatsappTelefono = estado === 'PENDIENTE_DE_COORDINACION' ? telefonoPaciente : null
+  const whatsappNombre = estado === 'PENDIENTE_DE_COORDINACION' ? nombrePaciente : null
+  const whatsappMedicoNombre = estado === 'PENDIENTE_DE_COORDINACION'
+    ? [medico?.nombre, medico?.apellido].filter(Boolean).join(' ') || null
+    : null
 
   const result = await pool.query(
-    `INSERT INTO citas (id_paciente, id_medico, fecha_hora, precio_acordado, notas_paciente, estado)
-     VALUES ($1, $2, $3::timestamptz, $4, $5, $6)
+    `INSERT INTO citas (
+       id_paciente, id_medico, fecha_hora, precio_acordado, notas_paciente, estado,
+       whatsapp_telefono, whatsapp_nombre, whatsapp_medico_nombre
+     )
+     VALUES ($1, $2, $3::timestamptz, $4, $5, $6, $7, $8, $9)
      RETURNING *`,
-    [pacienteId, medicoId, fechaHora, precioAcordado, `Cita agendada vía WhatsApp por ${nombrePaciente}`, estado]
+    [
+      pacienteId,
+      medicoId,
+      fechaHora,
+      precioAcordado,
+      `Cita agendada vía WhatsApp por ${nombrePaciente}`,
+      estado,
+      whatsappTelefono,
+      whatsappNombre,
+      whatsappMedicoNombre,
+    ]
   )
 
   return result.rows[0]
