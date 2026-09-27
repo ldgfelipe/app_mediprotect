@@ -16,6 +16,7 @@ import {
   enviarOpcionesFechaHoraPaciente,
   getWhatsAppConfig,
 } from './whatsapp-db'
+import { parsearSolicitudCita } from './whatsapp-flow'
 import { emitCitaEvento } from './socket-emitter'
 import { getWhatsAppConfig as getWhatsAppConfigMain, enviarMensaje, enviarLista } from './whatsapp'
 
@@ -605,6 +606,17 @@ export async function proseguirOIniciarFlujo(
   const data = conv.datos_temp || {}
   const flowActual = data.flow as FlujoCtx | undefined
 
+  // Parsear mensaje para extraer datos estructurados (pacienteId, doctor, email, etc.)
+  const solicitudParseada = parsearSolicitudCita(texto)
+
+  // Construir vars iniciales con datos parseados
+  const initialVars: Record<string, any> = {}
+  if (solicitudParseada.pacienteId) initialVars.paciente_id = solicitudParseada.pacienteId
+  if (solicitudParseada.doctor) initialVars.doctor_nombre = solicitudParseada.doctor
+  if (solicitudParseada.nombre) initialVars.paciente_nombre = solicitudParseada.nombre
+  if (solicitudParseada.email) initialVars.paciente_email = solicitudParseada.email
+  if (solicitudParseada.telefono) initialVars.paciente_telefono = solicitudParseada.telefono
+
   if (flowActual?.flowId && flowActual.nodeId) {
     const flow = await obtenerFlujo(pool, flowActual.flowId)
     if (flow) {
@@ -612,7 +624,7 @@ export async function proseguirOIniciarFlujo(
       const nuevo = detectarFlujoPorKeywords(activos, texto)
       const esKeywordExacta = !!nuevo && (activos.find((f) => f.id === nuevo.id)?.keywords || []).some((k) => norm(k) === norm(texto))
       if (nuevo && esKeywordExacta) {
-        const res = await ejecutarFlujo(pool, nuevo, { flowId: nuevo.id, nodeId: null, vars: {}, esperando: false }, conv, texto, nombre)
+        const res = await ejecutarFlujo(pool, nuevo, { flowId: nuevo.id, nodeId: null, vars: { ...initialVars }, esperando: false }, conv, texto, nombre)
         if (res.respuesta) return { respuesta: res.respuesta, flujoDetectado: true }
       } else {
         const res = await ejecutarFlujo(pool, flow, flowActual, conv, texto, nombre)
@@ -629,6 +641,6 @@ export async function proseguirOIniciarFlujo(
     return { respuesta: { texto: FALLBACK_SIN_FLUJO.texto, nuevoEstado: conv.estado || 'bienvenida', datosTemp: data }, flujoDetectado: false }
   }
 
-  const res = await ejecutarFlujo(pool, flow, { flowId: flow.id, nodeId: null, vars: {}, esperando: false }, conv, texto, nombre)
+  const res = await ejecutarFlujo(pool, flow, { flowId: flow.id, nodeId: null, vars: { ...initialVars }, esperando: false }, conv, texto, nombre)
   return { respuesta: res.respuesta || { texto: FALLBACK_SIN_FLUJO.texto, nuevoEstado: 'bienvenida', datosTemp: {} }, flujoDetectado: true }
 }

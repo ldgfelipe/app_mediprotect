@@ -62,20 +62,26 @@ export function parsearSolicitudCita(texto: string) {
 
   result.esSolicitudDirecta = true
 
+  // Nombre: "soy Ana Martinez Diaz" / "me llamo Juan Perez"
   const nombreMatch = texto.match(/(?:soy|me llamo|mi nombre es)\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)+)/i)
   if (nombreMatch) result.nombre = nombreMatch[1].trim()
 
-  const doctorMatch = texto.match(/(?:médico?|doctor?|dr\.?|dra\.?)\s+([a-záéíóúñ]+(?:-[a-záéíóúñ]+)+)/i)
+  // Doctor: "médico Raul Payan Nadue" / "doctor Raul Payan" / "dr Raul" / "dra Ana"
+  // Acepta mayúsculas, espacios, guiones, acentos
+  const doctorMatch = texto.match(/(?:médico?|doctor?|dr\.?|dra\.?)\s+([A-ZÁÉÍÓÚÑa-záéíóúñ]+(?:\s+[A-ZÁÉÍÓÚÑa-záéíóúñ]+)+)/i)
   if (doctorMatch) result.doctor = doctorMatch[1].trim()
 
+  // Email
   const emailMatch = texto.match(/[\w.+-]+@[\w-]+\.[\w.-]+/)
   if (emailMatch) result.email = emailMatch[0]
 
+  // Teléfono: "Teléfono: 2224445566" o "tel: 2224445566" o solo 10 dígitos
   const phoneMatch = texto.match(/(?:teléfono|telefono|tel|cel|phone)[:\s]*(\d{10})/i) || texto.match(/\b(\d{10})\b/)
   if (phoneMatch) result.telefono = phoneMatch[1]
 
+  // ID: "ID: ff142735-ee46-4e7d-8ed8-2e529a16d9f7" (con o sin espacios)
   const idMatch = texto.match(/ID[:\s]*([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i)
-  if (idMatch) result.pacienteId = idMatch[1]
+  if (idMatch) result.pacienteId = idMatch[1].trim()
 
   if (result.nombre || result.pacienteId || result.doctor) {
     return result
