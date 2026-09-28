@@ -32,6 +32,13 @@ export async function procesarSeleccionHorarioCita(
     return await procesarSeleccionHora(pool, telefono, texto, indice, hora)
   }
 
+  // Respuesta numérica (las opciones se envían como texto numerado,
+  // ya que WhatsApp bloqueó las listas interactivas).
+  const numMatch = texto.match(/^[1-9]\d?$/)
+  if (numMatch) {
+    return await procesarSeleccionNumCita(pool, telefono, Number(numMatch[0]))
+  }
+
   // Formato legacy: cita_slot:citaId:fecha:indice
   const match = texto.match(/^cita_slot:([^:]+):([^:]+):(\d+)$/)
   if (!match) return { matched: false }
@@ -62,6 +69,54 @@ export async function procesarSeleccionHorarioCita(
     return { matched: true, respuesta: 'Esa opción ya no está disponible. Un asistente te enviará nuevos horarios.' }
   }
 
+  return await confirmarOpcionHorario(pool, cita, opcion)
+}
+
+async function procesarSeleccionNumCita(
+  pool: any,
+  telefono: string,
+  numero: number
+): Promise<{ matched: boolean; respuesta?: string }> {
+  const result = await pool.query(
+    `SELECT c.id, c.id_paciente, c.id_medico, c.estado, c.fecha_hora,
+            c.whatsapp_opciones, c.whatsapp_telefono, c.whatsapp_nombre,
+            COALESCE(c.whatsapp_nombre, NULLIF(CONCAT_WS(' ', p.nombre, p.apellido), '')) AS paciente_nombre,
+            COALESCE(c.whatsapp_medico_nombre, NULLIF(CONCAT_WS(' ', m.nombre, m.apellido), '')) AS medico_nombre
+       FROM citas c
+       LEFT JOIN pacientes p ON p.id = c.id_paciente
+       LEFT JOIN medicos m ON m.id = c.id_medico
+      WHERE c.estado = 'PENDIENTE_DE_COORDINACION'
+        AND c.fecha_hora IS NULL
+        AND COALESCE(jsonb_array_length(c.whatsapp_opciones), 0) > 0
+        AND regexp_replace(COALESCE(c.whatsapp_telefono, p.telefono, ''), '[^0-9]', '', 'g') =
+            regexp_replace($1, '[^0-9]', '', 'g')
+      ORDER BY c.created_at DESC
+      LIMIT 1`,
+    [telefono]
+  )
+  const cita = result.rows[0]
+  if (!cita) return { matched: false }
+
+  const opciones = (cita.whatsapp_opciones || []) as OpcionHorario[]
+  const opcion = opciones[numero - 1]
+  if (!opcion) {
+    return { matched: true, respuesta: 'Esa opción ya no está disponible. Un asistente te enviará nuevos horarios.' }
+  }
+
+  // Solo fecha (día seleccionado) → enviar horas disponibles por texto
+  if (opcion.fecha && !opcion.hora) {
+    return await procesarSeleccionDia(pool, telefono, `cita_dia_${numero - 1}_${opcion.fecha}`, numero - 1, opcion.fecha)
+  }
+
+  // Fecha + hora → confirmar la cita
+  return await confirmarOpcionHorario(pool, cita, opcion)
+}
+
+async function confirmarOpcionHorario(
+  pool: any,
+  cita: any,
+  opcion: OpcionHorario
+): Promise<{ matched: true; respuesta: string }> {
   const fechaHora = new Date(`${opcion.fecha}T${opcion.hora}:00Z`)
   if (Number.isNaN(fechaHora.getTime()) || fechaHora.toISOString().slice(0, 16) !== `${opcion.fecha}T${opcion.hora}`) {
     throw createError({ statusCode: 500, message: 'La opción de horario guardada no es válida' })

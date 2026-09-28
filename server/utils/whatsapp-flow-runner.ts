@@ -455,12 +455,17 @@ export async function ejecutarFlujo(
       }
       case 'pregunta': {
         const opciones = (node.config?.opciones || [])
-        const idxMatch = texto.match(/^op_(\d+)(?:_.*)?$/)
+        let indice: number | null = null
+        const opMatch = texto.match(/^op_(\d+)(?:_.*)?$/)
+        if (opMatch) indice = parseInt(opMatch[1])
+        else {
+          const num = texto.match(/^[1-9]\d{0,2}$/)
+          if (num) indice = parseInt(num[1]) - 1
+        }
         let destino: string | null = null
         let elegido: any = null
-        if (idxMatch) {
-          const idx = parseInt(idxMatch[1])
-          const op = opciones[idx]
+        if (indice !== null) {
+          const op = opciones[indice]
           if (op) { elegido = op; destino = siguienteNodo(def, node.id, op.valor || op.label) }
         } else {
           const directa = opciones.find((o: any) => norm(o.label) === norm(texto) || norm(o.valor) === norm(texto))
@@ -486,10 +491,15 @@ export async function ejecutarFlujo(
       case 'lista': {
         const fuente = node.config?.fuente || 'especialidades'
         const opciones = await generarLista(pool, fuente, vars, node.config || {})
-        const idxMatch = texto.match(/^op_(\d+)(?:_.*)?$/)
-        if (idxMatch) {
-          const idx = parseInt(idxMatch[1])
-          const op = opciones[idx]
+        let indiceLista: number | null = null
+        const listaMatch = texto.match(/^op_(\d+)(?:_.*)?$/)
+        if (listaMatch) indiceLista = parseInt(listaMatch[1])
+        else {
+          const num = texto.match(/^[1-9]\d{0,2}$/)
+          if (num) indiceLista = parseInt(num[1]) - 1
+        }
+        if (indiceLista !== null) {
+          const op = opciones[indiceLista]
           if (op && node.config?.campo) vars[node.config.campo] = op.id
           else if (op) vars[node.config?.campo || 'seleccion'] = op.id
           nodeId = siguienteNodo(def, node.id)

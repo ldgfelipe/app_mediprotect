@@ -569,14 +569,14 @@ export async function enviarOpcionesFechaHoraPaciente(
   const dias = await getDiasDisponiblesParaMedico(pool, doctorId)
   if (dias.length === 0) return { ok: false, error: 'Sin disponibilidad' }
 
-  const { enviarLista } = await import('./whatsapp')
+  const { enviarOpcionesTexto } = await import('./whatsapp')
   const opciones = dias.slice(0, 10).map((d, i) => ({
     id: `cita_dia_${i}_${d.descripcion}`,
     titulo: d.titulo,
     descripcion: d.descripcion,
   }))
 
-  await enviarLista({ gatewayUrl, instanceName, apiKey: '' }, telefonoPaciente, `📅 *Elige una fecha para tu cita con ${doctorNombre}:*`, opciones, 'Fechas disponibles')
+  await enviarOpcionesTexto({ gatewayUrl, instanceName, apiKey }, telefonoPaciente, `📅 *Elige una fecha para tu cita con ${doctorNombre}:*`, opciones, 'Fechas disponibles')
 
   await pool.query(
     `UPDATE citas SET whatsapp_opciones = $2, updated_at = NOW() WHERE id = $1`,

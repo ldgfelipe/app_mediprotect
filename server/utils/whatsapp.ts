@@ -42,6 +42,24 @@ export async function enviarMensaje(config: WhatsAppConfig, telefono: string, te
   return parsearRespuesta(res, url)
 }
 
+export async function enviarOpcionesTexto(
+  config: WhatsAppConfig,
+  telefono: string,
+  texto: string,
+  opciones: { id: string; titulo: string; descripcion?: string }[],
+  tituloSeccion = 'Opciones'
+) {
+  const lineas = opciones
+    .filter(o => o && (o.titulo || o.descripcion))
+    .map((o, i) => `${i + 1}. ${o.titulo || o.descripcion}`)
+    .join('\n')
+  const cuerpo = `${texto}\n\n${lineas}\n\n_Responde solo con el número de la opción (ej. 1)._`
+  return enviarMensaje(config, telefono, cuerpo)
+}
+
+// WhatsApp bloqueó los mensajes interactivos (sendList/sendButtons) en esta
+// cuenta (respuesta 405 de Baileys). Se envían opciones como texto numerado y
+// la respuesta del paciente se resuelve por índice (whatsapp-pending-appointments).
 export async function enviarLista(
   config: WhatsAppConfig,
   telefono: string,
@@ -49,29 +67,7 @@ export async function enviarLista(
   opciones: { id: string; titulo: string; descripcion?: string }[],
   tituloSeccion = 'Opciones'
 ) {
-  const sections = [{
-    title: tituloSeccion,
-    rows: opciones.map(o => ({
-      title: o.titulo,
-      description: o.descripcion || o.titulo,
-      rowId: o.id
-    }))
-  }]
-
-  const url = resolverUrl(config, 'message/sendList')
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: cabeceras(config),
-    body: JSON.stringify({
-      number: normalizarTelefono(telefono),
-      title: 'MediProtect',
-      description: texto,
-      buttonText: 'Seleccionar',
-      footerText: 'MediProtect',
-      sections
-    })
-  })
-  return parsearRespuesta(res, url)
+  return enviarOpcionesTexto(config, telefono, texto, opciones, tituloSeccion)
 }
 
 export async function enviarBotones(
@@ -80,21 +76,5 @@ export async function enviarBotones(
   texto: string,
   botones: { id: string; titulo: string }[]
 ) {
-  const url = resolverUrl(config, 'message/sendButtons')
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: cabeceras(config),
-    body: JSON.stringify({
-      number: normalizarTelefono(telefono),
-      title: 'MediProtect',
-      description: texto,
-      footer: 'MediProtect',
-      buttons: botones.map(b => ({
-        type: 'reply',
-        title: b.titulo,
-        id: b.id
-      }))
-    })
-  })
-  return parsearRespuesta(res, url)
+  return enviarOpcionesTexto(config, telefono, texto, botones, 'Opciones')
 }
