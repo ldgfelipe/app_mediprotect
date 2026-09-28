@@ -85,14 +85,16 @@ export default defineEventHandler(async (event) => {
   // ── 2) Citas con 3h de antigüedad y sin recordatorio ──────────────────────
   const pendientes = await pool.query(
     `SELECT c.id, c.folio, c.fecha_hora, c.estado,
-            p.telefono, p.nombre, p.apellido
+            COALESCE(NULLIF(c.whatsapp_telefono, ''), p.telefono) AS telefono,
+            COALESCE(NULLIF(c.whatsapp_nombre, ''), p.nombre, '') AS nombre,
+            COALESCE(p.apellido, '') AS apellido
        FROM citas c
        JOIN pacientes p ON p.id = c.id_paciente
       WHERE c.fecha_hora <= NOW() - make_interval(hours => $1)
         AND c.recordatorio_asistencia_enviado = false
         AND c.respuesta_paciente_asistio IS NULL
         AND COALESCE(c.estado, '') <> 'cancelada'
-        AND COALESCE(p.telefono, '') <> ''
+        AND COALESCE(NULLIF(c.whatsapp_telefono, ''), p.telefono, '') <> ''
       ORDER BY c.fecha_hora ASC
       LIMIT $2`,
     [HORAS_DESPUES_CITA, LIMITE_CITAS]
