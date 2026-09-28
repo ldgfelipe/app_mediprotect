@@ -488,7 +488,7 @@ export async function createCitaFechaPorConfirmar(
        id_paciente, id_medico, fecha_hora, precio_acordado, notas_paciente, estado,
        whatsapp_telefono, whatsapp_nombre, whatsapp_medico_nombre
      )
-     VALUES ($1, $2, NULL, $3, $4, 'PENDIENTE_DE_COORDINACION', $5, $6, $7)
+     VALUES ($1, $2, NULL, $3, $4, $5, $6, $7, $8)
      RETURNING *`,
     [
       pacienteId,

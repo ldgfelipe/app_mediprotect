@@ -113,7 +113,14 @@ ADD COLUMN IF NOT EXISTS total_calificaciones INTEGER DEFAULT 0;
 
 ALTER TABLE citas 
 ADD COLUMN IF NOT EXISTS whatsapp_opciones JSONB DEFAULT '[]',
-ADD COLUMN IF NOT EXISTS recordatorio_enviado BOOLEAN DEFAULT false;
+ADD COLUMN IF NOT EXISTS recordatorio_enviado BOOLEAN DEFAULT false,
+ADD COLUMN IF NOT EXISTS whatsapp_telefono TEXT,
+ADD COLUMN IF NOT EXISTS whatsapp_nombre TEXT,
+ADD COLUMN IF NOT EXISTS whatsapp_medico_nombre TEXT,
+ADD COLUMN IF NOT EXISTS respuesta_paciente_asistio VARCHAR(10),
+ADD COLUMN IF NOT EXISTS respuesta_paciente_at TIMESTAMPTZ,
+ADD COLUMN IF NOT EXISTS respuesta_medico_asistio VARCHAR(10),
+ADD COLUMN IF NOT EXISTS respuesta_medico_at TIMESTAMPTZ;
 
 ALTER TABLE medicos 
 ADD COLUMN IF NOT EXISTS whatsapp_telefono TEXT;
@@ -143,20 +150,10 @@ ON CONFLICT (nombre) DO UPDATE SET
   definicion = EXCLUDED.definicion,
   activo = EXCLUDED.activo,
   updated_at = NOW();
-
-UPDATE whatsapp_flows SET activo = false WHERE nombre = 'citas';
-
-INSERT INTO medicos (nombre, apellido, slug, especialidad, precio_regular, porcentaje_descuento, activo, estatus_medico)
-VALUES ('Raul', 'Payan Nadue', 'raul-payan-nadue', 'Medicina General', 1000, 10, true, 'activo')
-ON CONFLICT (slug) DO NOTHING;
-
-INSERT INTO pacientes (id, nombre, apellido, email, telefono, password_hash, activo)
-VALUES ('ff142735-ee46-4e7d-8ed8-2e529a16d9f7', 'Ana', 'Martinez Diaz', 'ana.test@mediprotect.com.mx', '2224445566', '\$2b\$10\$dummyhashfordevelopmentonly', true)
-ON CONFLICT (id) DO NOTHING;
 `
 
 export async function initializeDatabase() {
-  const pool = useDbPool()
+  const pool = await useDbPool()
   
   try {
     console.log('[DB-INIT] Iniciando verificación/creación de esquema de BD...')
