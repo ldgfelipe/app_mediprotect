@@ -152,6 +152,19 @@ async function processIncomingMessage(msg: any, pool: any) {
     return
   }
 
+  // Evitar reprocesar el mismo mensaje (Evolution puede reenviar el evento
+  // y provocar citas duplicadas).
+  const yaProcesado = await pool.query(
+    `SELECT 1 FROM whatsapp_mensajes_log
+     WHERE whatsapp_msg_id = $1 AND direccion = 'in'
+     LIMIT 1`,
+    [msgId]
+  )
+  if (yaProcesado.rows.length > 0) {
+    console.log(`[WhatsApp Webhook] Mensaje ${msgId} ya procesado, omitiendo`)
+    return
+  }
+
   console.log(`[WhatsApp Webhook] Mensaje de ${telefono}: "${texto}" (tipo: ${tipo})`)
 
   await logMensaje(pool, telefono, 'in', texto, tipo, msgId)
