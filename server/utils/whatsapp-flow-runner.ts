@@ -638,6 +638,23 @@ export async function proseguirOIniciarFlujo(
   const flows = await listarFlujosActivos(pool)
   if (flows.length === 0) return { respuesta: null, flujoDetectado: false }
 
+  // Si el parser detectó una solicitud estructurada, priorizar el flujo dedicado
+  // sin depender de keywords (el mensaje contiene ID paciente, doctor, email, teléfono).
+  if (solicitudParseada.esSolicitudDirecta) {
+    const flujoEstructurado = flows.find((f) => f.nombre === 'solicitud_estructurada')
+    if (flujoEstructurado) {
+      const res = await ejecutarFlujo(
+        pool,
+        flujoEstructurado,
+        { flowId: flujoEstructurado.id, nodeId: null, vars: { ...initialVars }, esperando: false },
+        conv,
+        texto,
+        nombre
+      )
+      return { respuesta: res.respuesta || { texto: FALLBACK_SIN_FLUJO.texto, nuevoEstado: 'bienvenida', datosTemp: {} }, flujoDetectado: true }
+    }
+  }
+
   const flow = detectarFlujoPorKeywords(flows, texto)
   if (!flow) {
     return { respuesta: { texto: FALLBACK_SIN_FLUJO.texto, nuevoEstado: conv.estado || 'bienvenida', datosTemp: data }, flujoDetectado: false }
