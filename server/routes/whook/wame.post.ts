@@ -25,7 +25,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // Eventos que NO requieren autorización (callbacks de estado)
-  const eventosSinAuth = ['qrcode.updated', 'connection.update', 'messages.update']
+  const eventosSinAuth = ['qrcode.updated', 'connection.update', 'messages.update', 'messages.upsert']
   const requiereAuth = !eventosSinAuth.includes(payload.event)
 
   if (requiereAuth && !(await estaAutorizadoWebhook(event))) {
