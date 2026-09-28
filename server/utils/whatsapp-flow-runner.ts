@@ -460,7 +460,7 @@ export async function ejecutarFlujo(
         if (opMatch) indice = parseInt(opMatch[1])
         else {
           const num = texto.match(/^[1-9]\d{0,2}$/)
-          if (num) indice = parseInt(num[1]) - 1
+          if (num) indice = parseInt(num[0]) - 1
         }
         let destino: string | null = null
         let elegido: any = null
@@ -496,7 +496,7 @@ export async function ejecutarFlujo(
         if (listaMatch) indiceLista = parseInt(listaMatch[1])
         else {
           const num = texto.match(/^[1-9]\d{0,2}$/)
-          if (num) indiceLista = parseInt(num[1]) - 1
+          if (num) indiceLista = parseInt(num[0]) - 1
         }
         if (indiceLista !== null) {
           const op = opciones[indiceLista]
