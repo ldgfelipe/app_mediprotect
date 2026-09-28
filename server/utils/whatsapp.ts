@@ -53,7 +53,7 @@ export async function enviarLista(
     title: tituloSeccion,
     rows: opciones.map(o => ({
       title: o.titulo,
-      description: o.descripcion || '',
+      description: o.descripcion || o.titulo,
       rowId: o.id
     }))
   }]
@@ -67,6 +67,7 @@ export async function enviarLista(
       title: 'MediProtect',
       description: texto,
       buttonText: 'Seleccionar',
+      footerText: 'MediProtect',
       sections
     })
   })
