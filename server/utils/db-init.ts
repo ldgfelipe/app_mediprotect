@@ -125,6 +125,30 @@ ADD COLUMN IF NOT EXISTS respuesta_medico_at TIMESTAMPTZ;
 ALTER TABLE medicos 
 ADD COLUMN IF NOT EXISTS whatsapp_telefono TEXT;
 
+-- 2. Clicks en tarjetas de médico y botón de WhatsApp del perfil
+CREATE TABLE IF NOT EXISTS medico_clicks (
+  id SERIAL PRIMARY KEY,
+  tipo VARCHAR(50) NOT NULL,
+  origen VARCHAR(50),
+  id_medico UUID,
+  medico_nombre VARCHAR(200),
+  especialidad VARCHAR(150),
+  ubicacion VARCHAR(200),
+  pagina TEXT,
+  referrer TEXT,
+  sesion_id VARCHAR(64),
+  utm_source VARCHAR(100),
+  utm_medium VARCHAR(100),
+  utm_campaign VARCHAR(100),
+  user_agent TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_medico_clicks_tipo ON medico_clicks(tipo);
+CREATE INDEX IF NOT EXISTS idx_medico_clicks_medico ON medico_clicks(id_medico);
+CREATE INDEX IF NOT EXISTS idx_medico_clicks_created ON medico_clicks(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_medico_clicks_sesion ON medico_clicks(sesion_id);
+
 -- Datos iniciales
 INSERT INTO medicos (nombre, apellido, slug, especialidad, precio_regular, porcentaje_descuento, activo, estatus_medico)
 VALUES ('Raul', 'Payan Nadue', 'raul-payan-nadue', 'Medicina General', 1000, 10, true, 'activo')

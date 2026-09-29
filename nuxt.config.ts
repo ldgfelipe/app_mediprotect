@@ -24,6 +24,9 @@ export default defineNuxtConfig({
       link: [
         { rel: 'manifest', href: '/manifest.json' },
       ],
+      script: [
+        { src: '/mp-clics.js', defer: true },
+      ],
     },
   },
 })
