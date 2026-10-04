@@ -383,10 +383,11 @@ function irADashboard() {
             <span class="error-icon">❌</span>
             <span class="error-text">CURP inválida</span>
           </div>
-<div class="curp-validation info" v-if="formPaciente.datos_renapo">
+          <div class="curp-validation info" v-if="formPaciente.datos_renapo">
             <span class="info-icon">ℹ️</span>
             <span>Datos completados: {{ formPaciente.datos_renapo.nombre }} {{ formPaciente.datos_renapo.apellido }} | {{ formPaciente.datos_renapo.fecha_nacimiento }} | {{ formPaciente.datos_renapo.genero }}</span>
           </div>
+        </div>
 
           <div class="form-group"><label>Domicilio completo</label><input v-model="formPaciente.direccion" type="text" placeholder="Calle, número, colonia" /></div>
 

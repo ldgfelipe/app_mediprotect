@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken'
-import { jwtSecret } from '../../utils/secrets'
-import { syncMedicosFromMediProtect } from '../../utils/sync-medicos'
+import { jwtSecret } from '../../../utils/secrets'
+import { syncMedicosFromMediProtect } from '../../../utils/sync-medicos'
 
 export default defineEventHandler(async (event) => {
   const token = getHeader(event, 'authorization')?.replace('Bearer ', '') || getCookie(event, 'admin_token')
