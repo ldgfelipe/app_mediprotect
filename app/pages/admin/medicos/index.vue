@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { useSocket } from '~/composables/useSocket'
+import { useNotifications } from '~/composables/useNotifications'
+
 definePageMeta({ middleware: 'admin-auth' })
 const token = useCookie('admin_token')
 const adminUsuario = useCookie('admin_usuario')
@@ -34,9 +37,25 @@ const editForm = ref<any>({})
 const editError = ref('')
 const editOk = ref('')
 
+const { on, onReconnect } = useSocket()
+const { agregar } = useNotifications()
+
 onMounted(async () => {
   await loadMedicos()
   await loadEspecialidades()
+
+  on('medico:created', (data) => {
+    loadMedicos()
+    agregar({ tipo: 'medico_created', titulo: 'Nuevo médico', mensaje: `${data.nombre || ''} ${data.apellido || ''}`, timestamp: new Date() })
+  })
+  on('medico:updated', (data) => {
+    loadMedicos()
+    agregar({ tipo: 'medico_updated', titulo: 'Médico actualizado', mensaje: `${data.nombre || ''} ${data.apellido || ''}`, timestamp: new Date() })
+  })
+  onReconnect(() => {
+    console.log('[WS] Reconectado, recargando médicos...')
+    loadMedicos()
+  })
 })
 
 async function loadMedicos() {

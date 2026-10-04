@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { useSocket } from '~/composables/useSocket'
+import { useNotifications } from '~/composables/useNotifications'
+
 definePageMeta({ middleware: 'admin-auth' })
 const pacientes = ref<any[]>([])
 const loading = ref(true)
@@ -9,6 +12,46 @@ const editForm = ref<any>({})
 const errorMsg = ref('')
 const okMsg = ref('')
 
+// Ver citas del paciente
+const showCitasModal = ref(false)
+const pacienteCitas = ref<any[]>([])
+const pacienteSeleccionadoCitas = ref<any>(null)
+const loadingCitas = ref(false)
+
+async function verCitasPaciente(p: any) {
+  pacienteSeleccionadoCitas.value = p
+  loadingCitas.value = true
+  showCitasModal.value = true
+  try {
+    const token = useCookie('admin_token').value
+    const data: any = await $fetch(`/api/admin/pacientes/${p.id}/citas`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    pacienteCitas.value = data?.citas || []
+  } catch (e: any) {
+    pacienteCitas.value = []
+    console.error(e)
+  } finally {
+    loadingCitas.value = false
+  }
+}
+
+function cerrarCitasModal() {
+  showCitasModal.value = false
+  pacienteCitas.value = []
+  pacienteSeleccionadoCitas.value = null
+}
+
+function estadoColor(estado: string) {
+  const colors: Record<string, string> = {
+    pendiente: '#fdcb6e', confirmada: '#00b894', paciente_llego: '#0984e3',
+    en_atencion: '#6c5ce7', asistida: '#00cec9', no_asistida: '#d63031',
+    cancelada: '#b2bec3', reagendada: '#e17055',
+    PENDIENTE_DE_COORDINACION: '#fdcb6e'
+  }
+  return colors[estado] || '#636e72'
+}
+
 // CURP validation
 const curpValidando = ref(false)
 const curpError = ref('')
@@ -17,14 +60,40 @@ const curpDatos = ref<any>(null)
 // Plans
 const paquetes = ref<any[]>([])
 
+const adminToken = useCookie('admin_token')
+const { on, onReconnect } = useSocket()
+const { agregar } = useNotifications()
+
+async function cargarPacientes() {
+  try {
+    const [pacientesData, paqData]: any[] = await Promise.all([
+      $fetch('/api/admin/pacientes', { headers: { Authorization: 'Bearer ' + adminToken.value } }),
+      $fetch('/api/paquetes').catch(() => ({ paquetes: [] }))
+    ])
+    pacientes.value = pacientesData?.pacientes || []
+    paquetes.value = paqData?.paquetes || []
+  } catch (e) {
+    console.error('Error cargando pacientes:', e)
+  } finally {
+    loading.value = false
+  }
+}
+
 onMounted(async () => {
-  const [pacientesData, paqData]: any[] = await Promise.all([
-    useFetch('/api/admin/pacientes'),
-    $fetch('/api/paquetes').catch(() => ({ paquetes: [] }))
-  ])
-  pacientes.value = pacientesData.data.value?.pacientes || []
-  paquetes.value = paqData?.paquetes || []
-  loading.value = false
+  await cargarPacientes()
+
+  on('paciente:created', (data) => {
+    cargarPacientes()
+    agregar({ tipo: 'paciente_created', titulo: 'Nuevo paciente', mensaje: `${data.nombre || ''} ${data.apellido || ''}`, timestamp: new Date() })
+  })
+  on('paciente:updated', (data) => {
+    cargarPacientes()
+    agregar({ tipo: 'paciente_updated', titulo: 'Paciente actualizado', mensaje: `${data.nombre || ''} ${data.apellido || ''}`, timestamp: new Date() })
+  })
+  onReconnect(() => {
+    console.log('[WS] Reconectado, recargando pacientes...')
+    cargarPacientes()
+  })
 })
 
 const filtered = computed(() => {
@@ -280,8 +349,11 @@ async function eliminarPaciente(p: any) {
               <td><span class="curp-text">{{ p.curp || '---' }}</span></td>
               <td>{{ p.email }}</td><td>{{ p.telefono || '---' }}</td>
               <td>{{ new Date(p.created_at).toLocaleDateString('es-MX') }}</td>
-              <td><button class="btn-edit" @click="abrirEditar(p)">Editar</button>
-                <button class="btn-delete" @click="confirmarEliminar(p)" title="Eliminar paciente">🗑️ Eliminar</button></td>
+              <td>
+                <button class="btn-edit" @click="abrirEditar(p)">Editar</button>
+                <button class="btn-view" @click="verCitasPaciente(p)">👁️ Ver Citas</button>
+                <button class="btn-delete" @click="confirmarEliminar(p)" title="Eliminar paciente">🗑️ Eliminar</button>
+              </td>
             </tr>
             <tr v-if="!filtered.length"><td colspan="6" class="empty">Sin resultados</td></tr>
           </tbody>
@@ -411,6 +483,33 @@ async function eliminarPaciente(p: any) {
           </div>
         </div>
       </div>
+
+      <!-- Modal Ver Citas del Paciente -->
+      <div v-if="showCitasModal" class="modal-overlay" @click.self="cerrarCitasModal">
+        <div class="modal modal-lg">
+          <div class="modal-header">
+            <h2>Citas de {{ pacienteSeleccionadoCitas?.nombre }} {{ pacienteSeleccionadoCitas?.apellido_paterno || pacienteSeleccionadoCitas?.apellido }}</h2>
+            <button class="modal-close" @click="cerrarCitasModal">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div v-if="loadingCitas" class="loading">Cargando citas...</div>
+            <div v-else-if="!pacienteCitas.length" class="empty">Este paciente no tiene citas registradas</div>
+            <div v-else class="table-container">
+              <table>
+                <thead><tr><th>Fecha y Hora</th><th>Médico</th><th>Estado</th><th>Notas</th></tr></thead>
+                <tbody>
+                  <tr v-for="c in pacienteCitas" :key="c.id">
+                    <td>{{ new Date(c.fecha_hora).toLocaleString('es-MX') }}</td>
+                    <td>{{ c.medico_nombre }} {{ c.medico_apellido }}</td>
+                    <td><span class="badge" :style="{ background: estadoColor(c.estado) }">{{ c.estado }}</span></td>
+                    <td>{{ c.notas_asistente || c.notas_paciente || '—' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
     </main>
   </div>
 </template>
@@ -438,9 +537,13 @@ th { background: #f8f9fa; color: #636e72; font-weight: 600; }
 .curp-text { font-family: monospace; font-size: 0.8rem; letter-spacing: 0.5px; }
 .btn-edit { background: none; border: 1px solid #0984e3; color: #0984e3; padding: 0.3rem 0.75rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
 .btn-edit:hover { background: #0984e3; color: white; }
+.btn-view { background: none; border: 1px solid #6c5ce7; color: #6c5ce7; padding: 0.3rem 0.75rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; margin-left: 0.3rem; }
+.btn-view:hover { background: #6c5ce7; color: white; }
 .btn-primary { background: #00b894; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 500; white-space: nowrap; }
 .btn-primary:hover:not(:disabled) { background: #00a884; }
 .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 12px; color: white; font-size: 0.75rem; text-transform: capitalize; }
 
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
 .modal { background: white; border-radius: 12px; width: 100%; max-width: 620px; max-height: 90vh; overflow-y: auto; box-sizing: border-box; }

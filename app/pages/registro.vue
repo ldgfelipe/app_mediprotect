@@ -4,6 +4,8 @@ const route = useRoute()
 const loading = ref(false)
 const error = ref('')
 const tipo = ref<'paciente' | 'medico'>('paciente')
+const showEmailConfirm = ref(false)
+const emailConfirmMessage = ref('')
 const paquetes = ref<any[]>([])
 const paqueteSeleccionado = ref('')
 const paso = ref<'datos' | 'plan'>('datos')
@@ -263,17 +265,24 @@ async function handleSubmit() {
       return
     }
 
-    const doctor = route.query.doctor as string | undefined
-    if (doctor && tipo.value === 'paciente') {
-      router.push({ path: '/agendar-cita', query: { doctor } })
+    // Mostrar mensaje de confirmación de correo en lugar de redirigir directamente
+    if (tipo.value === 'paciente') {
+      emailConfirmMessage.value = '¡Registro exitoso! Hemos enviado un correo de confirmación a ' + res.usuario.email + '. Por favor, revisa tu bandeja de entrada y haz clic en el enlace para confirmar tu cuenta.'
+      showEmailConfirm.value = true
     } else {
-      router.push(tipo.value === 'medico' ? '/dashboard/medico' : '/dashboard/paciente')
+      // Para médicos, redirigir directamente al dashboard
+      router.push('/dashboard/medico')
     }
   } catch (e: any) {
     error.value = e?.data?.message || e?.message || 'Error al registrarse'
   } finally {
     loading.value = false
   }
+}
+
+function irADashboard() {
+  showEmailConfirm.value = false
+  router.push('/dashboard/paciente')
 }
 </script>
 
@@ -326,6 +335,25 @@ async function handleSubmit() {
           </div>
         </div>
 
+        <!-- Fecha de nacimiento (siempre requerida) -->
+        <div class="form-group">
+          <label>Fecha de Nacimiento *</label>
+          <input v-model="formPaciente.fecha_nacimiento" type="date" required />
+          <span v-if="formPaciente.datos_renapo && formPaciente.fecha_nacimiento" class="field-hint">Auto-completada desde tu CURP</span>
+        </div>
+
+        <!-- Género (siempre requerido) -->
+        <div class="form-group">
+          <label>Género *</label>
+          <select v-model="formPaciente.genero" required>
+            <option value="">Seleccionar...</option>
+            <option value="masculino">Masculino</option>
+            <option value="femenino">Femenino</option>
+            <option value="otro">Otro</option>
+          </select>
+          <span v-if="formPaciente.datos_renapo && formPaciente.genero" class="field-hint">Auto-completado desde tu CURP</span>
+        </div>
+
         <!-- Campos adicionales para planes de pago -->
         <div v-if="esPlanPago" class="seguro-section">
           <div class="seguro-banner">
@@ -355,12 +383,26 @@ async function handleSubmit() {
             <span class="error-icon">❌</span>
             <span class="error-text">CURP inválida</span>
           </div>
-          <div class="curp-validation info" v-if="formPaciente.datos_renapo">
+<div class="curp-validation info" v-if="formPaciente.datos_renapo">
             <span class="info-icon">ℹ️</span>
             <span>Datos completados: {{ formPaciente.datos_renapo.nombre }} {{ formPaciente.datos_renapo.apellido }} | {{ formPaciente.datos_renapo.fecha_nacimiento }} | {{ formPaciente.datos_renapo.genero }}</span>
           </div>
-        </div>
+
           <div class="form-group"><label>Domicilio completo</label><input v-model="formPaciente.direccion" type="text" placeholder="Calle, número, colonia" /></div>
+
+          <!-- Cómo nos conociste -->
+          <div class="form-group">
+            <label>¿Cómo nos conociste?</label>
+            <select v-model="formPaciente.como_nos_conociste">
+              <option value="">Seleccionar...</option>
+              <option value="google">Google / Búsqueda web</option>
+              <option value="facebook">Facebook / Instagram</option>
+              <option value="referido">Referido por un amigo/familiar</option>
+              <option value="medico">Recomendado por mi médico</option>
+              <option value="publicidad">Publicidad / Anuncio</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
 
           <div class="form-row">
             <div class="form-group"><label>Código Postal</label><input v-model="formPaciente.codigo_postal" type="text" placeholder="72000" maxlength="5" /></div>
@@ -471,6 +513,22 @@ async function handleSubmit() {
           <button type="submit" class="btn-primary" :disabled="loading">{{ loading ? 'Registrando...' : 'Crear Cuenta' }}</button>
         </div>
       </form>
+
+      <!-- Mensaje de confirmación de correo -->
+      <div v-if="showEmailConfirm && tipo === 'paciente'" class="auth-form email-confirm-screen">
+        <div class="confirm-icon">
+          <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+            <circle cx="32" cy="32" r="30" stroke="#00b894" stroke-width="3" fill="#f0fff4"/>
+            <path d="M20 32l8 8 16-16" stroke="#00b894" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+        </div>
+        <h2>¡Registro Exitoso!</h2>
+        <p class="confirm-message">{{ emailConfirmMessage }}</p>
+        <button type="button" class="btn-primary btn-confirm" @click="irADashboard">
+          Ir a mi Panel
+        </button>
+        <p class="auth-footer">También puedes <NuxtLink to="/login">iniciar sesión</NuxtLink> más tarde</p>
+      </div>
 
       <!-- FORMULARIO MÉDICO (sin cambios) -->
       <form v-if="tipo === 'medico'" @submit.prevent="handleSubmit" class="auth-form">
@@ -610,4 +668,18 @@ async function handleSubmit() {
   .planes-grid { grid-template-columns: 1fr; }
   .plan-seleccionado-banner { flex-direction: column; gap: 0.5rem; text-align: center; }
 }
+
+/* Email confirmation screen */
+.email-confirm-screen { text-align: center; padding: 2rem 0; }
+.confirm-icon { margin-bottom: 1rem; }
+.email-confirm-screen h2 { font-size: 1.3rem; color: #2d3436; margin: 0 0 0.5rem; }
+.confirm-message { color: #636e72; font-size: 0.9rem; margin: 0 0 1.5rem; line-height: 1.6; }
+.btn-confirm {
+  background: linear-gradient(135deg, #00b894, #00cec9);
+  color: white; border: none; padding: 0.85rem 2rem; border-radius: 10px;
+  cursor: pointer; font-size: 1rem; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  transition: all 0.2s;
+}
+.btn-confirm:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,184,148,0.3); }
 </style>
