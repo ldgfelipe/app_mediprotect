@@ -28,6 +28,7 @@ const formPaciente = ref({
   beneficiario_nombre: '', beneficiario_parentesco: '', beneficiario_telefono: '',
   beneficiarios: [] as any[],
   identificacion_tipo: 'INE', identificacion_numero: '', acepta_seguro: false,
+  estudios: [] as any[],
   curp_valido: false,
   curp_validando: false,
   datos_renapo: null
@@ -335,6 +336,21 @@ function irADashboard() {
           </div>
         </div>
 
+        <!-- Datos de contacto (siempre requeridos) -->
+        <div class="form-section-divider">
+          <span>Datos de acceso y contacto</span>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group"><label>Email *</label><input v-model="formPaciente.email" type="email" placeholder="correo@ejemplo.com" required /></div>
+          <div class="form-group"><label>Teléfono *</label><input v-model="formPaciente.telefono" type="tel" placeholder="10 dígitos" required /></div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group"><label>Contraseña *</label><input v-model="formPaciente.password" type="password" placeholder="Mínimo 6 caracteres" required minlength="6" /></div>
+          <div class="form-group"><label>Teléfono 2 (opcional)</label><input v-model="formPaciente.telefono2" type="tel" placeholder="10 dígitos" /></div>
+        </div>
+
         <!-- Fecha de nacimiento (siempre requerida) -->
         <div class="form-group">
           <label>Fecha de Nacimiento *</label>
@@ -506,6 +522,25 @@ function irADashboard() {
               <span>Acepto las condiciones específicas del seguro por accidentes personales respaldado por VRIM / Grupo Financiero Inbursa *</span>
             </label>
           </div>
+
+          <!-- Estudios / Formación profesional -->
+          <h3 class="form-section-subtitle">Estudios / Formación profesional</h3>
+          <div v-for="(estudio, idx) in formPaciente.estudios" :key="idx" class="estudio-card">
+            <div class="estudio-header">
+              <strong>Estudio {{ idx + 1 }}</strong>
+              <button type="button" class="btn-remove-estudio" @click="formPaciente.estudios.splice(idx, 1)">✕</button>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Título / Grado *</label><input v-model="estudio.titulo" type="text" placeholder="Ej: Licenciatura en Medicina" required /></div>
+              <div class="form-group"><label>Institución</label><input v-model="estudio.institucion" type="text" placeholder="Ej: UNAM" /></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Año</label><input v-model="estudio.anio" type="text" placeholder="Ej: 2020" /></div>
+              <div class="form-group"><label>Descripción</label><input v-model="estudio.descripcion" type="text" placeholder="Detalles adicionales" /></div>
+            </div>
+          </div>
+          <button type="button" class="btn-add-estudio" @click="formPaciente.estudios.push({ titulo: '', institucion: '', anio: '', descripcion: '' })">+ Agregar estudio</button>
+
         </div>
 
         <p v-if="error" class="error-msg">{{ error }}</p>
@@ -669,6 +704,19 @@ function irADashboard() {
   .planes-grid { grid-template-columns: 1fr; }
   .plan-seleccionado-banner { flex-direction: column; gap: 0.5rem; text-align: center; }
 }
+
+/* Form section divider */
+.form-section-divider { margin: 1.5rem 0 1rem; padding-top: 0.8rem; border-top: 1px solid #e0e0e0; text-align: center; }
+.form-section-divider span { font-size: 0.8rem; color: #00b894; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; background: white; padding: 0 1rem; position: relative; top: -0.5rem; }
+
+/* Estudios cards */
+.estudio-card { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1rem; margin-bottom: 0.8rem; }
+.estudio-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; }
+.estudio-header strong { font-size: 0.9rem; color: #2d3436; }
+.btn-remove-estudio { background: none; border: none; color: #d63031; cursor: pointer; font-size: 1.1rem; padding: 0.2rem 0.5rem; }
+.btn-remove-estudio:hover { background: #ffebee; border-radius: 4px; }
+.btn-add-estudio { background: none; border: 1px dashed #00b894; color: #00b894; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; width: 100%; margin-top: 0.5rem; }
+.btn-add-estudio:hover { background: #f0fff4; }
 
 /* Email confirmation screen */
 .email-confirm-screen { text-align: center; padding: 2rem 0; }
