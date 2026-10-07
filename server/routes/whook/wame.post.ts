@@ -79,13 +79,29 @@ export default defineEventHandler(async (event) => {
     return { ok: true }
   }
 
+  // Obtener prefijo de comando configurado (por defecto "/")
+  const configPrefijo = await pool.query(
+    `SELECT valor FROM configuracion_sistema WHERE clave = 'whatsapp_prefijo_comando'`
+  )
+  const prefijoComando = configPrefijo.rows[0]?.valor || '/'
+
   const mensajes = Array.isArray(payload.data) ? payload.data : [payload.data]
 
   for (const msg of mensajes) {
     if (!msg || msg.key?.fromMe === true) continue
 
-    const { telefono } = extraerMensajeEvolution(msg)
+    const { telefono, tipo, texto } = extraerMensajeEvolution(msg)
     if (!telefono) continue
+
+    // Solo procesar mensajes que inicien con el prefijo de comando
+    if (tipo === 'text' && texto) {
+      const textoTrim = texto.trim()
+      if (!textoTrim.startsWith(prefijoComando)) {
+        // Ignorar mensajes que no inician con el comando
+        console.log(`[WhatsApp Webhook] Mensaje sin prefijo "${prefijoComando}" de ${telefono}, ignorado: "${textoTrim.substring(0, 50)}"`)
+        continue
+      }
+    }
 
     const permitido = await permiteMensaje(pool, telefono)
     if (!permitido) {
@@ -165,6 +181,18 @@ async function processIncomingMessage(msg: any, pool: any) {
     return
   }
 
+  // Obtener prefijo de comando para limpiar el texto
+  const configPrefijo = await pool.query(
+    `SELECT valor FROM configuracion_sistema WHERE clave = 'whatsapp_prefijo_comando'`
+  )
+  const prefijoComando = configPrefijo.rows[0]?.valor || '/'
+
+  // Limpiar el prefijo del comando del texto antes de procesar
+  let textoProcesado = texto
+  if (tipo === 'text' && texto.startsWith(prefijoComando)) {
+    textoProcesado = texto.substring(prefijoComando.length).trim()
+  }
+
   console.log(`[WhatsApp Webhook] Mensaje de ${telefono}: "${texto}" (tipo: ${tipo})`)
 
   await logMensaje(pool, telefono, 'in', texto, tipo, msgId)
@@ -175,12 +203,12 @@ async function processIncomingMessage(msg: any, pool: any) {
   let flujoUsado = false
 
   if (tipo === 'text' || tipo === 'list' || tipo === 'button') {
-    const seleccionCita = await procesarSeleccionHorarioCita(pool, telefono, texto)
+    const seleccionCita = await procesarSeleccionHorarioCita(pool, telefono, textoProcesado)
     if (seleccionCita.matched) {
       respuesta = { texto: seleccionCita.respuesta, nuevoEstado: conv.estado, datosTemp: conv.datos_temp || {} }
       flujoUsado = true
     } else {
-      const flowRes = await proseguirOIniciarFlujo(pool, conv, texto, nombre)
+      const flowRes = await proseguirOIniciarFlujo(pool, conv, textoProcesado, nombre)
       if (flowRes.flujoDetectado) {
         respuesta = flowRes.respuesta
         flujoUsado = true
@@ -190,14 +218,14 @@ async function processIncomingMessage(msg: any, pool: any) {
 
   if (!flujoUsado) {
     if (conv.estado === 'bienvenida' && tipo === 'text') {
-      const solicitud = parsearSolicitudCita(texto)
+      const solicitud = parsearSolicitudCita(textoProcesado)
       if (solicitud.esSolicitudDirecta) {
         await updateConversationState(pool, conv.id, 'solicitud_directa', conv.datos_temp || {})
         conv.estado = 'solicitud_directa'
       }
     }
 
-    respuesta = await processMessage(conv, texto, nombre, pool)
+    respuesta = await processMessage(conv, textoProcesado, nombre, pool)
   }
 
   if (respuesta) {
