@@ -143,7 +143,18 @@ export async function handleMedicoCommand(texto: string, pool: any): Promise<Res
   
   try {
     // Buscar médicos por nombre en la BD (múltiples resultados)
+    console.log(`[handleMedicoCommand] Buscando: "${nombreBusqueda}"`)
     const doctores = await searchDoctorsByName(pool, nombreBusqueda)
+    console.log(`[handleMedicoCommand] Resultados: ${doctores?.length || 0}`)
+    if (doctores && doctores.length > 0) {
+      console.log(`[handleMedicoCommand] Primer resultado:`, { 
+        id: doctores[0].id, 
+        nombre: doctores[0].nombre, 
+        apellido: doctores[0].apellido,
+        apellido_paterno: doctores[0].apellido_paterno,
+        apellido_materno: doctores[0].apellido_materno
+      })
+    }
     
     if (!doctores || doctores.length === 0) {
       return {
