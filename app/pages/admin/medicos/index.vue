@@ -598,13 +598,25 @@ const viewMedico = ref<any>(null)
 const showViewModal = ref(false)
 
 async function abrirVer(medico: any) {
-  try {
-    const data: any = await $fetch(`/api/admin/medicos/${medico.id}`, {
-      headers: { Authorization: `Bearer ${token.value}` }
-    })
-    viewMedico.value = data.medico
+  // Construir URL del perfil en mediprotect.com.mx
+  const baseUrl = 'https://www.mediprotect.com.mx'
+  let perfilUrl = ''
+  
+  if (medico.perfil_url_path) {
+    perfilUrl = `${baseUrl}/${medico.perfil_url_path}`
+  } else if (medico.slug) {
+    // Construir URL basada en el slug y título
+    const prefix = medico.titulo?.toLowerCase().startsWith('dra') ? 'perfil-dra-' : 'perfil-dr-'
+    perfilUrl = `${baseUrl}/${prefix}${medico.slug}`
+  }
+  
+  if (perfilUrl) {
+    window.open(perfilUrl, '_blank', 'noopener,noreferrer')
+  } else {
+    // Fallback: abrir modal con datos locales si no hay URL
     showViewModal.value = true
-  } catch (e) { console.error(e) }
+    viewMedico.value = medico
+  }
 }
 
 function cerrarVer() {
