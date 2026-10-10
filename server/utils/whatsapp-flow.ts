@@ -8,6 +8,7 @@ import {
   searchPatientById,
   searchDoctorBySlug,
   searchDoctorByName,
+  searchDoctorsByName,
   getDiasDisponiblesParaMedico,
   getHorasDisponiblesParaMedico,
   searchDoctorByName as dbSearchDoctorByName
@@ -141,8 +142,8 @@ export async function handleMedicoCommand(texto: string, pool: any): Promise<Res
   }
   
   try {
-    // Buscar médico por nombre en la BD
-    const doctores = await dbSearchDoctorByName(pool, nombreBusqueda)
+    // Buscar médicos por nombre en la BD (múltiples resultados)
+    const doctores = await searchDoctorsByName(pool, nombreBusqueda)
     
     if (!doctores || doctores.length === 0) {
       return {
@@ -159,7 +160,7 @@ export async function handleMedicoCommand(texto: string, pool: any): Promise<Res
       const medicosAMostrar = doctores.slice(0, 5)
       medicosAMostrar.forEach((doc, i) => {
         respuesta += `${i + 1}. *${doc.titulo || 'Dr.'} ${doc.nombre} ${doc.apellido}*\n`
-        respuesta += `   🏥 ${doc.especialidad_nombre || 'Sin especialidad'}\n`
+        respuesta += `   🏥 ${doc.especialidad || 'Sin especialidad'}\n`
         if (doc.consultorio_ciudad) respuesta += `   📍 ${doc.consultorio_ciudad}\n`
         if (doc.telefono) respuesta += `   📞 ${doc.telefono}\n`
         if (doc.cedula_profesional) respuesta += `   🪪 Cédula: ${doc.cedula_profesional}\n`
@@ -183,7 +184,7 @@ export async function handleMedicoCommand(texto: string, pool: any): Promise<Res
     const doc = doctores[0]
     let respuesta = `✅ *Médico encontrado:*\n\n`
     respuesta += `*${doc.titulo || 'Dr.'} ${doc.nombre} ${doc.apellido}*\n\n`
-    respuesta += `🏥 *Especialidad:* ${doc.especialidad_nombre || 'No especificada'}\n`
+    respuesta += `🏥 *Especialidad:* ${doc.especialidad || 'No especificada'}\n`
     if (doc.subespecialidad) respuesta += `🔬 *Subespecialidad:* ${doc.subespecialidad}\n`
     if (doc.consultorio_ciudad) respuesta += `📍 *Ciudad:* ${doc.consultorio_ciudad}\n`
     if (doc.hospital_consultorio) respuesta += `🏢 *Hospital/Consultorio:* ${doc.hospital_consultorio}\n`

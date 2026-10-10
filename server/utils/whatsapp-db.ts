@@ -402,6 +402,33 @@ export async function searchDoctorByName(pool: any, nombre: string) {
   return result.rows[0] || null
 }
 
+// Nueva función que retorna múltiples médicos (para comando /medico)
+export async function searchDoctorsByName(pool: any, nombre: string, limit: number = 10) {
+  const search = `%${nombre.toLowerCase()}%`
+  const result = await pool.query(
+    `SELECT 
+      id, nombre, apellido, apellido_paterno, apellido_materno, slug, 
+      precio_regular, precio_miembro, porcentaje_descuento, especialidad,
+      titulo, subespecialidad, consultorio_ciudad, consultorio_direccion,
+      hospital_consultorio, cedula_profesional, telefono, email, 
+      universidad, horario_atencion, foto_url
+     FROM medicos
+     WHERE (
+       LOWER(nombre) LIKE $1
+       OR LOWER(apellido) LIKE $1
+       OR LOWER(apellido_paterno) LIKE $1
+       OR LOWER(apellido_materno) LIKE $1
+       OR LOWER(slug) LIKE $1
+       OR LOWER(CONCAT(nombre, ' ', COALESCE(apellido_paterno, ''), ' ', COALESCE(apellido_materno, ''))) LIKE $1
+     )
+     AND activo = true
+     AND (estatus_medico IS NULL OR estatus_medico = 'activo')
+     LIMIT $2`,
+    [search, limit]
+  )
+  return result.rows
+}
+
 export function getDiasDisponibles(): { id: string; titulo: string; descripcion: string }[] {
   const hoy = new Date()
   const dias: { id: string; titulo: string; descripcion: string }[] = []
