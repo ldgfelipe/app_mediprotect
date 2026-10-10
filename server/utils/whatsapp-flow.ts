@@ -9,7 +9,8 @@ import {
   searchDoctorBySlug,
   searchDoctorByName,
   getDiasDisponiblesParaMedico,
-  getHorasDisponiblesParaMedico
+  getHorasDisponiblesParaMedico,
+  searchDoctorByName as dbSearchDoctorByName
 } from './whatsapp-db'
 
 interface Conversacion {
@@ -104,6 +105,115 @@ export function detectarSaludo(texto: string): string | null {
   return null
 }
 
+/**
+ * Maneja el comando /medico [nombre]
+ * Busca un médico por nombre (con o sin prefijo DR/Dr/Doctor/Dra)
+ * y devuelve sus datos básicos
+ */
+export async function handleMedicoCommand(texto: string, pool: any): Promise<Respuesta | null> {
+  const textoLower = texto.toLowerCase().trim()
+  
+  // Verificar si es el comando /medico
+  if (!textoLower.startsWith('medico') && !textoLower.startsWith('médico')) {
+    return null
+  }
+  
+  // Extraer el nombre del médico después del comando
+  // Formatos aceptados: "medico Dr Ernesto", "medico Ernesto", "médico Ernesto", etc.
+  const medicoMatch = texto.match(/^(?:medico|médico)\s+(?:dr\.?|dra\.?|doctor?|dra?)?\s*(.+)$/i)
+  
+  if (!medicoMatch || !medicoMatch[1]?.trim()) {
+    return {
+      texto: '❌ Formato incorrecto. Usa: */medico [nombre del médico]*\n\nEjemplos:\n• /medico Dr Ernesto Salgado\n• /medico Ernesto Salgado Ruiz\n• /medico dra Ana García',
+      nuevoEstado: 'bienvenida',
+      datosTemp: {}
+    }
+  }
+  
+  const nombreBusqueda = medicoMatch[1].trim()
+  
+  if (nombreBusqueda.length < 3) {
+    return {
+      texto: '❌ El nombre del médico es muy corto. Proporciona al menos 3 caracteres.',
+      nuevoEstado: 'bienvenida',
+      datosTemp: {}
+    }
+  }
+  
+  try {
+    // Buscar médico por nombre en la BD
+    const doctores = await dbSearchDoctorByName(pool, nombreBusqueda)
+    
+    if (!doctores || doctores.length === 0) {
+      return {
+        texto: `🔍 No se encontró ningún médico con el nombre *"${nombreBusqueda}"*\n\nVerifica la ortografía o intenta con otro nombre.`,
+        nuevoEstado: 'bienvenida',
+        datosTemp: {}
+      }
+    }
+    
+    // Si hay múltiples coincidencias, mostrar las primeras 5
+    if (doctores.length > 1) {
+      let respuesta = `🔍 Se encontraron *${doctores.length}* médicos con "${nombreBusqueda}":\n\n`
+      
+      const medicosAMostrar = doctores.slice(0, 5)
+      medicosAMostrar.forEach((doc, i) => {
+        respuesta += `${i + 1}. *${doc.titulo || 'Dr.'} ${doc.nombre} ${doc.apellido}*\n`
+        respuesta += `   🏥 ${doc.especialidad_nombre || 'Sin especialidad'}\n`
+        if (doc.consultorio_ciudad) respuesta += `   📍 ${doc.consultorio_ciudad}\n`
+        if (doc.telefono) respuesta += `   📞 ${doc.telefono}\n`
+        if (doc.cedula_profesional) respuesta += `   🪪 Cédula: ${doc.cedula_profesional}\n`
+        respuesta += '\n'
+      })
+      
+      if (doctores.length > 5) {
+        respuesta += `_...y ${doctores.length - 5} más_\n\n`
+      }
+      
+      respuesta += '💡 Usa el nombre completo para más precisión.'
+      
+      return {
+        texto: respuesta,
+        nuevoEstado: 'bienvenida',
+        datosTemp: {}
+      }
+    }
+    
+    // Un solo médico encontrado - mostrar detalles completos
+    const doc = doctores[0]
+    let respuesta = `✅ *Médico encontrado:*\n\n`
+    respuesta += `*${doc.titulo || 'Dr.'} ${doc.nombre} ${doc.apellido}*\n\n`
+    respuesta += `🏥 *Especialidad:* ${doc.especialidad_nombre || 'No especificada'}\n`
+    if (doc.subespecialidad) respuesta += `🔬 *Subespecialidad:* ${doc.subespecialidad}\n`
+    if (doc.consultorio_ciudad) respuesta += `📍 *Ciudad:* ${doc.consultorio_ciudad}\n`
+    if (doc.hospital_consultorio) respuesta += `🏢 *Hospital/Consultorio:* ${doc.hospital_consultorio}\n`
+    if (doc.consultorio_direccion) respuesta += `📍 *Dirección:* ${doc.consultorio_direccion}\n`
+    if (doc.cedula_profesional) respuesta += `🪪 *Cédula:* ${doc.cedula_profesional}\n`
+    if (doc.telefono) respuesta += `📞 *Teléfono:* ${doc.telefono}\n`
+    if (doc.email) respuesta += `📧 *Email:* ${doc.email}\n`
+    if (doc.universidad) respuesta += `🎓 *Universidad:* ${doc.universidad}\n`
+    if (doc.horario_atencion) respuesta += `🕐 *Horario:* ${doc.horario_atencion}\n`
+    if (doc.precio_regular) respuesta += `💰 *Precio regular:* $${doc.precio_regular} MXN\n`
+    if (doc.precio_miembro) respuesta += `💎 *Precio miembro:* $${doc.precio_miembro} MXN\n`
+    
+    respuesta += '\n¿Deseas agendar una cita con este médico? Escribe */agendar* para comenzar.'
+    
+    return {
+      texto: respuesta,
+      nuevoEstado: 'bienvenida',
+      datosTemp: { doctorSugerido: doc.id }
+    }
+    
+  } catch (error) {
+    console.error('[handleMedicoCommand] Error:', error)
+    return {
+      texto: '❌ Error al buscar el médico. Intenta de nuevo más tarde.',
+      nuevoEstado: 'bienvenida',
+      datosTemp: {}
+    }
+  }
+}
+
 export async function processMessage(conv: Conversacion, texto: string, nombre: string, pool: any): Promise<Respuesta | null> {
   // Primero, detectar saludos simples
   const saludo = detectarSaludo(texto)
@@ -117,6 +227,12 @@ export async function processMessage(conv: Conversacion, texto: string, nombre: 
       nuevoEstado: conv.estado || 'bienvenida',
       datosTemp: { ...conv.datos_temp }
     }
+  }
+
+  // Verificar comandos especiales (como /medico) que funcionan en cualquier estado
+  const comandoMedico = await handleMedicoCommand(texto, pool)
+  if (comandoMedico) {
+    return comandoMedico
   }
 
   const state = conv.estado
