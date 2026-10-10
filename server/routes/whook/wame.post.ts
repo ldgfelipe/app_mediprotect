@@ -6,6 +6,7 @@ import { estaAutorizadoWebhook } from '../../utils/whook-guard'
 import { normalizarQR } from '../../utils/evolution-admin'
 import { permiteMensaje } from '../../utils/whatsapp-security'
 import { procesarSeleccionHorarioCita } from '../../utils/whatsapp-pending-appointments'
+import { handleMedicoCommand } from '../../utils/whatsapp-flow'
 
 export default defineEventHandler(async (event) => {
   const pool = await useDbPool(event)
@@ -208,10 +209,22 @@ async function processIncomingMessage(msg: any, pool: any) {
       respuesta = { texto: seleccionCita.respuesta, nuevoEstado: conv.estado, datosTemp: conv.datos_temp || {} }
       flujoUsado = true
     } else {
-      const flowRes = await proseguirOIniciarFlujo(pool, conv, textoProcesado, nombre)
-      if (flowRes.flujoDetectado) {
-        respuesta = flowRes.respuesta
-        flujoUsado = true
+      // Verificar comando /medico ANTES del flow runner
+      const textoLower = textoProcesado.toLowerCase().trim()
+      if (textoLower.startsWith('medico') || textoLower.startsWith('médico')) {
+        const medicoRes = await handleMedicoCommand(textoProcesado, pool)
+        if (medicoRes) {
+          respuesta = medicoRes
+          flujoUsado = true
+        }
+      }
+      
+      if (!flujoUsado) {
+        const flowRes = await proseguirOIniciarFlujo(pool, conv, textoProcesado, nombre)
+        if (flowRes.flujoDetectado) {
+          respuesta = flowRes.respuesta
+          flujoUsado = true
+        }
       }
     }
   }
