@@ -40,6 +40,13 @@ const editOk = ref('')
 const { on, onReconnect } = useSocket()
 const { agregar } = useNotifications()
 
+// Sync state
+const syncLoading = ref(false)
+const syncResult = ref<any>(null)
+const showSyncHistory = ref(false)
+const syncHistory = ref<any[]>([])
+const syncHistoryLoading = ref(false)
+
 onMounted(async () => {
   await loadMedicos()
   await loadEspecialidades()
@@ -71,6 +78,51 @@ async function loadMedicos() {
     console.error(e)
   }
   finally { loading.value = false }
+}
+
+// ========== SYNC FUNCTIONS ==========
+async function triggerSync() {
+  syncLoading.value = true
+  syncResult.value = null
+  try {
+    const data: any = await $fetch('/api/admin/medicos/sync', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token.value}` },
+    })
+    syncResult.value = { success: true, message: `Sincronización completada: ${data.success} médicos procesados, ${data.errors} errores`, details: data.details }
+    await loadMedicos()
+    await loadSyncHistory()
+  } catch (e: any) {
+    syncResult.value = { success: false, message: e?.data?.message || 'Error en la sincronización' }
+  } finally {
+    syncLoading.value = false
+    setTimeout(() => { syncResult.value = null }, 5000)
+  }
+}
+
+async function loadSyncHistory() {
+  syncHistoryLoading.value = true
+  try {
+    const data: any = await $fetch('/api/admin/medicos/sync-history', {
+      headers: { Authorization: `Bearer ${token.value}` },
+    })
+    syncHistory.value = data?.logs || []
+  } catch (e) {
+    console.error('[Sync History] Error:', e)
+    syncHistory.value = []
+  } finally {
+    syncHistoryLoading.value = false
+  }
+}
+
+function openSyncHistory() {
+  showSyncHistory.value = true
+  loadSyncHistory()
+}
+
+function closeSyncHistory() {
+  showSyncHistory.value = false
+  syncHistory.value = []
 }
 
 const filteredMedicos = computed(() => {
@@ -645,7 +697,16 @@ function abrirGoogleMaps(url: string) {
     <main class="admin-content">
       <header class="content-header">
         <div><h1>Gestion de Medicos</h1><p>Administrar informacion, fotos y datos</p></div>
-        <button class="btn-primary" @click="openNewModal">+ Nuevo Medico</button>
+        <div class="header-actions">
+          <button class="btn-secondary" @click="openSyncHistory" :disabled="syncLoading">
+            <span class="btn-icon">📋</span> Historial Sync
+          </button>
+          <button class="btn-primary" @click="triggerSync" :disabled="syncLoading">
+            <span v-if="syncLoading" class="spinner-sm"></span>
+            <span v-else class="btn-icon">🔄</span> Sincronizar Ahora
+          </button>
+          <button class="btn-primary" @click="openNewModal">+ Nuevo Medico</button>
+        </div>
       </header>
       <div class="search-bar">
         <input v-model="search" type="text" placeholder="Buscar por nombre, cedula o especialidad..." />
@@ -682,6 +743,47 @@ function abrirGoogleMaps(url: string) {
                 <button class="btn-delete" @click="confirmarEliminar(medico)" title="Eliminar medico">🗑️ Eliminar</button>
               </div>
             </div>
+        </div>
+      </div>
+
+      <!-- Sync Result Toast -->
+      <div v-if="syncResult" class="sync-toast" :class="syncResult.success ? 'success' : 'error'">
+        <span class="sync-toast-icon">{{ syncResult.success ? '✅' : '❌' }}</span>
+        <span class="sync-toast-message">{{ syncResult.message }}</span>
+        <button class="sync-toast-close" @click="syncResult = null">&times;</button>
+      </div>
+
+      <!-- Sync History Modal -->
+      <div v-if="showSyncHistory" class="modal-overlay" @click.self="closeSyncHistory">
+        <div class="modal modal-lg">
+          <div class="modal-header">
+            <h2>Historial de Sincronización</h2>
+            <button class="modal-close" @click="closeSyncHistory">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div v-if="syncHistoryLoading" class="loading">Cargando historial...</div>
+            <div v-else-if="!syncHistory.length" class="empty">No hay registros de sincronización</div>
+            <div v-else class="table-container">
+              <table>
+                <thead>
+                  <tr><th>Fecha</th><th>Slug</th><th>Estado</th><th>Mensaje</th><th>Duración</th></tr>
+                </thead>
+                <tbody>
+                  <tr v-for="log in syncHistory" :key="log.id">
+                    <td>{{ new Date(log.creado_en).toLocaleString('es-MX') }}</td>
+                    <td><code>{{ log.slug }}</code></td>
+                    <td>
+                      <span class="sync-status-badge" :class="log.status">
+                        {{ log.status === 'created' ? 'Creado' : log.status === 'updated' ? 'Actualizado' : 'Error' }}
+                      </span>
+                    </td>
+                    <td>{{ log.mensaje }}</td>
+                    <td>{{ log.duracion_ms }}ms</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1307,4 +1409,37 @@ function abrirGoogleMaps(url: string) {
 .maps-link { color: #4285f4; font-size: 0.8rem; text-decoration: none; font-weight: 500; }
 .maps-link:hover { text-decoration: underline; }
 .checkbox-label { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: #2d3436; cursor: pointer; }
+
+/* Header Actions */
+.header-actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+.header-actions .btn-primary { display: inline-flex; align-items: center; gap: 0.4rem; }
+.header-actions .btn-secondary { display: inline-flex; align-items: center; gap: 0.4rem; background: #dfe6e9; color: #2d3436; border: none; padding: 0.6rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 500; }
+.header-actions .btn-secondary:hover:not(:disabled) { background: #d1dbe2; }
+.header-actions .btn-secondary:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-icon { font-size: 1rem; }
+.spinner-sm { width: 14px; height: 14px; border: 2px solid transparent; border-top-color: currentColor; border-radius: 50%; animation: spin 0.6s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Sync Toast */
+.sync-toast { position: fixed; top: 1.5rem; right: 1.5rem; display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1.25rem; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.15); z-index: 2000; animation: slideIn 0.3s ease; }
+.sync-toast.success { background: #e8f5e9; border: 1px solid #c8e6c9; color: #2e7d32; }
+.sync-toast.error { background: #ffebee; border: 1px solid #ffcdd2; color: #c62828; }
+.sync-toast-icon { font-size: 1.25rem; }
+.sync-toast-message { font-size: 0.9rem; font-weight: 500; }
+.sync-toast-close { background: none; border: none; font-size: 1.25rem; cursor: pointer; opacity: 0.6; padding: 0 0.25rem; color: inherit; }
+.sync-toast-close:hover { opacity: 1; }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+/* Sync Status Badge */
+.sync-status-badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
+.sync-status-badge.created { background: #e8f5e9; color: #2e7d32; }
+.sync-status-badge.updated { background: #e3f2fd; color: #1565c0; }
+.sync-status-badge.error { background: #ffebee; color: #c62828; }
+
+/* Sync History Modal */
+.sync-history-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.sync-history-table th { text-align: left; padding: 0.5rem 0.75rem; background: #f8f9fa; color: #636e72; font-weight: 600; border-bottom: 1px solid #e0e0e0; }
+.sync-history-table td { padding: 0.5rem 0.75rem; border-bottom: 1px solid #f0f0f0; }
+.sync-history-table code { background: #f5f6fa; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.75rem; }
+.sync-history-table tr:hover { background: #fafafa; }
 </style>
