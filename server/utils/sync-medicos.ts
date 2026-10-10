@@ -58,6 +58,7 @@ export async function syncMedicosFromMediProtect(pool: any): Promise<{ success: 
   const details: any[] = []
 
   for (const slug of slugs) {
+    const startTime = Date.now()
     try {
       // Primero intentamos con perfil-dr-, si falla 404 probamos perfil-dra-
       let url = `${MEDIPROTECT_BASE}/perfil-dr-${slug}`
@@ -72,6 +73,11 @@ export async function syncMedicosFromMediProtect(pool: any): Promise<{ success: 
       const html = await resp.text()
       const $ = cheerio.load(html)
       const data = await scrapeProfileFromHtml($, url)
+
+      // Verificar si el médico ya existe para determinar el tipo de operación
+      const existing = await pool.query(`SELECT * FROM medicos WHERE slug = $1`, [slug])
+      const isNew = existing.rows.length === 0
+      const datosAnteriores = isNew ? null : existing.rows[0]
 
       // UPSERT: Insertar si no existe, actualizar si existe
       await pool.query(`
@@ -101,12 +107,52 @@ export async function syncMedicosFromMediProtect(pool: any): Promise<{ success: 
         JSON.stringify(data.informacion_consulta)
       ])
 
+      const duracion = Date.now() - startTime
+      const status = isNew ? 'created' : 'updated'
+      
+      // Registrar en log de sincronización
+      await pool.query(`
+        INSERT INTO medicos_sync_log (slug, status, mensaje, datos_anteriores, datos_nuevos, duracion_ms)
+        VALUES ($1, $2, $3, $4, $5, $6)
+      `, [
+        slug,
+        status,
+        `Médico ${isNew ? 'creado' : 'actualizado'} desde mediprotect.com.mx`,
+        datosAnteriores ? JSON.stringify({
+          foto_url: datosAnteriores.foto_url,
+          bio: datosAnteriores.bio,
+          formacion_academica: datosAnteriores.formacion_academica,
+          servicios: datosAnteriores.servicios,
+          idiomas: datosAnteriores.idiomas,
+          horario_atencion: datosAnteriores.horario_atencion,
+          informacion_consulta: datosAnteriores.informacion_consulta,
+        }) : null,
+        JSON.stringify({
+          foto_url: data.foto_url,
+          bio: data.bio,
+          formacion_academica: data.formacion_academica,
+          servicios: data.servicios,
+          idiomas: data.idiomas,
+          horario_atencion: data.horario_atencion,
+          informacion_consulta: data.informacion_consulta,
+        }),
+        duracion
+      ])
+
       success++
-      details.push({ slug, status: 'upserted' })
-      console.log(`[Sync Medicos] Upserted: ${slug}`)
+      details.push({ slug, status })
+      console.log(`[Sync Medicos] ${isNew ? 'Created' : 'Updated'}: ${slug} (${duracion}ms)`)
     } catch (err: any) {
+      const duracion = Date.now() - startTime
       errors++
       details.push({ slug, status: 'error', error: err?.message || 'Unknown error' })
+      
+      // Registrar error en log
+      await pool.query(`
+        INSERT INTO medicos_sync_log (slug, status, mensaje, duracion_ms)
+        VALUES ($1, 'error', $2, $3)
+      `, [slug, err?.message || 'Unknown error', duracion]).catch(() => {})
+      
       console.error(`[Sync Medicos] Error syncing ${slug}:`, err?.message)
     }
   }
