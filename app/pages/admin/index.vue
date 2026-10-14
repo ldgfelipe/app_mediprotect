@@ -32,6 +32,24 @@ const curpError = ref('')
 
 const especialidades = ref<any[]>([])
 
+// "Tareas de hoy"
+const tareas = ref<any>(null)
+const tareasLoading = ref(false)
+const gruposAbiertos = ref<Record<string, boolean>>({})
+
+async function cargarTareas() {
+  tareasLoading.value = true
+  try {
+    const data: any = await $fetch('/api/admin/tareas-hoy', { headers: { Authorization: 'Bearer ' + adminToken.value } })
+    tareas.value = data
+  } catch (e) { console.error(e) }
+  tareasLoading.value = false
+}
+
+function toggleGrupo(id: string) {
+  gruposAbiertos.value[id] = !gruposAbiertos.value[id]
+}
+
 onMounted(async () => {
   try {
     const [statsData, espData] = await Promise.all([
@@ -42,6 +60,7 @@ onMounted(async () => {
     especialidades.value = (espData as any)?.especialidades || []
   } catch (e) { console.error(e) }
   loading.value = false
+  cargarTareas()
 })
 
 function cerrarSesion() {
@@ -208,6 +227,10 @@ async function validarCURP() {
         <div v-if="errorMsg" class="toast-error">{{ errorMsg }}</div>
         <div class="section-nav">
           <button :class="['nav-btn', { active: activeSection === 'resumen' }]" @click="activeSection = 'resumen'">Resumen</button>
+          <button :class="['nav-btn', { active: activeSection === 'tareas' }]" @click="activeSection = 'tareas'">
+            Tareas de hoy
+            <span v-if="tareas?.resumen?.total" class="nav-badge">{{ tareas.resumen.total }}</span>
+          </button>
           <button :class="['nav-btn', { active: activeSection === 'medicos' }]" @click="activeSection = 'medicos'">Medicos</button>
           <button :class="['nav-btn', { active: activeSection === 'pacientes' }]" @click="activeSection = 'pacientes'">Pacientes</button>
           <button :class="['nav-btn', { active: activeSection === 'empresas' }]" @click="activeSection = 'empresas'">Empresas</button>
@@ -220,6 +243,58 @@ async function validarCURP() {
             <NuxtLink to="/admin/medicos" class="summary-card"><h3>Medicos</h3><p>{{ stats?.total_medicos || 0 }} registrados</p><span class="action">Gestionar</span></NuxtLink>
             <NuxtLink to="/admin/empresas" class="summary-card"><h3>Empresas</h3><p>{{ stats?.total_empresas || 0 }} afiliadas</p><span class="action">Gestionar</span></NuxtLink>
             <NuxtLink to="/admin/citas" class="summary-card"><h3>Citas</h3><p>{{ stats?.citas_pendientes || 0 }} pendientes de {{ stats?.total_citas || 0 }}</p><span class="action">Ver</span></NuxtLink>
+          </div>
+
+          <div v-if="tareas && tareas.grupos.length" class="tareas-mini">
+            <div class="tareas-mini-head">
+              <h3>⚠️ Tareas de hoy</h3>
+              <button class="link-btn" @click="activeSection = 'tareas'">Ver todas ({{ tareas.resumen.total }})</button>
+            </div>
+            <div class="tareas-mini-list">
+              <button v-for="g in tareas.grupos" :key="g.id" class="tareas-mini-item" @click="activeSection = 'tareas'">
+                <span class="tmi-label">{{ g.icono }} {{ g.titulo }}</span>
+                <strong class="tmi-count" :class="'prio-' + g.prioridad">{{ g.total }}</strong>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="activeSection === 'tareas'" class="panel">
+          <div class="panel-header">
+            <h2>Tareas de hoy</h2>
+            <button class="btn-cancel" @click="cargarTareas" :disabled="tareasLoading">{{ tareasLoading ? 'Actualizando...' : 'Actualizar' }}</button>
+          </div>
+          <p v-if="tareas" class="tareas-sub">
+            Tienes <strong>{{ tareas.resumen.total }}</strong> pendientes en {{ tareas.resumen.grupos }}
+            {{ tareas.resumen.grupos === 1 ? 'categoría' : 'categorías' }}
+            <span v-if="tareas.resumen.alta" class="pill-alta">{{ tareas.resumen.alta }} de prioridad alta</span>
+          </p>
+
+          <div v-if="tareasLoading && !tareas" class="empty-results">Cargando tareas...</div>
+          <div v-else-if="!tareas || tareas.grupos.length === 0" class="empty-results">🎉 No hay pendientes por ahora</div>
+
+          <div v-else class="tareas-grid">
+            <div v-for="g in tareas.grupos" :key="g.id" class="tarea-card" :class="'prio-' + g.prioridad">
+              <div class="tarea-head" @click="toggleGrupo(g.id)">
+                <span class="tarea-icon">{{ g.icono }}</span>
+                <div class="tarea-info">
+                  <strong>{{ g.titulo }}</strong>
+                  <span class="tarea-desc">{{ g.descripcion }}</span>
+                </div>
+                <span class="tarea-count">{{ g.total }}</span>
+                <span class="tarea-chevron">{{ gruposAbiertos[g.id] ? '▲' : '▼' }}</span>
+              </div>
+              <div class="tarea-accion">⚠️ Siguiente acción: <strong>{{ g.siguiente_accion }}</strong></div>
+              <div v-if="gruposAbiertos[g.id]" class="tarea-items">
+                <div v-for="it in g.items" :key="it.id" class="tarea-item">
+                  <div class="tarea-item-info">
+                    <strong>{{ it.titulo }}</strong>
+                    <span v-if="it.detalle">{{ it.detalle }}</span>
+                  </div>
+                  <NuxtLink :to="it.link" class="tarea-item-btn">{{ it.accion }}</NuxtLink>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -456,6 +531,52 @@ async function validarCURP() {
 .json-details { margin-top: 1rem; }
 .json-details summary { cursor: pointer; font-size: 0.85rem; color: #0984e3; font-weight: 500; padding: 0.4rem 0; }
 .json-details pre { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1rem; font-size: 0.78rem; overflow-x: auto; max-height: 400px; overflow-y: auto; margin-top: 0.5rem; }
+
+/* Tareas de hoy */
+.nav-badge { display: inline-block; margin-left: 0.45rem; background: #d63031; color: white; font-size: 0.7rem; font-weight: 700; padding: 0.05rem 0.45rem; border-radius: 10px; vertical-align: middle; }
+.nav-btn.active .nav-badge { background: #ffffff33; }
+.tareas-sub { color: #636e72; font-size: 0.88rem; margin: 0 0 1.25rem; }
+.tareas-sub strong { color: #2d3436; }
+.pill-alta { display: inline-block; margin-left: 0.5rem; background: #ffebee; color: #c62828; font-size: 0.75rem; font-weight: 600; padding: 0.1rem 0.55rem; border-radius: 10px; }
+.tareas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; }
+.tarea-card { border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden; background: white; }
+.tarea-card.prio-alta { border-left: 4px solid #d63031; }
+.tarea-card.prio-media { border-left: 4px solid #f39c12; }
+.tarea-card.prio-baja { border-left: 4px solid #0984e3; }
+.tarea-head { display: flex; align-items: center; gap: 0.75rem; padding: 1rem; cursor: pointer; }
+.tarea-head:hover { background: #fafafa; }
+.tarea-icon { font-size: 1.35rem; }
+.tarea-info { flex: 1; display: flex; flex-direction: column; }
+.tarea-info strong { color: #2d3436; font-size: 0.95rem; }
+.tarea-desc { color: #636e72; font-size: 0.78rem; }
+.tarea-count { background: #2d3436; color: white; font-weight: 700; font-size: 0.8rem; min-width: 26px; text-align: center; padding: 0.15rem 0.5rem; border-radius: 12px; }
+.tarea-chevron { color: #b2bec3; font-size: 0.7rem; }
+.tarea-accion { padding: 0.55rem 1rem; background: #fffbf0; border-top: 1px solid #f5efdf; color: #8a6d1a; font-size: 0.8rem; }
+.tarea-accion strong { color: #6b5410; }
+.tarea-items { border-top: 1px solid #f0f0f0; max-height: 280px; overflow-y: auto; }
+.tarea-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 1rem; border-bottom: 1px solid #f7f7f7; }
+.tarea-item:last-child { border-bottom: none; }
+.tarea-item-info { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.tarea-item-info strong { font-size: 0.85rem; color: #2d3436; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tarea-item-info span { font-size: 0.75rem; color: #95a5a6; }
+.tarea-item-btn { background: #00b894; color: white; text-decoration: none; font-size: 0.75rem; font-weight: 600; padding: 0.35rem 0.7rem; border-radius: 6px; white-space: nowrap; }
+.tarea-item-btn:hover { background: #00a884; }
+
+/* Mini tareas en Resumen */
+.tareas-mini { margin-top: 1.5rem; }
+.tareas-mini-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+.tareas-mini-head h3 { margin: 0; font-size: 1rem; color: #2d3436; }
+.link-btn { background: none; border: none; color: #00b894; font-size: 0.82rem; font-weight: 600; cursor: pointer; padding: 0; }
+.link-btn:hover { text-decoration: underline; }
+.tareas-mini-list { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.tareas-mini-item { display: flex; align-items: center; gap: 0.6rem; background: #f8f9fa; border: 1px solid #e8eaed; border-radius: 8px; padding: 0.55rem 0.85rem; cursor: pointer; transition: 0.15s; }
+.tareas-mini-item:hover { border-color: #00b894; background: white; }
+.tmi-label { font-size: 0.82rem; color: #2d3436; }
+.tmi-count { font-size: 0.85rem; padding: 0.05rem 0.5rem; border-radius: 10px; background: #eceff1; color: #546e7a; }
+.tmi-count.prio-alta { background: #ffebee; color: #c62828; }
+.tmi-count.prio-media { background: #fff8e1; color: #b8860b; }
+.tmi-count.prio-baja { background: #e3f2fd; color: #1565c0; }
+
 @media (max-width: 640px) {
   .curp-input-row { flex-direction: column; }
   .result-grid { grid-template-columns: 1fr; }

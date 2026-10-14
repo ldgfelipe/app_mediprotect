@@ -64,7 +64,22 @@ const citasNormales = computed(() =>
 )
 
 // Pestañas
-const activeTab = ref('citas')
+const activeTab = ref('tareas')
+
+// Tareas de hoy (panel accionable)
+const tareas = ref(null)
+const tareasLoading = ref(false)
+const gruposAbiertos = ref({})
+
+async function cargarTareas() {
+  tareasLoading.value = true
+  try {
+    const data = await $fetch('/api/admin/tareas-hoy', { headers: { Authorization: 'Bearer ' + authToken.value } })
+    tareas.value = data
+  } catch (e) { console.error(e) }
+  tareasLoading.value = false
+}
+function toggleGrupo(id) { gruposAbiertos.value[id] = !gruposAbiertos.value[id] }
 
 // Vista: calendario (default) o lista
 const vistaCitas = ref('calendar')
@@ -119,6 +134,7 @@ onMounted(() => {
   if (!saved) { navigateTo('/login-asistente'); return }
   usuario.value = JSON.parse(saved)
   cargarCitas()
+  cargarTareas()
   $fetch('/api/paquetes').then(d => { paquetesLista.value = d?.paquetes || [] }).catch(() => {})
 
   on('cita:created', (cita) => {
@@ -1115,6 +1131,10 @@ async function crearPacienteParaEmpresa() {
       <div class="header-inner">
         <img src="https://imagedelivery.net/xaKlCos5cTg_1RWzIu_h-A/0a041066-aa69-4fe5-07ed-50ee74875100/public" alt="MediProtect" class="logo" />
         <nav>
+          <button :class="{ active: activeTab === 'tareas' }" @click="activeTab = 'tareas'">
+            Tareas
+            <span v-if="tareas?.resumen?.total" class="tab-badge">{{ tareas.resumen.total }}</span>
+          </button>
           <button :class="{ active: activeTab === 'citas' }" @click="activeTab = 'citas'">Citas</button>
           <button :class="{ active: activeTab === 'medicos' }" @click="activeTab = 'medicos'">Medicos</button>
           <button :class="{ active: activeTab === 'pacientes' }" @click="activeTab = 'pacientes'">Pacientes</button>
@@ -1129,6 +1149,48 @@ async function crearPacienteParaEmpresa() {
     </header>
 
     <main class="content">
+      <!-- PESTAÑA: TAREAS DE HOY -->
+      <div v-if="activeTab === 'tareas'">
+        <div class="content-header">
+          <h1>Tareas de hoy</h1>
+          <div class="header-actions">
+            <button @click="cargarTareas" class="btn-secondary" :disabled="tareasLoading">{{ tareasLoading ? 'Actualizando...' : 'Actualizar' }}</button>
+          </div>
+        </div>
+
+        <p v-if="tareas" class="tareas-sub">
+          Tienes <strong>{{ tareas.resumen.total }}</strong> pendientes
+          <span v-if="tareas.resumen.alta" class="pill-alta">{{ tareas.resumen.alta }} de prioridad alta</span>
+        </p>
+
+        <div v-if="tareasLoading && !tareas" class="empty-results">Cargando tareas...</div>
+        <div v-else-if="!tareas || tareas.grupos.length === 0" class="empty-results">🎉 No hay pendientes por ahora</div>
+
+        <div v-else class="tareas-grid">
+          <div v-for="g in tareas.grupos" :key="g.id" class="tarea-card" :class="'prio-' + g.prioridad">
+            <div class="tarea-head" @click="toggleGrupo(g.id)">
+              <span class="tarea-icon">{{ g.icono }}</span>
+              <div class="tarea-info">
+                <strong>{{ g.titulo }}</strong>
+                <span class="tarea-desc">{{ g.descripcion }}</span>
+              </div>
+              <span class="tarea-count">{{ g.total }}</span>
+              <span class="tarea-chevron">{{ gruposAbiertos[g.id] ? '▲' : '▼' }}</span>
+            </div>
+            <div class="tarea-accion">⚠️ Siguiente acción: <strong>{{ g.siguiente_accion }}</strong></div>
+            <div v-if="gruposAbiertos[g.id]" class="tarea-items">
+              <div v-for="it in g.items" :key="it.id" class="tarea-item">
+                <div class="tarea-item-info">
+                  <strong>{{ it.titulo }}</strong>
+                  <span v-if="it.detalle">{{ it.detalle }}</span>
+                </div>
+                <NuxtLink :to="it.link" class="tarea-item-btn">{{ it.accion }}</NuxtLink>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- PESTAÑA: CITAS -->
       <div v-if="activeTab === 'citas'">
         <div class="content-header">
@@ -2470,4 +2532,34 @@ h1 { font-size: 1.5rem; color: #2d3436; }
 .coordination-options > p { margin: 0 0 0.75rem; color: #636e72; font-size: 0.85rem; }
 .coordination-options .option-row { align-items: flex-end; }
 .coordination-options > button { margin-right: 0.5rem; margin-bottom: 0.5rem; }
+
+/* Tareas de hoy */
+.tab-badge { display: inline-block; margin-left: 0.4rem; background: #d63031; color: white; font-size: 0.68rem; font-weight: 700; padding: 0.05rem 0.45rem; border-radius: 10px; vertical-align: middle; }
+nav button.active .tab-badge { background: rgba(255,255,255,0.3); }
+.tareas-sub { color: #636e72; font-size: 0.9rem; margin: 0 0 1.25rem; }
+.tareas-sub strong { color: #2d3436; }
+.pill-alta { display: inline-block; margin-left: 0.5rem; background: #ffebee; color: #c62828; font-size: 0.75rem; font-weight: 600; padding: 0.1rem 0.55rem; border-radius: 10px; }
+.tareas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 1rem; }
+.tarea-card { background: white; border: 1px solid #e8eaed; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+.tarea-card.prio-alta { border-left: 4px solid #d63031; }
+.tarea-card.prio-media { border-left: 4px solid #f39c12; }
+.tarea-card.prio-baja { border-left: 4px solid #0984e3; }
+.tarea-head { display: flex; align-items: center; gap: 0.75rem; padding: 1rem; cursor: pointer; }
+.tarea-head:hover { background: #fafafa; }
+.tarea-icon { font-size: 1.35rem; }
+.tarea-info { flex: 1; display: flex; flex-direction: column; }
+.tarea-info strong { color: #2d3436; font-size: 0.95rem; }
+.tarea-desc { color: #636e72; font-size: 0.78rem; }
+.tarea-count { background: #2d3436; color: white; font-weight: 700; font-size: 0.8rem; min-width: 26px; text-align: center; padding: 0.15rem 0.5rem; border-radius: 12px; }
+.tarea-chevron { color: #b2bec3; font-size: 0.7rem; }
+.tarea-accion { padding: 0.55rem 1rem; background: #fffbf0; border-top: 1px solid #f5efdf; color: #8a6d1a; font-size: 0.8rem; }
+.tarea-accion strong { color: #6b5410; }
+.tarea-items { border-top: 1px solid #f0f0f0; max-height: 300px; overflow-y: auto; }
+.tarea-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 1rem; border-bottom: 1px solid #f7f7f7; }
+.tarea-item:last-child { border-bottom: none; }
+.tarea-item-info { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.tarea-item-info strong { font-size: 0.85rem; color: #2d3436; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tarea-item-info span { font-size: 0.75rem; color: #95a5a6; }
+.tarea-item-btn { background: #00b894; color: white; text-decoration: none; font-size: 0.75rem; font-weight: 600; padding: 0.35rem 0.7rem; border-radius: 6px; white-space: nowrap; }
+.tarea-item-btn:hover { background: #00a884; }
 </style>
