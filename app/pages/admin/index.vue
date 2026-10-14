@@ -127,15 +127,93 @@ function buscarEmpresas() {
   }, 300)
 }
 
+// ---- Validación y detección de duplicados (anti-errores tipo CRM) ----
+const erroresMedico = ref<Record<string, string>>({})
+const erroresPaciente = ref<Record<string, string>>({})
+const dupMedico = ref<any[]>([])
+const dupPaciente = ref<any[]>([])
+const checkingDup = ref(false)
+
+function normalizarTel(v: string): string {
+  let s = String(v || '').replace(/\D/g, '')
+  if (s.length === 13 && s.startsWith('521')) s = s.slice(3)
+  else if (s.length === 12 && s.startsWith('52')) s = s.slice(2)
+  return s
+}
+
+function onTelMedico() { formMedico.value.telefono = normalizarTel(formMedico.value.telefono) }
+function onTelPaciente() { formPaciente.value.telefono = normalizarTel(formPaciente.value.telefono) }
+
+function abrirNuevoMedico() { showNuevoMedico.value = true; erroresMedico.value = {}; dupMedico.value = []; errorMsg.value = '' }
+function abrirNuevoPaciente() { showNuevoPaciente.value = true; erroresPaciente.value = {}; dupPaciente.value = []; errorMsg.value = '' }
+function abrirNuevaEmpresa() { showNuevaEmpresa.value = true; errorMsg.value = '' }
+
+function validarMedico(): boolean {
+  const e: Record<string, string> = {}
+  const f = formMedico.value
+  if (!f.nombre.trim()) e.nombre = 'El nombre es obligatorio'
+  if (!f.apellido.trim()) e.apellido = 'El apellido es obligatorio'
+  if (f.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email)) e.email = 'Correo inválido (ej. nombre@dominio.com)'
+  if (f.telefono && f.telefono.length !== 10) e.telefono = 'El teléfono debe tener 10 dígitos'
+  if (f.cedula_profesional && !/^[0-9A-Za-z]{4,}$/.test(f.cedula_profesional)) e.cedula_profesional = 'Cédula inválida (mínimo 4 caracteres)'
+  erroresMedico.value = e
+  return Object.keys(e).length === 0
+}
+
+function validarPaciente(): boolean {
+  const e: Record<string, string> = {}
+  const f = formPaciente.value
+  if (!f.nombre.trim()) e.nombre = 'El nombre es obligatorio'
+  if (!f.email.trim()) e.email = 'El correo es obligatorio'
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email)) e.email = 'Correo inválido (ej. nombre@dominio.com)'
+  if (f.telefono && f.telefono.length !== 10) e.telefono = 'El teléfono debe tener 10 dígitos'
+  if (f.curp && f.curp.length !== 18) e.curp = 'La CURP debe tener 18 caracteres'
+  erroresPaciente.value = e
+  return Object.keys(e).length === 0
+}
+
+async function verificarDuplicadosMedico() {
+  const f = formMedico.value
+  if (!f.email && !f.cedula_profesional && !f.telefono) { dupMedico.value = []; return }
+  checkingDup.value = true
+  try {
+    const data: any = await $fetch('/api/admin/medicos/check', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + adminToken.value },
+      body: { email: f.email, cedula_profesional: f.cedula_profesional, telefono: f.telefono },
+    })
+    dupMedico.value = data?.duplicados || []
+  } catch { dupMedico.value = [] }
+  checkingDup.value = false
+}
+
+async function verificarDuplicadosPaciente() {
+  const f = formPaciente.value
+  if (!f.email && !f.telefono && !f.curp) { dupPaciente.value = []; return }
+  checkingDup.value = true
+  try {
+    const data: any = await $fetch('/api/admin/pacientes/check', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + adminToken.value },
+      body: { email: f.email, telefono: f.telefono, curp: f.curp },
+    })
+    dupPaciente.value = data?.duplicados || []
+  } catch { dupPaciente.value = [] }
+  checkingDup.value = false
+}
+
 async function guardarMedico() {
   errorMsg.value = ''; okMsg.value = ''
-  if (!formMedico.value.nombre || !formMedico.value.apellido) { errorMsg.value = 'Nombre y apellido son requeridos'; return }
+  if (!validarMedico()) { errorMsg.value = 'Revisa los campos marcados en rojo'; return }
+  await verificarDuplicadosMedico()
+  if (dupMedico.value.length) { errorMsg.value = 'Este médico ya está registrado — revisa el aviso'; return }
   saving.value = true
   try {
     await $fetch('/api/admin/medicos', { method: 'POST', headers: { Authorization: 'Bearer ' + adminToken.value }, body: formMedico.value })
     okMsg.value = 'Medico registrado correctamente'; showNuevoMedico.value = false
     formMedico.value = { nombre: '', apellido: '', email: '', telefono: '', cedula_profesional: '', titulo: 'Dr.', especialidad: '', usuario: '', password: '' }
     stats.value.total_medicos = (stats.value.total_medicos || 0) + 1
+    cargarTareas()
     setTimeout(() => { okMsg.value = '' }, 3000)
   } catch (e: any) { errorMsg.value = e.data?.message || 'Error al guardar' }
   finally { saving.value = false }
@@ -143,13 +221,16 @@ async function guardarMedico() {
 
 async function guardarPaciente() {
   errorMsg.value = ''; okMsg.value = ''
-  if (!formPaciente.value.nombre || !formPaciente.value.email) { errorMsg.value = 'Nombre y email son requeridos'; return }
+  if (!validarPaciente()) { errorMsg.value = 'Revisa los campos marcados en rojo'; return }
+  await verificarDuplicadosPaciente()
+  if (dupPaciente.value.length) { errorMsg.value = 'Este paciente ya está registrado — revisa el aviso'; return }
   saving.value = true
   try {
     await $fetch('/api/admin/pacientes', { method: 'POST', headers: { Authorization: 'Bearer ' + adminToken.value }, body: formPaciente.value })
     okMsg.value = 'Paciente registrado correctamente'; showNuevoPaciente.value = false
     formPaciente.value = { nombre: '', apellido: '', email: '', telefono: '', fecha_nacimiento: '', genero: '', ciudad: '', curp: '', password: '' }
     stats.value.total_pacientes = (stats.value.total_pacientes || 0) + 1
+    cargarTareas()
     setTimeout(() => { okMsg.value = '' }, 3000)
   } catch (e: any) { errorMsg.value = e.data?.message || 'Error al guardar' }
   finally { saving.value = false }
@@ -299,7 +380,7 @@ async function validarCURP() {
         </div>
 
         <div v-if="activeSection === 'medicos'" class="panel">
-          <div class="panel-header"><h2>Directorio de Medicos</h2><button class="btn-primary" @click="showNuevoMedico = true">+ Nuevo Medico</button></div>
+          <div class="panel-header"><h2>Directorio de Medicos</h2><button class="btn-primary" @click="abrirNuevoMedico">+ Nuevo Medico</button></div>
           <div class="search-box"><input v-model="searchMedicos" @input="buscarMedicos" placeholder="Buscar por nombre, email, cedula o especialidad..." /><span v-if="loadingSearch" class="spinner">...</span></div>
           <div v-if="resultadosMedicos.length > 0" class="results-list">
             <div v-for="m in resultadosMedicos" :key="m.id" class="result-card">
@@ -313,7 +394,7 @@ async function validarCURP() {
         </div>
 
         <div v-if="activeSection === 'pacientes'" class="panel">
-          <div class="panel-header"><h2>Directorio de Pacientes</h2><button class="btn-primary" @click="showNuevoPaciente = true">+ Nuevo Paciente</button></div>
+          <div class="panel-header"><h2>Directorio de Pacientes</h2><button class="btn-primary" @click="abrirNuevoPaciente">+ Nuevo Paciente</button></div>
           <div class="search-box"><input v-model="searchPacientes" @input="buscarPacientes" placeholder="Buscar por nombre, email o telefono..." /><span v-if="loadingSearch" class="spinner">...</span></div>
           <div v-if="resultadosPacientes.length > 0" class="results-list">
             <div v-for="p in resultadosPacientes" :key="p.id" class="result-card">
@@ -327,7 +408,7 @@ async function validarCURP() {
         </div>
 
         <div v-if="activeSection === 'empresas'" class="panel">
-          <div class="panel-header"><h2>Directorio de Empresas</h2><button class="btn-primary" @click="showNuevaEmpresa = true">+ Nueva Empresa</button></div>
+          <div class="panel-header"><h2>Directorio de Empresas</h2><button class="btn-primary" @click="abrirNuevaEmpresa">+ Nueva Empresa</button></div>
           <div class="search-box"><input v-model="searchEmpresas" @input="buscarEmpresas" placeholder="Buscar por nombre, RFC, email o contacto..." /><span v-if="loadingSearch" class="spinner">...</span></div>
           <div v-if="resultadosEmpresas.length > 0" class="results-list">
             <div v-for="e in resultadosEmpresas" :key="e.id" class="result-card">
@@ -398,12 +479,17 @@ async function validarCURP() {
     <div v-if="showNuevoMedico" class="modal-overlay">
       <div class="modal"><div class="modal-header"><h2>Nuevo Medico</h2><button class="modal-close" @click="showNuevoMedico = false">&times;</button></div>
         <div class="modal-body">
-          <div class="form-row"><div class="form-group"><label>Nombre *</label><input v-model="formMedico.nombre" /></div><div class="form-group"><label>Apellido *</label><input v-model="formMedico.apellido" /></div></div>
-          <div class="form-row"><div class="form-group"><label>Email</label><input v-model="formMedico.email" type="email" /></div><div class="form-group"><label>Telefono</label><input v-model="formMedico.telefono" /></div></div>
-          <div class="form-row"><div class="form-group"><label>Cedula Profesional</label><input v-model="formMedico.cedula_profesional" /></div><div class="form-group"><label>Titulo</label><input v-model="formMedico.titulo" placeholder="Dr." /></div></div>
+          <div class="form-row"><div class="form-group"><label>Nombre *</label><input v-model="formMedico.nombre" :class="{ 'input-error': erroresMedico.nombre }" /><span v-if="erroresMedico.nombre" class="field-error">{{ erroresMedico.nombre }}</span></div><div class="form-group"><label>Apellido *</label><input v-model="formMedico.apellido" :class="{ 'input-error': erroresMedico.apellido }" /><span v-if="erroresMedico.apellido" class="field-error">{{ erroresMedico.apellido }}</span></div></div>
+          <div class="form-row"><div class="form-group"><label>Email</label><input v-model="formMedico.email" type="email" :class="{ 'input-error': erroresMedico.email }" @blur="verificarDuplicadosMedico" /><span v-if="erroresMedico.email" class="field-error">{{ erroresMedico.email }}</span></div><div class="form-group"><label>Telefono (10 dígitos)</label><input v-model="formMedico.telefono" inputmode="numeric" maxlength="10" :class="{ 'input-error': erroresMedico.telefono }" @input="onTelMedico" @blur="verificarDuplicadosMedico" /><span v-if="erroresMedico.telefono" class="field-error">{{ erroresMedico.telefono }}</span></div></div>
+          <div class="form-row"><div class="form-group"><label>Cedula Profesional</label><input v-model="formMedico.cedula_profesional" :class="{ 'input-error': erroresMedico.cedula_profesional }" @blur="verificarDuplicadosMedico" /><span v-if="erroresMedico.cedula_profesional" class="field-error">{{ erroresMedico.cedula_profesional }}</span></div><div class="form-group"><label>Titulo</label><input v-model="formMedico.titulo" placeholder="Dr." /></div></div>
           <div class="form-group"><label>Especialidad</label><select v-model="formMedico.especialidad"><option value="">Seleccionar...</option><option v-for="e in especialidades" :key="e.id" :value="e.nombre">{{ e.nombre }}</option></select></div>
           <div class="form-row"><div class="form-group"><label>Usuario (login)</label><input v-model="formMedico.usuario" placeholder="dr.lopez" /></div><div class="form-group"><label>Contrasena</label><input v-model="formMedico.password" type="password" placeholder="******" /></div></div>
-          <div class="form-actions"><button class="btn-cancel" @click="showNuevoMedico = false">Cancelar</button><button class="btn-primary" @click="guardarMedico" :disabled="saving">{{ saving ? 'Guardando...' : 'Guardar' }}</button></div>
+          <div v-if="dupMedico.length" class="dup-warning">
+            <strong>⚠️ Posible duplicado</strong>
+            <ul><li v-for="(d, i) in dupMedico" :key="i">{{ d.mensaje }}</li></ul>
+            <span class="dup-hint">Puedes continuar solo si estás seguro de que es otra persona.</span>
+          </div>
+          <div class="form-actions"><button class="btn-cancel" @click="showNuevoMedico = false">Cancelar</button><button class="btn-primary" @click="guardarMedico" :disabled="saving || checkingDup">{{ saving ? 'Guardando...' : (checkingDup ? 'Verificando...' : 'Guardar') }}</button></div>
         </div>
       </div>
     </div>
@@ -411,12 +497,17 @@ async function validarCURP() {
     <div v-if="showNuevoPaciente" class="modal-overlay">
       <div class="modal"><div class="modal-header"><h2>Nuevo Paciente</h2><button class="modal-close" @click="showNuevoPaciente = false">&times;</button></div>
         <div class="modal-body">
-          <div class="form-row"><div class="form-group"><label>Nombre *</label><input v-model="formPaciente.nombre" /></div><div class="form-group"><label>Apellido</label><input v-model="formPaciente.apellido" /></div></div>
-          <div class="form-row"><div class="form-group"><label>Email *</label><input v-model="formPaciente.email" type="email" /></div><div class="form-group"><label>Telefono</label><input v-model="formPaciente.telefono" /></div></div>
+          <div class="form-row"><div class="form-group"><label>Nombre *</label><input v-model="formPaciente.nombre" :class="{ 'input-error': erroresPaciente.nombre }" /><span v-if="erroresPaciente.nombre" class="field-error">{{ erroresPaciente.nombre }}</span></div><div class="form-group"><label>Apellido</label><input v-model="formPaciente.apellido" /></div></div>
+          <div class="form-row"><div class="form-group"><label>Email *</label><input v-model="formPaciente.email" type="email" :class="{ 'input-error': erroresPaciente.email }" @blur="verificarDuplicadosPaciente" /><span v-if="erroresPaciente.email" class="field-error">{{ erroresPaciente.email }}</span></div><div class="form-group"><label>Telefono (10 dígitos)</label><input v-model="formPaciente.telefono" inputmode="numeric" maxlength="10" :class="{ 'input-error': erroresPaciente.telefono }" @input="onTelPaciente" @blur="verificarDuplicadosPaciente" /><span v-if="erroresPaciente.telefono" class="field-error">{{ erroresPaciente.telefono }}</span></div></div>
           <div class="form-row"><div class="form-group"><label>Fecha nacimiento</label><input v-model="formPaciente.fecha_nacimiento" type="date" /></div><div class="form-group"><label>Genero</label><select v-model="formPaciente.genero"><option value="">---</option><option value="masculino">Masculino</option><option value="femenino">Femenino</option></select></div></div>
-          <div class="form-row"><div class="form-group"><label>Ciudad</label><input v-model="formPaciente.ciudad" /></div><div class="form-group"><label>CURP</label><input v-model="formPaciente.curp" maxlength="18" placeholder="18 caracteres" /></div></div>
+          <div class="form-row"><div class="form-group"><label>Ciudad</label><input v-model="formPaciente.ciudad" /></div><div class="form-group"><label>CURP (18 caracteres)</label><input v-model="formPaciente.curp" maxlength="18" :class="{ 'input-error': erroresPaciente.curp }" style="text-transform:uppercase" @blur="verificarDuplicadosPaciente" /><span v-if="erroresPaciente.curp" class="field-error">{{ erroresPaciente.curp }}</span></div></div>
           <div class="form-group"><label>Contrasena (default: mediprotect123)</label><input v-model="formPaciente.password" type="password" placeholder="******" /></div>
-          <div class="form-actions"><button class="btn-cancel" @click="showNuevoPaciente = false">Cancelar</button><button class="btn-primary" @click="guardarPaciente" :disabled="saving">{{ saving ? 'Guardando...' : 'Guardar' }}</button></div>
+          <div v-if="dupPaciente.length" class="dup-warning">
+            <strong>⚠️ Posible duplicado</strong>
+            <ul><li v-for="(d, i) in dupPaciente" :key="i">{{ d.mensaje }}</li></ul>
+            <span class="dup-hint">Puedes continuar solo si estás seguro de que es otra persona.</span>
+          </div>
+          <div class="form-actions"><button class="btn-cancel" @click="showNuevoPaciente = false">Cancelar</button><button class="btn-primary" @click="guardarPaciente" :disabled="saving || checkingDup">{{ saving ? 'Guardando...' : (checkingDup ? 'Verificando...' : 'Guardar') }}</button></div>
         </div>
       </div>
     </div>
@@ -576,6 +667,15 @@ async function validarCURP() {
 .tmi-count.prio-alta { background: #ffebee; color: #c62828; }
 .tmi-count.prio-media { background: #fff8e1; color: #b8860b; }
 .tmi-count.prio-baja { background: #e3f2fd; color: #1565c0; }
+
+/* Validación de formularios */
+.input-error { border-color: #d63031 !important; background: #fff5f5; }
+.field-error { color: #d63031; font-size: 0.72rem; margin-top: 0.2rem; }
+.dup-warning { background: #fff8e1; border: 1px solid #ffe082; border-radius: 8px; padding: 0.75rem 1rem; margin-top: 0.75rem; font-size: 0.82rem; color: #8a6d1a; }
+.dup-warning strong { display: block; margin-bottom: 0.35rem; color: #b8860b; }
+.dup-warning ul { margin: 0 0 0.35rem; padding-left: 1.1rem; }
+.dup-warning li { margin-bottom: 0.15rem; }
+.dup-hint { color: #a08652; font-size: 0.75rem; }
 
 @media (max-width: 640px) {
   .curp-input-row { flex-direction: column; }

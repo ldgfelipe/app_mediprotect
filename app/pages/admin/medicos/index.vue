@@ -258,8 +258,39 @@ function applyAiData() {
   showAiPreview.value = false
 }
 
+const dupNuevo = ref<any[]>([])
+
+function normalizarTelNuevo() {
+  let s = String(newMedico.value.telefono || '').replace(/\D/g, '')
+  if (s.length === 13 && s.startsWith('521')) s = s.slice(3)
+  else if (s.length === 12 && s.startsWith('52')) s = s.slice(2)
+  newMedico.value.telefono = s
+}
+
+async function verificarDuplicadosNuevo() {
+  const f = newMedico.value
+  if (!f.email && !f.cedula_profesional && !f.telefono) { dupNuevo.value = []; return }
+  try {
+    const data: any = await $fetch('/api/admin/medicos/check', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token.value}` },
+      body: { email: f.email, cedula_profesional: f.cedula_profesional, telefono: f.telefono },
+    })
+    dupNuevo.value = data?.duplicados || []
+  } catch { dupNuevo.value = [] }
+}
+
 async function saveNewMedico() {
   if (!newMedico.value.nombre || !newMedico.value.apellido_paterno || !newMedico.value.especialidad) { alert('Nombre, apellido paterno y especialidad son requeridos'); return }
+  if (newMedico.value.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newMedico.value.email)) { alert('El correo no es válido (ej. nombre@dominio.com)'); return }
+  if (newMedico.value.telefono && String(newMedico.value.telefono).length !== 10) { alert('El teléfono debe tener 10 dígitos'); return }
+
+  await verificarDuplicadosNuevo()
+  if (dupNuevo.value.length) {
+    const lista = dupNuevo.value.map(d => '• ' + d.mensaje).join('\n')
+    if (!confirm('Posible duplicado:\n' + lista + '\n\n¿Deseas continuar de todas formas?')) return
+  }
+
   savingNew.value = true
   try {
     const response = await $fetch('/api/admin/medicos', { method: 'POST', headers: { Authorization: `Bearer ${token.value}` }, body: newMedico.value })
@@ -1154,12 +1185,17 @@ function descargarReporteErrores() {
                 <div class="form-group"><label>Telefono 2</label><input v-model="newMedico.telefono_2" /></div>
               </div>
               <div class="form-row">
-                <div class="form-group"><label>Email</label><input v-model="newMedico.email" type="email" /></div>
-                <div class="form-group"><label>Telefono</label><input v-model="newMedico.telefono" /></div>
+                <div class="form-group"><label>Email</label><input v-model="newMedico.email" type="email" @blur="verificarDuplicadosNuevo" /></div>
+                <div class="form-group"><label>Telefono (10 dígitos)</label><input v-model="newMedico.telefono" inputmode="numeric" maxlength="10" @input="normalizarTelNuevo" @blur="verificarDuplicadosNuevo" /></div>
               </div>
               <div class="form-row">
-                <div class="form-group"><label>Cedula Profesional</label><input v-model="newMedico.cedula_profesional" /></div>
+                <div class="form-group"><label>Cedula Profesional</label><input v-model="newMedico.cedula_profesional" @blur="verificarDuplicadosNuevo" /></div>
                 <div class="form-group"><label>Titulo</label><input v-model="newMedico.titulo" placeholder="Dr." /></div>
+              </div>
+              <div v-if="dupNuevo.length" class="dup-warning">
+                <strong>⚠️ Posible duplicado</strong>
+                <ul><li v-for="(d, i) in dupNuevo" :key="i">{{ d.mensaje }}</li></ul>
+                <span class="dup-hint">Puedes continuar si estás seguro de que es otra persona.</span>
               </div>
               <div class="form-row">
                 <div class="form-group"><label>Especialidad *</label>
@@ -1771,4 +1807,9 @@ function descargarReporteErrores() {
 .badge-duplicado { background: #fff8e1; color: #f57f17; }
 .badge-error { background: #ffebee; color: #c62828; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem; flex-wrap: wrap; }
+.dup-warning { background: #fff8e1; border: 1px solid #ffe082; border-radius: 8px; padding: 0.75rem 1rem; margin-top: 0.75rem; font-size: 0.82rem; color: #8a6d1a; }
+.dup-warning strong { display: block; margin-bottom: 0.35rem; color: #b8860b; }
+.dup-warning ul { margin: 0 0 0.35rem; padding-left: 1.1rem; }
+.dup-warning li { margin-bottom: 0.15rem; }
+.dup-hint { color: #a08652; font-size: 0.75rem; }
 </style>
