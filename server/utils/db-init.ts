@@ -149,6 +149,32 @@ CREATE INDEX IF NOT EXISTS idx_medico_clicks_medico ON medico_clicks(id_medico);
 CREATE INDEX IF NOT EXISTS idx_medico_clicks_created ON medico_clicks(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_medico_clicks_sesion ON medico_clicks(sesion_id);
 
+-- Campos del CRM (captura) + bitácora de importación masiva
+ALTER TABLE medicos
+  ADD COLUMN IF NOT EXISTS comision_por_cita    DECIMAL(10,2),
+  ADD COLUMN IF NOT EXISTS convenio_firmado     BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS fecha_firma_convenio DATE,
+  ADD COLUMN IF NOT EXISTS fecha_afiliacion     DATE,
+  ADD COLUMN IF NOT EXISTS advertencias         INTEGER DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS notas                TEXT,
+  ADD COLUMN IF NOT EXISTS servicios            JSONB DEFAULT '[]'::jsonb,
+  ADD COLUMN IF NOT EXISTS idiomas              JSONB DEFAULT '["Español"]'::jsonb,
+  ADD COLUMN IF NOT EXISTS perfil_url_path      TEXT;
+
+CREATE TABLE IF NOT EXISTS medicos_import_batches (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    usuario_id UUID,
+    archivo VARCHAR(255),
+    total INTEGER DEFAULT 0,
+    insertados INTEGER DEFAULT 0,
+    actualizados INTEGER DEFAULT 0,
+    errores INTEGER DEFAULT 0,
+    detalle JSONB,
+    creado_en TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_medicos_import_batches_creado ON medicos_import_batches(creado_en DESC);
+
 -- Datos iniciales
 INSERT INTO medicos (nombre, apellido, slug, especialidad, precio_regular, porcentaje_descuento, activo, estatus_medico)
 VALUES ('Raul', 'Payan Nadue', 'raul-payan-nadue', 'Medicina General', 1000, 10, true, 'activo')

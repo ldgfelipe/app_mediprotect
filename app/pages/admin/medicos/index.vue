@@ -686,6 +686,152 @@ function resetConsultorioForm() {
 function abrirGoogleMaps(url: string) {
   if (url) window.open(url, '_blank')
 }
+
+// ========== IMPORTAR MÉDICOS (archivo) ==========
+const showImport = ref(false)
+const importStep = ref(1)
+const importFile = ref<File | null>(null)
+const importInput = ref<HTMLInputElement | null>(null)
+const importLoading = ref(false)
+const importError = ref('')
+const importDragOver = ref(false)
+const importActualizar = ref(false)
+const importEnviarConfirmacion = ref(false)
+const importPreview = ref<any>(null)
+const importResult = ref<any>(null)
+
+const importPreviewCounts = computed(() => {
+  const filas = importPreview.value?.filas || []
+  return {
+    nuevo: filas.filter((f: any) => f.status === 'nuevo').length,
+    actualizar: filas.filter((f: any) => f.status === 'actualizar').length,
+    duplicado: filas.filter((f: any) => f.status === 'duplicado').length,
+    error: filas.filter((f: any) => f.status === 'error').length,
+  }
+})
+
+function openImportModal() {
+  showImport.value = true
+  importStep.value = 1
+  importFile.value = null
+  importError.value = ''
+  importPreview.value = null
+  importResult.value = null
+  importActualizar.value = false
+  importEnviarConfirmacion.value = false
+  importDragOver.value = false
+}
+
+function cerrarImport() { showImport.value = false }
+function abrirSelectorArchivo() { importInput.value?.click() }
+
+function onImportFileSelected(e: Event) {
+  const input = e.target as HTMLInputElement
+  const f = input.files?.[0]
+  if (f) { importFile.value = f; importError.value = '' }
+  input.value = ''
+}
+
+function onImportDrop(e: DragEvent) {
+  importDragOver.value = false
+  const f = e.dataTransfer?.files?.[0]
+  if (f) { importFile.value = f; importError.value = '' }
+}
+
+async function descargarPlantilla() {
+  try {
+    const blob: any = await $fetch('/api/admin/medicos/importar-plantilla', {
+      headers: { Authorization: `Bearer ${token.value}` },
+      responseType: 'blob',
+    })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'plantilla-medicos.csv'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  } catch (e: any) {
+    importError.value = e?.data?.message || 'No se pudo descargar la plantilla'
+  }
+}
+
+function buildImportForm(dryRun: boolean): FormData {
+  const fd = new FormData()
+  if (importFile.value) fd.append('archivo', importFile.value)
+  fd.append('dryRun', dryRun ? 'true' : 'false')
+  fd.append('actualizar', importActualizar.value ? 'true' : 'false')
+  fd.append('enviarConfirmacion', importEnviarConfirmacion.value ? 'true' : 'false')
+  return fd
+}
+
+async function previsualizar() {
+  if (!importFile.value) return
+  importLoading.value = true
+  importError.value = ''
+  try {
+    const data: any = await $fetch('/api/admin/medicos/importar', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token.value}` },
+      body: buildImportForm(true),
+    })
+    importPreview.value = data
+    importStep.value = 2
+  } catch (e: any) {
+    importError.value = e?.data?.message || e?.message || 'Error al analizar el archivo'
+  } finally {
+    importLoading.value = false
+  }
+}
+
+async function confirmarImport() {
+  importLoading.value = true
+  importError.value = ''
+  try {
+    const data: any = await $fetch('/api/admin/medicos/importar', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token.value}` },
+      body: buildImportForm(false),
+    })
+    importResult.value = data
+    importStep.value = 3
+    await loadMedicos()
+  } catch (e: any) {
+    importError.value = e?.data?.message || e?.message || 'Error al importar'
+  } finally {
+    importLoading.value = false
+  }
+}
+
+function volverPaso1() { importStep.value = 1; importError.value = '' }
+
+function statusLabel(s: string) {
+  const map: any = { nuevo: 'Nuevo', actualizar: 'Actualizar', insertado: 'Insertado', actualizado: 'Actualizado', duplicado: 'Duplicado', error: 'Error' }
+  return map[s] || s
+}
+
+function descargarReporteErrores() {
+  const filas = (importResult.value?.filas || []).filter((f: any) => f.status === 'error' || f.status === 'duplicado')
+  const head = ['FILA', 'ESTADO', 'NOMBRE', 'CORREO', 'CEDULA', 'TELEFONO', 'MENSAJE']
+  const lines = [head.join(',')]
+  for (const f of filas) {
+    const cells = [f.fila, f.status, f.nombre || '', f.email || '', f.cedula || '', f.telefono || '', f.mensaje || '']
+    lines.push(cells.map((c: any) => {
+      const s = String(c ?? '')
+      return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s
+    }).join(','))
+  }
+  const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'errores-importacion-medicos.csv'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
 </script>
 
 <template>
@@ -718,6 +864,9 @@ function abrirGoogleMaps(url: string) {
             <span v-else class="btn-icon">🔄</span> Sincronizar Ahora
           </button>
           <button class="btn-primary" @click="openNewModal">+ Nuevo Medico</button>
+          <button class="btn-secondary" @click="openImportModal">
+            <span class="btn-icon">📥</span> Importar
+          </button>
         </div>
       </header>
       <div class="search-bar">
@@ -794,6 +943,140 @@ function abrirGoogleMaps(url: string) {
                   </tr>
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Importar Médicos -->
+      <div v-if="showImport" class="modal-overlay" @click.self="cerrarImport">
+        <div class="modal modal-lg">
+          <div class="modal-header">
+            <h2>Importar Médicos desde archivo</h2>
+            <button class="modal-close" @click="cerrarImport">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div class="import-steps">
+              <span class="step" :class="{ active: importStep === 1 }">1. Subir archivo</span>
+              <span class="step" :class="{ active: importStep === 2 }">2. Revisar</span>
+              <span class="step" :class="{ active: importStep === 3 }">3. Resultado</span>
+            </div>
+
+            <!-- Paso 1 -->
+            <div v-if="importStep === 1">
+              <div class="import-help">
+                <p>Sube un archivo <strong>.xlsx</strong> o <strong>.csv</strong>. Los encabezados se reconocen solos (por ejemplo <em>NOMBRE COMPLETO</em>, <em>CÉDULA PROFESIONAL</em>, <em>ESPECIALIDAD</em>, <em>TELÉFONO WHATSAPP</em>).</p>
+                <button class="btn-secondary" type="button" @click="descargarPlantilla">⬇️ Descargar plantilla CSV</button>
+              </div>
+
+              <div class="drop-zone" :class="{ over: importDragOver }"
+                   @dragover.prevent="importDragOver = true"
+                   @dragleave.prevent="importDragOver = false"
+                   @drop.prevent="onImportDrop">
+                <input ref="importInput" type="file" accept=".xlsx,.xlsm,.csv,.txt" @change="onImportFileSelected" hidden />
+                <div class="drop-inner">
+                  <div class="drop-icon">📄</div>
+                  <p v-if="!importFile">Arrastra tu archivo aquí o</p>
+                  <p v-else><strong>{{ importFile.name }}</strong> · {{ (importFile.size / 1024).toFixed(0) }} KB</p>
+                  <button class="btn-primary" type="button" @click="abrirSelectorArchivo">Elegir archivo</button>
+                </div>
+              </div>
+
+              <label class="check-row">
+                <input type="checkbox" v-model="importActualizar" />
+                Actualizar médicos que ya existan (por correo o cédula)
+              </label>
+              <label class="check-row">
+                <input type="checkbox" v-model="importEnviarConfirmacion" />
+                Enviar correo de confirmación a los médicos nuevos
+              </label>
+
+              <div v-if="importError" class="ai-error">{{ importError }}</div>
+
+              <div class="modal-actions">
+                <button class="btn-cancel-sm" type="button" @click="cerrarImport">Cancelar</button>
+                <button class="btn-primary" type="button" :disabled="!importFile || importLoading" @click="previsualizar">
+                  <span v-if="importLoading" class="spinner-sm"></span>
+                  {{ importLoading ? 'Analizando...' : 'Analizar archivo' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Paso 2: previsualización -->
+            <div v-else-if="importStep === 2 && importPreview">
+              <div class="import-summary">
+                <span class="sum-chip sum-nuevo">🟢 {{ importPreviewCounts.nuevo }} nuevos</span>
+                <span class="sum-chip sum-actualizar" v-if="importActualizar">🔄 {{ importPreviewCounts.actualizar }} a actualizar</span>
+                <span class="sum-chip sum-duplicado">🟡 {{ importPreviewCounts.duplicado }} duplicados</span>
+                <span class="sum-chip sum-error">🔴 {{ importPreviewCounts.error }} con error</span>
+                <span class="sum-chip sum-total">Total: {{ importPreview.total }}</span>
+              </div>
+              <p class="import-hoja" v-if="importPreview.hoja">Hoja detectada: <strong>{{ importPreview.hoja }}</strong></p>
+              <div v-if="importPreview.columnasNoReconocidas?.length" class="import-warn">
+                Columnas ignoradas: {{ importPreview.columnasNoReconocidas.join(', ') }}
+              </div>
+
+              <div class="table-container import-table-scroll">
+                <table>
+                  <thead>
+                    <tr><th>Fila</th><th>Estado</th><th>Nombre</th><th>Correo</th><th>Cédula</th><th>Teléfono</th><th>Mensaje</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="f in importPreview.filas" :key="f.fila">
+                      <td>{{ f.fila }}</td>
+                      <td><span class="badge" :class="'badge-' + f.status">{{ statusLabel(f.status) }}</span></td>
+                      <td>{{ f.nombre }}</td>
+                      <td>{{ f.email || '-' }}</td>
+                      <td>{{ f.cedula || '-' }}</td>
+                      <td>{{ f.telefono || '-' }}</td>
+                      <td class="msg-cell">{{ f.mensaje || '' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div v-if="importError" class="ai-error">{{ importError }}</div>
+
+              <div class="modal-actions">
+                <button class="btn-cancel-sm" type="button" @click="volverPaso1">← Volver</button>
+                <button class="btn-primary" type="button" :disabled="importLoading || (importPreviewCounts.nuevo === 0 && importPreviewCounts.actualizar === 0)" @click="confirmarImport">
+                  <span v-if="importLoading" class="spinner-sm"></span>
+                  {{ importLoading ? 'Importando...' : `Importar ${importPreviewCounts.nuevo + importPreviewCounts.actualizar} médicos` }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Paso 3: resultado -->
+            <div v-else-if="importStep === 3 && importResult">
+              <div class="import-summary">
+                <span class="sum-chip sum-nuevo">✅ {{ importResult.insertados }} insertados</span>
+                <span class="sum-chip sum-actualizar">🔄 {{ importResult.actualizados }} actualizados</span>
+                <span class="sum-chip sum-duplicado">🟡 {{ importResult.duplicados }} duplicados</span>
+                <span class="sum-chip sum-error">🔴 {{ importResult.errores }} errores</span>
+              </div>
+
+              <div class="table-container import-table-scroll">
+                <table>
+                  <thead>
+                    <tr><th>Fila</th><th>Estado</th><th>Nombre</th><th>Mensaje</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="f in importResult.filas" :key="f.fila">
+                      <td>{{ f.fila }}</td>
+                      <td><span class="badge" :class="'badge-' + f.status">{{ statusLabel(f.status) }}</span></td>
+                      <td>{{ f.nombre }}</td>
+                      <td class="msg-cell">{{ f.mensaje || '' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="modal-actions">
+                <button class="btn-secondary" type="button" @click="descargarReporteErrores" v-if="importResult.errores || importResult.duplicados">
+                  ⬇️ Reporte de errores (CSV)
+                </button>
+                <button class="btn-primary" type="button" @click="cerrarImport">Listo</button>
+              </div>
             </div>
           </div>
         </div>
@@ -1454,4 +1737,38 @@ function abrirGoogleMaps(url: string) {
 .sync-history-table td { padding: 0.5rem 0.75rem; border-bottom: 1px solid #f0f0f0; }
 .sync-history-table code { background: #f5f6fa; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.75rem; }
 .sync-history-table tr:hover { background: #fafafa; }
+
+/* Importar Médicos (archivo) */
+.import-steps { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.import-steps .step { flex: 1; text-align: center; padding: 0.5rem 0.75rem; border-radius: 8px; background: #f5f6fa; color: #95a5a6; font-size: 0.82rem; font-weight: 600; border: 1px solid #eceff1; }
+.import-steps .step.active { background: #e8f5e9; color: #2e7d32; border-color: #c8e6c9; }
+.import-help { background: #f8f9fa; border: 1px solid #eceff1; border-radius: 8px; padding: 0.85rem 1rem; margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.6rem; align-items: flex-start; }
+.import-help p { margin: 0; font-size: 0.85rem; color: #636e72; line-height: 1.5; }
+.drop-zone { border: 2px dashed #b2bec3; border-radius: 10px; padding: 1.5rem; text-align: center; background: #fbfbfd; transition: all 0.15s ease; }
+.drop-zone.over { border-color: #00b894; background: #e8f5e9; }
+.drop-inner { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; }
+.drop-icon { font-size: 2rem; }
+.drop-inner p { margin: 0; font-size: 0.9rem; color: #636e72; }
+.check-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: #2d3436; margin-top: 1rem; cursor: pointer; }
+.import-summary { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.85rem; }
+.sum-chip { padding: 0.35rem 0.75rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+.sum-nuevo { background: #e8f5e9; color: #2e7d32; }
+.sum-actualizar { background: #e3f2fd; color: #1565c0; }
+.sum-duplicado { background: #fff8e1; color: #f57f17; }
+.sum-error { background: #ffebee; color: #c62828; }
+.sum-total { background: #f5f6fa; color: #636e72; }
+.import-hoja { font-size: 0.82rem; color: #636e72; margin: 0 0 0.65rem; }
+.import-warn { background: #fff8e1; color: #b8860b; border: 1px solid #ffe082; padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.78rem; margin-bottom: 0.75rem; }
+.import-table-scroll { max-height: 320px; overflow: auto; border: 1px solid #eceff1; border-radius: 8px; }
+.import-table-scroll table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.import-table-scroll th { position: sticky; top: 0; background: #f8f9fa; text-align: left; padding: 0.5rem 0.6rem; color: #636e72; font-weight: 600; border-bottom: 1px solid #e0e0e0; z-index: 1; }
+.import-table-scroll td { padding: 0.45rem 0.6rem; border-bottom: 1px solid #f5f5f5; }
+.import-table-scroll tr:hover td { background: #fafafa; }
+.msg-cell { color: #636e72; max-width: 260px; }
+.badge { display: inline-block; padding: 0.15rem 0.55rem; border-radius: 12px; font-size: 0.7rem; font-weight: 700; }
+.badge-nuevo, .badge-insertado { background: #e8f5e9; color: #2e7d32; }
+.badge-actualizar, .badge-actualizado { background: #e3f2fd; color: #1565c0; }
+.badge-duplicado { background: #fff8e1; color: #f57f17; }
+.badge-error { background: #ffebee; color: #c62828; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem; flex-wrap: wrap; }
 </style>
