@@ -404,7 +404,42 @@ export async function searchDoctorByName(pool: any, nombre: string) {
 
 // Nueva función que retorna múltiples médicos (para comando /medico)
 export async function searchDoctorsByName(pool: any, nombre: string, limit: number = 10) {
-  const search = `%${nombre.toLowerCase()}%`
+  const term = (nombre || '').toLowerCase().trim()
+  const phrase = `%${term}%`
+
+  const params: any[] = [phrase]
+  // Coincidencia por frase completa (comportamiento original)
+  const conds: string[] = [`(
+      LOWER(nombre) LIKE $1
+      OR LOWER(apellido) LIKE $1
+      OR LOWER(apellido_paterno) LIKE $1
+      OR LOWER(apellido_materno) LIKE $1
+      OR LOWER(slug) LIKE $1
+      OR LOWER(CONCAT_WS(' ', nombre, apellido, apellido_paterno, apellido_materno)) LIKE $1
+    )`]
+
+  // Coincidencia por palabras: todas las palabras deben aparecer en algún
+  // campo del nombre. Así "Ernesto Salgado Ruiz" encuentra al médico aunque
+  // los apellidos estén repartidos o guardados en distintos campos.
+  const tokens = term.split(/\s+/).filter(t => t.length >= 2).slice(0, 6)
+  if (tokens.length > 1) {
+    const tokenConds = tokens.map(t => {
+      params.push(`%${t}%`)
+      const i = params.length
+      return `(
+        LOWER(nombre) LIKE $${i}
+        OR LOWER(apellido) LIKE $${i}
+        OR LOWER(apellido_paterno) LIKE $${i}
+        OR LOWER(apellido_materno) LIKE $${i}
+        OR LOWER(slug) LIKE $${i}
+      )`
+    })
+    conds.push(`(${tokenConds.join(' AND ')})`)
+  }
+
+  params.push(limit)
+  const limitIdx = params.length
+
   const result = await pool.query(
     `SELECT 
       id, nombre, apellido, apellido_paterno, apellido_materno, slug, 
@@ -413,18 +448,11 @@ export async function searchDoctorsByName(pool: any, nombre: string, limit: numb
       hospital_consultorio, cedula_profesional, telefono, email, 
       universidad, horario_atencion, foto_url
      FROM medicos
-     WHERE (
-       LOWER(nombre) LIKE $1
-       OR LOWER(apellido) LIKE $1
-       OR LOWER(apellido_paterno) LIKE $1
-       OR LOWER(apellido_materno) LIKE $1
-       OR LOWER(slug) LIKE $1
-       OR LOWER(CONCAT(nombre, ' ', COALESCE(apellido_paterno, ''), ' ', COALESCE(apellido_materno, ''))) LIKE $1
-     )
+     WHERE (${conds.join(' OR ')})
      AND activo = true
-     AND (estatus_medico IS NULL OR estatus_medico = 'activo')
-     LIMIT $2`,
-    [search, limit]
+     AND (estatus_medico IS NULL OR LOWER(estatus_medico) = 'activo')
+     LIMIT $${limitIdx}`,
+    params
   )
   return result.rows
 }

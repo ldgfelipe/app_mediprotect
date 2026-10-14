@@ -627,27 +627,45 @@ async function guardarEdicion() {
 
 const viewMedico = ref<any>(null)
 const showViewModal = ref(false)
+const verificandoPerfil = ref<string | null>(null)
+const perfilUrlCache = ref<Record<string, string | null>>({})
 
 async function abrirVer(medico: any) {
-  // Construir URL del perfil en mediprotect.com.mx
+  // Resolver la URL real del perfil en mediprotect.com.mx (probando candidatos).
+  // Así evitamos abrir una página 404 cuando el slug no coincide.
   const baseUrl = 'https://www.mediprotect.com.mx'
-  let perfilUrl = ''
-  
-  if (medico.perfil_url_path) {
-    perfilUrl = `${baseUrl}/${medico.perfil_url_path}`
-  } else if (medico.slug) {
-    // Construir URL basada en el slug y título
-    const prefix = medico.titulo?.toLowerCase().startsWith('dra') ? 'perfil-dra-' : 'perfil-dr-'
-    perfilUrl = `${baseUrl}/${prefix}${medico.slug}`
-  }
-  
-  if (perfilUrl) {
-    window.open(perfilUrl, '_blank', 'noopener,noreferrer')
-  } else {
-    // Fallback: abrir modal con datos locales si no hay URL
+
+  if (perfilUrlCache.value[medico.id] !== undefined) {
+    const cached = perfilUrlCache.value[medico.id]
+    if (cached) { window.open(cached, '_blank', 'noopener,noreferrer'); return }
     showViewModal.value = true
     viewMedico.value = medico
+    return
   }
+
+  verificandoPerfil.value = medico.id
+  try {
+    const data: any = await $fetch('/api/admin/medicos/perfil-url', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token.value}` },
+      body: { id: medico.id },
+    })
+    const url: string | null = data?.url || null
+    perfilUrlCache.value[medico.id] = url
+    if (url) {
+      medico.perfil_url_path = url.replace(baseUrl, '')
+      window.open(url, '_blank', 'noopener,noreferrer')
+      return
+    }
+  } catch (e) {
+    console.error('[abrirVer]', e)
+  } finally {
+    verificandoPerfil.value = null
+  }
+
+  // Sin perfil público: mostrar el detalle local
+  showViewModal.value = true
+  viewMedico.value = medico
 }
 
 function cerrarVer() {
@@ -930,7 +948,7 @@ function descargarReporteErrores() {
                 <strong>Precio:</strong> ${{ medico.precio_regular || 0 }} / ${{ medico.precio_miembro || 0 }} (miembro)
               </div>
               <div class="card-actions">
-                <button class="btn-view" @click="abrirVer(medico)" title="Ver perfil completo">👁️ Ver</button>
+                <button class="btn-view" @click="abrirVer(medico)" :disabled="verificandoPerfil === medico.id" :title="verificandoPerfil === medico.id ? 'Buscando perfil...' : 'Ver perfil completo'">{{ verificandoPerfil === medico.id ? '⏳' : '👁️ Ver' }}</button>
                 <button class="btn-edit" @click="abrirEditar(medico)">Editar</button>
                 <button class="btn-delete" @click="confirmarEliminar(medico)" title="Eliminar medico">🗑️ Eliminar</button>
               </div>
@@ -1509,6 +1527,7 @@ function descargarReporteErrores() {
           </div>
           <div class="modal-body">
             <div v-if="viewMedico" class="perfil-view">
+              <div class="perfil-sin-publico">ℹ️ Este médico todavía no tiene un perfil público en mediprotect.com.mx. Aquí ves su información registrada.</div>
               <div class="perfil-header">
                 <div class="perfil-foto">
                   <img v-if="viewMedico.foto_url" :src="viewMedico.foto_url" :alt="`${viewMedico.nombre} ${viewMedico.apellido}`" />
@@ -1812,4 +1831,5 @@ function descargarReporteErrores() {
 .dup-warning ul { margin: 0 0 0.35rem; padding-left: 1.1rem; }
 .dup-warning li { margin-bottom: 0.15rem; }
 .dup-hint { color: #a08652; font-size: 0.75rem; }
+.perfil-sin-publico { background: #e3f2fd; border: 1px solid #bbdefb; color: #1565c0; padding: 0.6rem 0.85rem; border-radius: 8px; font-size: 0.82rem; margin-bottom: 1rem; }
 </style>
