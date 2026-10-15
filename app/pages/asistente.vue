@@ -623,6 +623,10 @@ function cerrarSesion() {
   navigateTo('/login-asistente')
 }
 
+function irAHoja() {
+  navigateTo('/hoja')
+}
+
 function estadoColor(estado) {
   const colors = { pendiente: '#fdcb6e', confirmada: '#0984e3', paciente_llego: '#00b894', en_atencion: '#6c5ce7', asistida: '#00b894', no_asistida: '#d63031', cancelada: '#b2bec3', reagendada: '#e17055', PENDIENTE_DE_COORDINACION: '#fdcb6e' }
   return colors[estado] || '#dfe6e9'
@@ -1139,6 +1143,7 @@ async function crearPacienteParaEmpresa() {
           <button :class="{ active: activeTab === 'medicos' }" @click="activeTab = 'medicos'">Medicos</button>
           <button :class="{ active: activeTab === 'pacientes' }" @click="activeTab = 'pacientes'">Pacientes</button>
           <button :class="{ active: activeTab === 'empresas' }" @click="activeTab = 'empresas'">Empresas</button>
+          <button @click="irAHoja" title="Vista tipo Excel">📊 Hoja</button>
         </nav>
         <div class="user-info">
           <NotificationBell />

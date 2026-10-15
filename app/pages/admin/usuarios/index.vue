@@ -91,6 +91,7 @@ async function toggleActivo(u) {
         <img src="https://imagedelivery.net/xaKlCos5cTg_1RWzIu_h-A/0a041066-aa69-4fe5-07ed-50ee74875100/public" alt="MediProtect" class="logo" />
         <nav>
           <NuxtLink to="/admin">Dashboard</NuxtLink>
+          <NuxtLink to="/hoja">📊 Hoja</NuxtLink>
           <NuxtLink to="/admin/citas">Citas</NuxtLink>
           <NuxtLink to="/admin/asistentes">Asistentes</NuxtLink>
           <NuxtLink to="/admin/usuarios" class="active">Usuarios</NuxtLink>

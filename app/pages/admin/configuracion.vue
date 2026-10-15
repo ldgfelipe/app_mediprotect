@@ -7,6 +7,7 @@
       </div>
       <nav>
         <NuxtLink to="/admin" class="nav-link">Dashboard</NuxtLink>
+        <NuxtLink to="/hoja" class="nav-link">📊 Hoja</NuxtLink>
         <NuxtLink to="/admin/pacientes" class="nav-link">Pacientes</NuxtLink>
         <NuxtLink to="/admin/medicos" class="nav-link">Médicos</NuxtLink>
         <NuxtLink to="/admin/citas" class="nav-link">Citas</NuxtLink>

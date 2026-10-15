@@ -105,6 +105,7 @@ onMounted(cargarTablas)
       <div class="sidebar-brand"><h2>MediProtect</h2><span class="rol">Admin</span></div>
       <nav>
         <NuxtLink to="/admin">Dashboard</NuxtLink>
+        <NuxtLink to="/hoja">📊 Hoja</NuxtLink>
         <NuxtLink to="/admin/pacientes">Pacientes</NuxtLink>
         <NuxtLink to="/admin/medicos">Médicos</NuxtLink>
         <NuxtLink to="/admin/citas">Citas</NuxtLink>

@@ -318,6 +318,7 @@ async function eliminarPaciente(p: any) {
       <div class="sidebar-brand"><h2>MediProtect</h2><span class="rol">Admin</span></div>
       <nav>
         <NuxtLink to="/admin">Dashboard</NuxtLink>
+        <NuxtLink to="/hoja">📊 Hoja</NuxtLink>
         <NuxtLink to="/admin/pacientes" class="active">Pacientes</NuxtLink>
         <NuxtLink to="/admin/medicos">Medicos</NuxtLink>
         <NuxtLink to="/admin/empresas">Empresas</NuxtLink>
